@@ -21,6 +21,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:paddingStart="16dp"
     android:paddingEnd="8dp"
     android:orientation="horizontal">
@@ -64,4 +69,16 @@
         app:icon="@drawable/ic_dots_vertical"
         app:iconSize="24dp"
         app:iconTint="@color/textColorPrimary" />
+</LinearLayout>
+
+    <!--
+      The Material shell is being built in Compose while the feed list is still
+      the upstream RecyclerView, so the two coexist here for now. See
+      OverlayComposeHost for how Compose is hosted in a launcher-owned window.
+    -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/header_categories"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
 </LinearLayout>

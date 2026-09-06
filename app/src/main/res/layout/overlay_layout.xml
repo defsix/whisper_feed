@@ -32,7 +32,7 @@
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             app:contentScrim="@android:color/transparent"
             app:layout_scrollFlags="scroll|enterAlways"

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">076 Feed</string>
+    <string name="all_categories">All</string>
     <string name="home">Home</string>
     <string name="app_id" translatable="false">Package</string>
     <string name="app_version" translatable="false">Version</string>

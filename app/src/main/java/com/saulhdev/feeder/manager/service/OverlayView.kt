@@ -33,6 +33,13 @@ import com.saulhdev.feeder.data.entity.MenuItem
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.feed.FeedAdapter
 import com.saulhdev.feeder.ui.navigation.Routes
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
+import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.ui.overlay.CategoryChipRow
+import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.ui.theme.CardTheme
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
@@ -62,6 +69,19 @@ class OverlayView(val context: Context) :
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
     private val articles: SyncRestClient by inject(SyncRestClient::class.java)
     val prefs: FeedPreferences by inject()
+    private val sourcesRepo: SourcesRepository by inject()
+    private val composeHost = OverlayComposeHost()
+
+    /**
+     * Whether the overlay is currently showing a dark background.
+     *
+     * The overlay has its own theme preference (light/dark/black/auto) that is
+     * independent of the system setting, so Compose content must follow this
+     * rather than [isSystemInDarkTheme], or the chips end up light on a dark
+     * feed whenever the two disagree. Unifying the two theme systems is the rest
+     * of this milestone's work; until then they are bridged here.
+     */
+    private val overlayIsDark = mutableStateOf(true)
 
     var bookmarkVisible = false
     private var pendingCloseOnResume = false
@@ -80,6 +100,13 @@ class OverlayView(val context: Context) :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Both of these must precede inflation. The layout contains a ComposeView,
+        // and Compose resolves its owners by walking up the view tree the moment
+        // the view attaches to a window — which can happen during inflation, since
+        // the container is already part of the overlay's window.
+        composeHost.onCreate()
+        composeHost.attachTo(this.container)
+
         rootView = View.inflate(
             ContextThemeWrapper(this, R.style.AppTheme),
             R.layout.overlay_layout,
@@ -97,6 +124,7 @@ class OverlayView(val context: Context) :
         initInsets()
         initRecyclerView()
         initHeader()
+        initCategoryChips()
         refreshNotifications()
 
         syncScope.launch {
@@ -154,6 +182,8 @@ class OverlayView(val context: Context) :
     private fun updateTheme(force: String? = null) {
         setTheme(force)
         updateStubUi()
+        overlayIsDark.value =
+            themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal).isDark()
         adapter.setTheme(themeHolder.currentTheme)
     }
 
@@ -397,11 +427,31 @@ class OverlayView(val context: Context) :
         }
     }
 
+    private fun initCategoryChips() {
+        rootView.findViewById<ComposeView>(R.id.header_categories).setContent {
+            AppTheme(darkTheme = overlayIsDark.value) {
+                val categories by sourcesRepo.getAllTagsFlow()
+                    .collectAsState(initial = emptyList())
+                val selected by prefs.tagsFilter.get()
+                    .collectAsState(initial = emptySet())
+
+                CategoryChipRow(
+                    categories = categories,
+                    selected = selected,
+                    // setValue blocks on the datastore write, so keep it off the
+                    // main thread; the feed updates through the existing flow.
+                    onSelectedChange = { syncScope.launch { prefs.tagsFilter.setValue(it) } },
+                )
+            }
+        }
+    }
+
     override fun onDestroy() {
         try {
             context.unregisterReceiver(closeSystemDialogsReceiver)
         } catch (_: Exception) {
         }
+        composeHost.onDestroy()
         super.onDestroy()
         NeoApp.bridge.setCallback(null)
     }
