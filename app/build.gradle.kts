@@ -26,7 +26,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.saulhdev.neofeed"
+        applicationId = "io.zero76.feed"
         minSdk = 26
         targetSdk = 37
         versionCode = 1900
@@ -97,7 +97,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             val versionName = output.versionName.get()
-            output.outputFileName.set("Neo_Feed_${versionName}_${variant.name}.apk")
+            output.outputFileName.set("076_Feed_${versionName}_${variant.name}.apk")
         }
     }
 }

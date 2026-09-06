@@ -18,3 +18,6 @@ google-gsa/build/
 app/build/
 release/
 neo/
+
+# Local SDK config (machine-specific, must not be committed)
+local.properties
