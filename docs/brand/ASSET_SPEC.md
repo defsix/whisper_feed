@@ -21,7 +21,7 @@ changes what gets exported.
 
 | # | Decision |
 |---|---|
-| D1 | **The three-bar symbol is the mark.** The curved leaf/wave form on the toolkit board is retired. The concept-board crops in `01_logos/` – `06_ui_mockups/` all show the retired design and are historical reference only. |
+| D1 | **The three curved wave bands are the mark**, per the named asset pack. This is the third design: it replaced a straight-tapered-bar mark, which had replaced the concept board's single leaf/"S" form. The concept-board crops in `01_logos/` – `06_ui_mockups/` show the first of those and are historical reference only. |
 | D2 | **The board's "SUBTLE GRADIENT" is presentation-only.** Not a brand token, not used in-app. Available for store and marketing backgrounds; exact stops still to be captured if a Play feature graphic is ever made. |
 | D3 | **Launcher icon = gradient symbol on near-white** (board concept "02 Light"). Background sampled from the board tile: `#FBFCFE`. |
 | D4 | **Inter is bundled**, with an in-app font setting so the user can change it. |
@@ -86,7 +86,7 @@ One file here removes a dozen rows below.
 
 | Priority | Status | Export as | Format | Variants | Notes |
 |---|---|---|---|---|---|
-| **P0** | NEED | `symbol_flat.svg` | SVG, square viewBox, art centred, **single flat fill** | one | **The single most useful file in this document.** Yields the monochrome icon layer, the notification icon and every favicon size, with no rasterisation and no safe-zone guesswork. Flat means one solid colour — no gradients, no overlapping translucency. |
+| P1 | NEED | `symbol_flat.svg` | SVG, square viewBox, art centred, **single flat fill** | one | The raster `symbol_navy_flat.png` / `symbol_white_flat.png` now cover the monochrome icon layer and the notification icon, so this is no longer blocking — but it would still remove every rasterisation step and give a clean 24 dp notification glyph and favicons at any size. |
 | P1 | NEED | `symbol.svg` | SVG, gradients intact | one | The full-colour mark as vector. Replaces the 1254 px raster for the launcher foreground, splash and About page, and scales without softening. |
 | P1 | NEED | `wordmark.svg` | SVG, outlined text | one | "Whisper" with letterforms converted to paths, so there is no font dependency. |
 | P1 | NEED | `lockup_horizontal.svg`, `lockup_stacked.svg` | SVG, outlined text | one each | Symbol + wordmark, correctly spaced. Recolourable per variant. |
@@ -120,7 +120,7 @@ In percentages of the exported square: **artwork must fit within the centre
 |---|---|---|---|---|---|
 | P0 | **HAVE** | `symbol_gradient_01.png` → `ic_launcher_foreground` | 1254×1254 RGBA supplied; downscaled to 432/324/216/162/108 | one | The gradient symbol on full transparency. Cropped to alpha bounds and centred in the safe circle at build time — no manual padding wanted. Superseded by `symbol.svg` when that exists. |
 | P0 | **HAVE** | background | — | one | Flat `#FBFCFE`, defined as a colour resource. **No file needed.** |
-| **P0** | **NEED** | `icon_monochrome.png` | 1024×1024 px, **alpha-only** (RGB ignored) | one | **Flat solid silhouette.** No gradient, no tonal shading, no soft inner edges, no overlapping translucency between the three bars. Android discards all colour and tints the alpha channel, so anything with tone renders as a smudge. Same centre-61% circle. *(`symbol_flat.svg` covers this)* |
+| P0 | **HAVE** | `symbol_navy_flat.png` → `ic_launcher_monochrome` | 1254×1254 RGBA supplied | one | A true single flat shape — verified to have no interior translucency, so it tints cleanly. Android discards its colour and tints the alpha. Same centre-61% circle. |
 
 Legacy square/round PNG icons are **not** required — `minSdk` is 26, so the
 adaptive icon is used on every supported release.
@@ -134,8 +134,8 @@ Not on the board. The app currently ships upstream Neo Feed's **Phosphor bell**
 
 | Priority | Status | Export as | Size | Variants | Style rules |
 |---|---|---|---|---|---|
-| **P0** | NEED | `icon_notification.svg` | 24 × 24 dp viewBox | one | **Pure white, completely flat, on transparency.** Android renders the alpha channel only and tints it — colour and gradient are discarded. Must stay legible at 24 dp; the three bars will likely need thickening and wider separation at this size, so expect a small-size optical variant rather than a straight scale-down. *(`symbol_flat.svg` may cover this if the shape survives shrinking)* |
-| P0 | NEED | `icon_notification.png` ×5 | 24, 36, 48, 72, 96 px | one | Raster fallback, only if no SVG. mdpi → xxxhdpi. |
+| P0 | **HAVE** | `symbol_white_flat.png` → `ic_notification.png` ×5 | 24, 36, 48, 72, 96 px generated | one | Shipping. It is legible at 24 dp, but the gaps between the bands come down to roughly a pixel, so it is close to its limit. |
+| P2 | NEED | `symbol_small.svg` | 24 × 24 dp viewBox | one | An optical variant for small sizes — same mark with wider gaps and slightly heavier bands — rather than a straight scale-down of the full-size artwork. Improves the notification icon and the 16 px favicon. |
 
 ---
 
@@ -150,18 +150,17 @@ follows the system setting.
 
 | Priority | Status | Export as | Size | Variants | Used for |
 |---|---|---|---|---|---|
-| P1 | HAVE | `symbol_gradient_01.png` | 1254×1254 RGBA | gradient | launcher foreground, About page, splash |
-| P1 | HAVE | `symbol_gradient_02.png` | 1254×1254 RGBA | gradient, tighter spacing | alternate |
-| P1 | HAVE | `symbol_white.png` | 1254×1254 RGBA | white | use on Cobalt or dark surfaces |
-| P2 | NEED | `symbol_navy.png` | 1024×1024 RGBA | navy | single-colour mark where the gradient is too loud |
-| P1 | PARTIAL | `logo_primary_light.png` / `logo_primary_dark.png` | ≥2400 px wide, RGBA | both | README, About, docs. *Have the navy-type version; need the white-type one.* |
+| P1 | HAVE | `symbol_gradient.png` | 1254×1254 RGBA | gradient | launcher foreground, About page, splash |
+| P1 | HAVE | `symbol_gradient_alt.png` | 1254×1254 RGBA | gradient, alternate cut | alternate |
+| P1 | HAVE | `symbol_navy_flat.png` | 1254×1254 RGBA | flat navy | monochrome icon layer; mark on light surfaces |
+| P1 | HAVE | `symbol_white_flat.png` | 1254×1254 RGBA | flat white | notification icon; splash; mark on dark surfaces |
 | P1 | HAVE | `lockup_horizontal_light.png` / `_dark.png` | 2172×724 RGBA | both | app bar, splash branding |
-| P1 | PARTIAL | `lockup_stacked_light.png` / `_dark.png` | ≥1600 px wide, RGBA | both | onboarding, About. *Have navy-type; need white-type.* |
-| P1 | PARTIAL | `wordmark_light.png` / `wordmark_dark.png` | 2172×724 RGBA | both | docs, footers. *Have navy-type; need white-type.* |
+| P1 | HAVE | `lockup_stacked_light.png` / `_dark.png` | 1122×1402 RGBA | both | onboarding, About |
+| P1 | HAVE | `wordmark_light.png` / `wordmark_dark.png` | 2172×724 RGBA | both | docs, footers |
 
-Tagline handling: export **with-tagline and without-tagline** versions of the
-primary logo and the horizontal lockup — the app bar needs the short one, the
-About page the long one.
+Tagline handling: every lockup in the pack carries the tagline. A
+**without-tagline** horizontal lockup is still wanted for the app bar, where the
+tagline is unreadable at that height.
 
 ---
 
@@ -174,8 +173,8 @@ to the launcher icon.
 
 | Priority | Status | Export as | Size | Variants | Style rules |
 |---|---|---|---|---|---|
-| P1 | NEED | `splash_icon.png` | 288 × 288 dp canvas → **1152×1152 px**, RGBA | one | Artwork must fit inside a **192 dp diameter circle** at the centre of the 288 dp canvas. If an icon background colour is also set, the limit tightens to a **160 dp circle**. Transparent outside the artwork. The board's splash shows the **white** symbol on Cobalt, so `symbol_white.png` is the likely source. *(`symbol.svg` covers this)* |
-| P1 | NEED | `splash_branding_light.png` / `_dark.png` | max 200 × 80 dp → **800×320 px**, RGBA | both | The wordmark or horizontal lockup pinned at the bottom of the splash. Must fit the box without cropping. |
+| P1 | HAVE | `symbol_white_flat.png` → `splash_icon.png` | 288 × 288 dp canvas → **1152×1152 px**, RGBA | one | Artwork must fit inside a **192 dp diameter circle** at the centre of the 288 dp canvas; with an icon background colour set, a **160 dp circle**. Generated from the supplied file when the splash is built. |
+| P1 | HAVE | `wordmark_light.png` / `wordmark_dark.png` → `splash_branding_*` | max 200 × 80 dp → **800×320 px**, RGBA | both | The wordmark pinned at the bottom of the splash, scaled to the box. |
 | P1 | NEED | background colour | two hex values | light + dark | Single flat colour per theme. The board reads as Cobalt; the dark-theme value is unconfirmed. |
 
 Splash copy: "Whisper" / "Your feeds, your focus." Both already in
@@ -244,7 +243,7 @@ target-API compliance, and a permissions declaration for
 
 | Priority | Status | Export as | Size | Variants | Style rules |
 |---|---|---|---|---|---|
-| P2 | NEED | `favicon_light.png` / `favicon_dark.png` | 512 × 512 px, RGBA | both | Board section **FAVICON CONCEPTS** — "02 Browser" is the light variant, "01 App Bar" the dark. 16 / 32 / 48 / 180 (apple-touch) / 192 / 512 are generated from these. *(`symbol.svg` covers this entirely)* |
+| P2 | HAVE | `symbol_navy_flat.png` / `symbol_white_flat.png` | 512 × 512 px generated | both | 16 / 32 / 48 / 180 (apple-touch) / 192 / 512 generate from these. At 16 px the band gaps close up; `symbol_small.svg` (§4) would fix that. |
 
 ---
 
@@ -302,37 +301,37 @@ Plus an in-app setting, `Appearance → Font`:
 
 ## 13. Priority summary
 
-**If only three things get made, make these:**
+**Nothing is blocking.** The named asset pack cleared every P0 item: the
+launcher icon ships all three layers from supplied artwork, and the
+notification icon is the real mark rather than another project's bell.
 
-1. **`symbol_flat.svg`** — a flat, single-colour vector of the three-bar mark.
-   Clears the monochrome icon layer, the notification icon and all six favicon
-   sizes in one file.
-2. **`icon_notification.svg`** — or confirmation that the flat symbol reads at
-   24 dp. The app is currently shipping another project's bell.
-3. **`onboarding_bg_dark.png`** — the only asset with no derivable source.
+**What would help most next, in order:**
 
-**Everything currently blocking (P0):**
-
-- `symbol_flat.svg` *or* a flat `icon_monochrome.png` at 1024²
-- `icon_notification.svg` *or* the five raster sizes
-
-The launcher foreground and background are settled — the artwork exists and the
-background is a hex value.
+1. **`onboarding_bg_dark.png`** — still the only asset in this document with no
+   derivable source.
+2. **`placeholder_article_light/dark.png`** — seen on every feed card whose
+   article has no image, which on a real feed is constant.
+3. **A horizontal lockup without the tagline** — for the app bar, where the
+   tagline cannot be read at that height.
+4. **Vector masters** (§2) — nothing needs them now, but they would remove every
+   rasterisation step and fix the small-size cases.
 
 ---
 
 ## 14. What the repo holds today
 
-In `docs/brand/07_production/` — supplied, 1254×1254 or larger, RGBA, usable:
+In `docs/brand/07_production/` — the named asset pack, RGBA, all verified clean
+(~1.5 px antialias band, no interior translucency, no stray pixels):
 
 | File | Covers |
 |---|---|
-| `symbol_gradient_01.png` | §3 launcher foreground (**D3**), §5 in-app mark |
-| `symbol_gradient_02.png` | §5 alternate |
-| `symbol_white.png` | §6 splash icon |
-| `lockup_horizontal_dark.png`, `lockup_horizontal_light.png` | §5 |
-| `lockup_stacked_dark.png` | §5 — white-type variant still needed |
-| `wordmark_dark.png` | §5 — white-type variant still needed |
+| `symbol_gradient.png` | §3 launcher foreground — **shipping** |
+| `symbol_navy_flat.png` | §3 monochrome layer — **shipping**; §9 favicons |
+| `symbol_white_flat.png` | §4 notification icon — **shipping**; §6 splash icon |
+| `symbol_gradient_alt.png` | §5 alternate |
+| `lockup_horizontal_light.png`, `_dark.png` | §5 |
+| `lockup_stacked_light.png`, `_dark.png` | §5, §7 |
+| `wordmark_light.png`, `_dark.png` | §5, §6 splash branding |
 
 In `docs/brand/01_logos/` … `06_ui_mockups/` — crops from the concept board,
 68–423 px, RGB with **no alpha**. **Historical reference only.** They show the
