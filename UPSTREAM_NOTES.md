@@ -99,10 +99,16 @@ override fun isSigned(): Boolean {
 
 So a package not in `whitelist` gets `signatureHash == -1` and is rejected
 **unless** the user-facing preference `pref_ignoreFeedWhitelist` is `true`.
-That preference is a real toggle, not a hidden build flag — it's exposed in
-Lawnchair's own **Debug Menu** (Settings → About → tap to reveal → "Show
-debug menu" → "Ignore feed whitelist"), reachable on any normal installed
-Lawnchair build, no root/custom build/Shizuku required. There's a matching
+That preference is a real toggle, not a hidden build flag, but it is not on
+the About screen (there's no Android-style "tap the version number" easter
+egg in this codebase — an earlier draft of this doc guessed that and was
+wrong). The actual unlock, read from `AllAppsSearchInput.kt`, is a hidden
+text command: **open the App Drawer, tap the search field, and type
+`/lawnchairdebug`** — that flips `pref_enableDebugMenu`. Once enabled, a
+hammer/build icon appears in the overflow bar of Lawnchair's main
+Preferences screen (`PreferencesDashboard.kt`); tapping it opens the "Debug
+menu" screen, which is where "Ignore feed whitelist" actually lives. No
+root/custom build/Shizuku required either way. There's a matching
 `pref_feedProvider` string preference (Home screen settings → Feed provider)
 where the user picks which discovered package to use.
 
@@ -165,7 +171,7 @@ This environment has no Android emulator, no physical device, and no adb
 target — so the following from the handoff's Milestone 0 checklist are
 still open and need to be run on your Pixel 10 Pro:
 
-- [ ] Sideload the built debug APK (or a release build) and confirm Lawnchair's Feed Provider picker shows it (expect: it won't, until the whitelist toggle + manual pick from §3 is done).
+- [ ] Sideload the built debug APK (or a release build) and confirm Lawnchair's Feed Provider picker shows it (expect: it won't, until the whitelist toggle + manual pick from §3 is done — remember the unlock is typing `/lawnchairdebug` in the App Drawer search bar, not an About-screen tap).
 - [ ] With the toggle enabled and Neo Feed picked as feed provider: confirm swipe-right-from-Home opens it.
 - [ ] Confirm the feed survives a Lawnchair restart.
 - [ ] Force-stop the Neo Feed process and confirm Lawnchair recovers (re-binds) on next swipe.
