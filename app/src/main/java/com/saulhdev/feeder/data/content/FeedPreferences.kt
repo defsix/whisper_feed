@@ -241,6 +241,25 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /* Sort & Filter */
+    /**
+     * Categories the feed is narrowed to — an INCLUDE list, empty meaning "All".
+     *
+     * Deliberately separate from [tagsFilter], which the filter sheet uses as an
+     * EXCLUDE list ("hide these"). Both were previously the same preference read
+     * with opposite meanings: the article query treated it as an include list
+     * while processArticles excluded exactly what that query had selected, so
+     * choosing any category reliably produced an empty feed. Selecting a
+     * category to browse and muting a category are different intentions and now
+     * have different preferences.
+     */
+    var categoryFilter = StringSetPref(
+        titleId = R.string.all_categories,
+        icon = Phosphor.Hash,
+        key = CATEGORY_FILTER,
+        dataStore = dataStore,
+        defaultValue = emptySet(),
+    )
+
     var sourcesFilter = StringSetPref(
         titleId = R.string.title_sources,
         icon = Phosphor.Info,
@@ -298,6 +317,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
         val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
+        val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")
         val EXPORT_DIAGNOSTICS = stringPreferencesKey("pref_export_diagnostics")
 
         /** Open the tapped article in 076 Feed's own reader, using cached content. */

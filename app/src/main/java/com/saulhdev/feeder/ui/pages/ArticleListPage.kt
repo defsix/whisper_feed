@@ -90,6 +90,11 @@ import com.saulhdev.feeder.ui.icons.phosphor.Power
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.utils.extensions.safeShareIntent
+import com.saulhdev.feeder.ui.overlay.ArticleCard
+import com.saulhdev.feeder.ui.overlay.CategoryChipRow
+import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
 
 @OptIn(
@@ -101,6 +106,7 @@ import org.koin.compose.koinInject
 fun ArticleListPage(
     prefs: FeedPreferences = koinInject(),
     syncClient: SyncRestClient = koinInject(),
+    sourcesRepo: SourcesRepository = koinInject(),
     viewModel: ArticleListViewModel = koinNeoViewModel(),
 ) {
     val context = LocalContext.current
@@ -255,6 +261,24 @@ fun ArticleListPage(
                                 .fillMaxSize()
                                 .padding(paddingValues)
                         ) {
+                            // Same strip as the launcher surface, reading the same
+                            // preference, so a category chosen in one is reflected
+                            // in the other.
+                            val categories by sourcesRepo.getAllTagsFlow()
+                                .collectAsState(initial = emptyList())
+                            val selectedCategories by prefs.categoryFilter.get()
+                                .collectAsState(initial = emptySet())
+
+                            CategoryChipRow(
+                                categories = categories,
+                                selected = selectedCategories,
+                                onSelectedChange = { picked ->
+                                    scope.launch(Dispatchers.IO) {
+                                        prefs.categoryFilter.setValue(picked)
+                                    }
+                                },
+                            )
+
                             when {
                                 showBookmarks -> LazyColumn(
                                     state = listState,
@@ -262,45 +286,9 @@ fun ArticleListPage(
                                     contentPadding = PaddingValues(8.dp)
                                 ) {
                                     items(bookmarked.bookmarkedArticles, key = { it.id }) { item ->
-                                        BookmarkItem(
-                                            article = item.article,
-                                            feed = item.feed,
-                                            onClickAction = { article ->
-                                                if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
-                                                    context.launchView(article.link ?: "")
-                                                } else {
-                                                    scope.launch {
-                                                        paneNavigator.navigateTo(
-                                                            ListDetailPaneScaffoldRole.Detail,
-                                                            article.uuid
-                                                        )
-                                                    }
-                                                }
-                                                scope.launch {
-                                                    viewModel.unpinArticle(article.uuid)
-                                                }
-                                            },
-                                            onRemoveAction = {
-                                                scope.launch {
-                                                    viewModel.bookmarkArticle(it.uuid, false)
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-
-                                else          -> PullToRefreshLazyColumn(
-                                    isRefreshing = state.isSyncing,
-                                    onRefresh = { syncClient.syncAllFeeds() },
-                                    listState = listState,
-                                    content = {
-                                        items(state.articles, key = { it.id }) { item ->
-                                            ArticleItem(
-                                                article = item,
-                                                onBookmark = {
-                                                    viewModel.bookmarkArticle(item.id, it)
-                                                },
-                                            ) {
+                                        ArticleCard(
+                                            item = item,
+                                            onClick = {
                                                 if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {
@@ -311,7 +299,51 @@ fun ArticleListPage(
                                                         )
                                                     }
                                                 }
-                                            }
+                                                scope.launch { viewModel.unpinArticle(item.id) }
+                                            },
+                                            onBookmark = { viewModel.bookmarkArticle(item.id, it) },
+                                            onShare = {
+                                                context.safeShareIntent(item.link, item.contentTitle)
+                                            },
+                                            modifier = Modifier.padding(horizontal = 4.dp),
+                                        )
+                                    }
+                                }
+
+                                else          -> PullToRefreshLazyColumn(
+                                    isRefreshing = state.isSyncing,
+                                    onRefresh = { syncClient.syncAllFeeds() },
+                                    listState = listState,
+                                    content = {
+                                        items(state.articles, key = { it.id }) { item ->
+                                            // The same card the launcher feed
+                                            // draws, so the two surfaces are not
+                                            // mistaken for different apps.
+                                            ArticleCard(
+                                                item = item,
+                                                onClick = {
+                                                    if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                        context.launchView(item.link)
+                                                    } else {
+                                                        scope.launch {
+                                                            paneNavigator.navigateTo(
+                                                                ListDetailPaneScaffoldRole.Detail,
+                                                                item.id
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                                onBookmark = {
+                                                    viewModel.bookmarkArticle(item.id, it)
+                                                },
+                                                onShare = {
+                                                    context.safeShareIntent(item.link, item.contentTitle)
+                                                },
+                                                modifier = Modifier.padding(
+                                                    horizontal = 12.dp,
+                                                    vertical = 6.dp,
+                                                ),
+                                            )
                                         }
                                     }
                                 )

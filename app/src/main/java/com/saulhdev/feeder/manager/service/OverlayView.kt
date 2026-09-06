@@ -315,7 +315,7 @@ class OverlayView(val context: Context) :
                 val density = LocalDensity.current
                 val categories by sourcesRepo.getAllTagsFlow()
                     .collectAsState(initial = emptyList())
-                val selected by prefs.tagsFilter.get()
+                val selected by prefs.categoryFilter.get()
                     .collectAsState(initial = emptySet())
 
                 FeedScaffold(
@@ -330,7 +330,7 @@ class OverlayView(val context: Context) :
                     bottomInset = with(density) { bottomInsetPx.value.toDp() },
                     // setValue blocks on the datastore write, so keep it off the
                     // main thread; the feed updates through the existing flow.
-                    onCategoriesChange = { syncScope.launch { prefs.tagsFilter.setValue(it) } },
+                    onCategoriesChange = { syncScope.launch { prefs.categoryFilter.setValue(it) } },
                     onRefresh = { refreshNotifications() },
                     onArticleClick = { openArticle(it) },
                     onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },

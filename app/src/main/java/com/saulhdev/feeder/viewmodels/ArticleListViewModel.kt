@@ -61,8 +61,11 @@ class ArticleListViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val articleListState: StateFlow<ArticleListState> = combine(
-        prefs.tagsFilter.get().flatMapLatest { tags ->
-            if (tags.any()) articleRepo.getFeedItemsByTags(tags)
+        // Categories narrow the feed (include); the filter sheet's tagsFilter
+        // mutes (exclude) and is applied in processArticles. These were the same
+        // preference read both ways, so any selection cancelled itself out.
+        prefs.categoryFilter.get().flatMapLatest { categories ->
+            if (categories.any()) articleRepo.getFeedItemsByTags(categories)
             else articleRepo.getEnabledFeedItems()
         },
         sortFilterState,
