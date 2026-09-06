@@ -40,8 +40,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
-import com.saulhdev.feeder.ui.theme.AppTheme
+import androidx.compose.material3.MaterialTheme
 import com.saulhdev.feeder.ui.theme.CardTheme
+import com.saulhdev.feeder.ui.theme.OverlayTheme
+import com.saulhdev.feeder.ui.theme.Typography
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
 import com.saulhdev.feeder.ui.views.DialogMenu
@@ -55,6 +57,7 @@ import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import org.koin.core.component.KoinComponent
@@ -74,15 +77,15 @@ class OverlayView(val context: Context) :
     private val composeHost = OverlayComposeHost()
 
     /**
-     * Whether the overlay is currently showing a dark background.
+     * The Material 3 scheme the overlay is currently drawn with.
      *
-     * The overlay has its own theme preference (light/dark/black/auto) that is
-     * independent of the system setting, so Compose content must follow this
-     * rather than [isSystemInDarkTheme], or the chips end up light on a dark
-     * feed whenever the two disagree. Unifying the two theme systems is the rest
-     * of this milestone's work; until then they are bridged here.
+     * Compose content and the legacy View code both derive from this one value,
+     * so they cannot disagree. It replaces an earlier stopgap that tracked only
+     * whether the background was dark; see OverlayTheme.
      */
-    private val overlayIsDark = mutableStateOf(true)
+    private val overlayScheme = mutableStateOf(
+        OverlayTheme.schemeFor(context, "auto_system", dynamic = true)
+    )
 
     private var categoryChipsAdded = false
 
@@ -153,6 +156,13 @@ class OverlayView(val context: Context) :
                 }
             }
         }
+        // Dynamic colour now feeds the overlay's scheme too, so a change to it
+        // has to rebuild the theme exactly as a theme-mode change does.
+        syncScope.launch {
+            prefs.dynamicColor.get().drop(1).collect {
+                mainScope.launch { updateTheme() }
+            }
+        }
         NeoApp.bridge.setCallback(this)
 
         val filter = IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
@@ -195,51 +205,36 @@ class OverlayView(val context: Context) :
     private fun updateTheme(force: String? = null) {
         setTheme(force)
         updateStubUi()
-        overlayIsDark.value =
-            themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal).isDark()
         adapter.setTheme(themeHolder.currentTheme)
     }
 
     private fun setTheme(force: String?) {
+        val scheme = OverlayTheme.schemeFor(
+            context = context,
+            mode = force ?: prefs.overlayTheme.getValue(),
+            // Previously ignored on this surface: the overlay always read the
+            // dynamic system colours regardless of what the user had chosen.
+            dynamic = prefs.dynamicColor.getValue(),
+        )
+        overlayScheme.value = scheme
         themeHolder.setTheme(
-            when (force ?: prefs.overlayTheme.getValue()) {
-                "auto_system_black" -> CardTheme.getThemeBySystem(context, true)
-                "auto_system"       -> CardTheme.getThemeBySystem(context, false)
-                "dark"              -> CardTheme.defaultDarkThemeColors
-                "black"             -> CardTheme.defaultBlackThemeColors
-                else                -> CardTheme.defaultLightThemeColors
-            }
+            with(OverlayTheme) { scheme.toCardColors(OverlayTheme.isLight(scheme)) }
         )
         setCustomTheme()
     }
 
     private fun updateStubUi() {
-        val theme = if (themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
-                .isDark()
-        ) CardTheme.defaultDarkThemeColors else CardTheme.defaultLightThemeColors
-        rootView.findViewById<MaterialButton>(R.id.header_settings).iconTint =
-            ColorStateList.valueOf(
-                theme.get(
-                    CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal
-                )
-            )
+        // The current theme already carries the right on-surface colour for its
+        // own background, so this reads it directly rather than re-deriving a
+        // light/dark palette from scratch — which was how the header could end
+        // up tinted from a different palette than the one actually drawn.
+        val onSurface = themeHolder.currentTheme.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal)
+        val tint = ColorStateList.valueOf(onSurface)
 
-        rootView.findViewById<MaterialButton>(R.id.header_filter).iconTint =
-            ColorStateList.valueOf(
-                theme.get(
-                    CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal
-                )
-            )
-
-        rootView.findViewById<MaterialButton>(R.id.header_bookmark).iconTint =
-            ColorStateList.valueOf(
-                theme.get(
-                    CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal
-                )
-            )
-
-        rootView.findViewById<TextView>(R.id.header_title)
-            .setTextColor(theme.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal))
+        rootView.findViewById<MaterialButton>(R.id.header_settings).iconTint = tint
+        rootView.findViewById<MaterialButton>(R.id.header_filter).iconTint = tint
+        rootView.findViewById<MaterialButton>(R.id.header_bookmark).iconTint = tint
+        rootView.findViewById<TextView>(R.id.header_title).setTextColor(onSurface)
     }
 
     private fun getStatusBarHeight(): Int {
@@ -467,7 +462,7 @@ class OverlayView(val context: Context) :
 
     private fun ComposeView.setChipContent() {
         setContent {
-            AppTheme(darkTheme = overlayIsDark.value) {
+            MaterialTheme(colorScheme = overlayScheme.value, typography = Typography) {
                 val categories by sourcesRepo.getAllTagsFlow()
                     .collectAsState(initial = emptyList())
                 val selected by prefs.tagsFilter.get()
