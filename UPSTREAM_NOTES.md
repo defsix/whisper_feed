@@ -152,6 +152,50 @@ picker path described above even before any renaming happens. Worth keeping
 in mind so a "why doesn't the debug APK show up as a feed provider" moment
 isn't mistaken for a deeper problem.
 
+## 3b. SYSTEM_ALERT_WINDOW is required — for opening articles, not for drawing the feed
+
+Upstream declares `android.permission.SYSTEM_ALERT_WINDOW` and `MainPage.kt`
+shows a blocking dialog until `Settings.canDrawOverlays()` returns true. It is
+easy to assume this is for rendering the overlay and therefore removable. It
+is not, and on-device behaviour confirms the split: **the feed renders fine
+without it**; what breaks is tapping an article.
+
+The reason is background activity launch (BAL) restrictions. The overlay is
+not a foreground activity of ours — the window is attached to the *launcher's*
+window token (`OverlayControllerCallback.setupOverlayController()` calls
+`window.setWindowManager(null, layoutParams.token, …)`), so a `startActivity()`
+from it is a background launch. Holding `SYSTEM_ALERT_WINDOW` is one of the
+documented BAL exemptions. Upstream's own dialog says as much: *"without it
+feed items would not open on click"*.
+
+Notably there is no `TYPE_APPLICATION_OVERLAY` or `TYPE_SYSTEM_ALERT` anywhere
+in the codebase, which is what makes the permission look vestigial on a first
+read. It is the BAL exemption that is being bought, not a window type.
+
+### Device setup gotcha
+
+On a sideloaded build the "Display over other apps" toggle is **greyed out**,
+because Android's *restricted settings* protection blocks sensitive
+permissions for apps not installed from an app store. Unblock it with:
+
+```text
+Settings → Apps → 076 Feed → ⋮ → Allow restricted settings
+```
+
+then grant the permission normally. Or directly:
+
+```bash
+adb shell appops set io.zero76.feed.dev SYSTEM_ALERT_WINDOW allow
+```
+
+This is a second manual setup step on top of the Lawnchair whitelist toggle in
+§3. Both are one-time and neither needs root, but they are worth revisiting in
+the polish milestone: if article opening can be routed through a BAL-exempt
+path instead, the permission and this setup step both disappear, which would
+better match the handoff's minimum-permission principle (§25). Treat that as
+unproven until tested — the permission stays until a replacement is shown to
+work.
+
 ## 4. Licensing (resolved)
 
 > **Update:** the repository's LICENSE is now GPLv3, byte-identical to

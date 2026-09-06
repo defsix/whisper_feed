@@ -67,6 +67,15 @@ menu and turn the whitelist check off:
 No root, LSPosed, or Shizuku is required. The mechanism and the reasoning
 behind it are documented in `UPSTREAM_NOTES.md` §3.
 
+### Granting "Display over other apps"
+
+The app needs this permission to open articles you tap — the feed itself
+renders without it, but taps do nothing. On a sideloaded build the toggle is
+greyed out, because Android restricts sensitive permissions for apps not
+installed from an app store. Unblock it via **Settings → Apps → 076 Feed → ⋮
+→ Allow restricted settings**, then grant it. See `UPSTREAM_NOTES.md` §3b for
+why the permission is needed.
+
 ## Licence and attribution
 
 076 Feed is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
