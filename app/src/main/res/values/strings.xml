@@ -38,8 +38,10 @@
     <string name="pref_transparency">Overlay background opacity</string>
     <string name="pref_dynamic_color">Dynamic Color</string>
     <string name="pref_ovr_theme">Overlay theme</string>
-    <string name="pref_browser_theme">Open in Browser</string>
-    <string name="pref_offline_reader">Offline reader</string>
+    <string name="pref_article_open_mode">Open articles with</string>
+    <string name="article_open_reader">Built-in reader</string>
+    <string name="article_open_browser">Default browser</string>
+    <string name="article_open_original">Open original in browser</string>
     <string name="pref_sync_wifi">Sync on Wifi Only</string>
     <string name="pref_sync_frequency">Sync Frequency</string>
     <string name="pref_sync_range">Sync Range</string>

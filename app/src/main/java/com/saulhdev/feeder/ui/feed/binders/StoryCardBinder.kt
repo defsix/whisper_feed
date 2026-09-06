@@ -19,7 +19,6 @@ import com.saulhdev.feeder.utils.extensions.isDark
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import com.saulhdev.feeder.utils.extensions.safeStartActivity
-import com.saulhdev.feeder.utils.openLinkInCustomTab
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,26 +75,15 @@ object StoryCardBinder : FeedBinder {
         }
 
         binding.root.setOnClickListener {
-            if (prefs.openInBrowser.getValue()) {
+            if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                 view.context.launchView(content.link)
             } else {
-                val scope = CoroutineScope(Dispatchers.Main)
-
-                scope.launch {
-                    if (prefs.offlineReader.getValue()) {
-                        view.context.safeStartActivity(
-                            MainActivity.navigateIntent(
-                                view.context,
-                                "${Routes.ARTICLE_VIEW}/${item.id}"
-                            )
-                        )
-                    } else {
-                        openLinkInCustomTab(
-                            context,
-                            content.link
-                        )
-                    }
-                }
+                view.context.safeStartActivity(
+                    MainActivity.navigateIntent(
+                        view.context,
+                        "${Routes.ARTICLE_VIEW}/${item.id}"
+                    )
+                )
             }
         }
 

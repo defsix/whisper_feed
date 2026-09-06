@@ -145,7 +145,7 @@ fun ArticlePage(
         actions = {
             RoundButton(
                 icon = Phosphor.ArrowSquareOut,
-                description = stringResource(id = R.string.pref_browser_theme),
+                description = stringResource(id = R.string.article_open_original),
             ) {
                 context.launchView(currentUrl)
             }

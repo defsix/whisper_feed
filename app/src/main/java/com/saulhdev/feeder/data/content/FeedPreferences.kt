@@ -88,26 +88,31 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         specialOutputs = { "${(it * 100).roundToInt()}%" }
     )
 
-    var openInBrowser = BooleanPref(
-        titleId = R.string.pref_browser_theme,
+    /**
+     * Where tapping an article takes you.
+     *
+     * Replaces the old openInBrowser/offlineReader boolean pair, which encoded
+     * three modes across two switches and required the user to guess the
+     * combination. "Offline reader" was the worst of it: it selected the built-in
+     * reader but read as if it controlled caching, which it never did — articles
+     * are cached at sync time regardless of this setting (see RssLocalSync).
+     */
+    var articleOpenMode = StringSelectionPref(
+        titleId = R.string.pref_article_open_mode,
         icon = Phosphor.Browser,
-        key = OPEN_IN_BROWSER,
+        key = ARTICLE_OPEN_MODE,
         dataStore = dataStore,
-        defaultValue = false
+        defaultValue = OPEN_MODE_READER,
+        entries = mapOf(
+            OPEN_MODE_READER to context.getString(R.string.article_open_reader),
+            OPEN_MODE_BROWSER to context.getString(R.string.article_open_browser),
+        )
     )
 
     var removeDuplicates = BooleanPref(
         titleId = R.string.pref_remove_duplicates,
         icon = Phosphor.FunnelSimple,
         key = REMOVE_DUPLICATES,
-        dataStore = dataStore,
-        defaultValue = true
-    )
-
-    var offlineReader = BooleanPref(
-        titleId = R.string.pref_offline_reader,
-        icon = Phosphor.BookBookmark,
-        key = OFFLINE_READER,
         dataStore = dataStore,
         defaultValue = true
     )
@@ -258,9 +263,14 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val OVERLAY_THEME = stringPreferencesKey("pref_overlay_theme")
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
-        val OPEN_IN_BROWSER = booleanPreferencesKey("pref_open_browser")
+        val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
+
+        /** Open the tapped article in 076 Feed's own reader, using cached content. */
+        const val OPEN_MODE_READER = "reader"
+
+        /** Hand the article's URL to the device's default browser. */
+        const val OPEN_MODE_BROWSER = "browser"
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
-        val OFFLINE_READER = booleanPreferencesKey("pref_offline_reader")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")
         val SYNC_FREQUENCY = stringPreferencesKey("pref_sync_frequency")

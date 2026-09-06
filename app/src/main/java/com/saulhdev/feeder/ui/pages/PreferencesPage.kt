@@ -62,8 +62,7 @@ fun PreferencesPage(
         prefs.syncFrequency,
         prefs.syncRange,
         prefs.syncOnlyOnWifi,
-        prefs.openInBrowser,
-        prefs.offlineReader,
+        prefs.articleOpenMode,
         prefs.removeDuplicates,
     )
     val filterPrefs = listOf(

@@ -87,7 +87,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Filter
 import com.saulhdev.feeder.ui.icons.phosphor.Filtered
 import com.saulhdev.feeder.ui.icons.phosphor.Power
-import com.saulhdev.feeder.utils.openLinkInCustomTab
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -267,23 +266,14 @@ fun ArticleListPage(
                                             article = item.article,
                                             feed = item.feed,
                                             onClickAction = { article ->
-                                                if (prefs.openInBrowser.getValue()) {
+                                                if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(article.link ?: "")
                                                 } else {
                                                     scope.launch {
-                                                        if (prefs.offlineReader.getValue()) {
-                                                            scope.launch {
-                                                                paneNavigator.navigateTo(
-                                                                    ListDetailPaneScaffoldRole.Detail,
-                                                                    article.uuid
-                                                                )
-                                                            }
-                                                        } else {
-                                                            openLinkInCustomTab(
-                                                                context,
-                                                                article.link!!
-                                                            )
-                                                        }
+                                                        paneNavigator.navigateTo(
+                                                            ListDetailPaneScaffoldRole.Detail,
+                                                            article.uuid
+                                                        )
                                                     }
                                                 }
                                                 scope.launch {
@@ -311,20 +301,13 @@ fun ArticleListPage(
                                                     viewModel.bookmarkArticle(item.id, it)
                                                 },
                                             ) {
-                                                if (prefs.openInBrowser.getValue()) {
+                                                if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {
-                                                    if (prefs.offlineReader.getValue()) {
-                                                        scope.launch {
-                                                            paneNavigator.navigateTo(
-                                                                ListDetailPaneScaffoldRole.Detail,
-                                                                item.id
-                                                            )
-                                                        }
-                                                    } else {
-                                                        openLinkInCustomTab(
-                                                            context,
-                                                            item.link
+                                                    scope.launch {
+                                                        paneNavigator.navigateTo(
+                                                            ListDetailPaneScaffoldRole.Detail,
+                                                            item.id
                                                         )
                                                     }
                                                 }
