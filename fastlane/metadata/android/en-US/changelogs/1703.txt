@@ -1,0 +1,7 @@
+Add: Parsing most and improve existing HTML-tags
+Add: Option to open feed in WebView
+Fix: Placeholder icons visibility on black backgrounds
+Fix: Applying dark/light system bars
+Update: Re-sync source after relevant update
+Update: Revamp About page
++ more in +30 commits & 5 translation contributions

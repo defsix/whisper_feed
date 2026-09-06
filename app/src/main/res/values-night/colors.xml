@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="md_theme_primary">#D0BCFF</color>
+    <color name="globalAccent">#4285f4</color>
+</resources>

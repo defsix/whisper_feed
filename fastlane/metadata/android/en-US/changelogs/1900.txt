@@ -1,0 +1,8 @@
+Add: Options to export/import bookmarked articles
+Add: Option to see bookmarks in launcher layout
+Add: Bookmark and Open in SMRY actions to article page
+Fix: Fix and improve OPML export/import logic
+Fix: Manual syncing
+Update: Replace legacy FeedItem calls with the new embedded entity
+Update: Revamp source edit page
++ more in +200 commits & +30 translation contributions

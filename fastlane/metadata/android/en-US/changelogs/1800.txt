@@ -1,0 +1,7 @@
+Add: SortFilter sheet to the articles page
+Fix: Back handling on edit and add feed pages
+Update: Make UI wide screens friendly & navigation adaptive
+Update: Replace removed MD icons with Phosphor icons
+Update: Revamp viewmodels and repositories applying separation of concerns
+TargetSDK 35
++ more in +40 commits & 10 translation contributions

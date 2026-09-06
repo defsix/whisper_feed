@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Neo Feed</string>
+    <string name="home">Home</string>
+    <string name="app_id" translatable="false">Package</string>
+    <string name="app_version" translatable="false">Version</string>
+    <string name="app_build" translatable="false">Build</string>
+    <string name="title_settings">Settings</string>
+    <string name="title_about">About</string>
+    <string name="title_sources">Data sources</string>
+    <string name="summary_sources">Add or remove sources</string>
+    <string name="date_format_day_month" translatable="false">%1$d %2$s</string>
+    <string name="date_format_day_month_year" translatable="false">%1$d %2$s %3$d</string>
+    <string name="date_ago_now">now</string>
+    <string name="date_at">at</string>
+    <string name="today">today</string>
+    <string name="tomorrow">tomorrow</string>
+    <string name="yesterday">yesterday</string>
+    <string name="pref_cat_contact">Contacts</string>
+    <string name="about_team">Team Members</string>
+    <string name="about_channel">Channel</string>
+    <string name="about_community">Community</string>
+    <string name="about_community_telegram">Community on Telegram</string>
+    <string name="about_community_matrix">Community on Matrix</string>
+    <string name="about_developer" translatable="false">Saul Henriquez</string>
+    <string name="about_developer2" translatable="false">Antonios Hazim</string>
+    <string name="about_build_information">Build info</string>
+    <string name="author_role">Developer</string>
+    <string name="about_licenses">License</string>
+    <string name="back_to_top">Back to Top</string>
+    <string name="about_changelog">Changelog</string>
+    <string name="about_open_source">Open Source Libraries</string>
+    <string name="pref_tg">Telegram channel</string>
+    <string name="about_source_code">Source code</string>
+    <string name="pref_cat_overlay">Appearance</string>
+    <string name="pref_cat_debug">Debug</string>
+    <string name="pref_transparency">Overlay background opacity</string>
+    <string name="pref_dynamic_color">Dynamic Color</string>
+    <string name="pref_ovr_theme">Overlay theme</string>
+    <string name="pref_browser_theme">Open in Browser</string>
+    <string name="pref_offline_reader">Offline reader</string>
+    <string name="pref_sync_wifi">Sync on Wifi Only</string>
+    <string name="pref_sync_frequency">Sync Frequency</string>
+    <string name="pref_sync_range">Sync Range</string>
+    <string name="pref_items_per_feed">Max items per feed</string>
+    <string name="pref_mastodon_items_per_feed">Max Mastodon items per feed</string>
+    <string name="syncing">Syncing</string>
+    <string name="sync_status">Sync status</string>
+    <string name="pref_compact">Compact item layout</string>
+    <string name="pref_card_bg">Card background</string>
+    <string name="pref_bg_color">Overlay background</string>
+    <string name="allow_notify_to_settings">Open settings</string>
+    <string name="overlay_no_permission">No permission granted</string>
+    <string name="overlay_reload">Click here to reload</string>
+    <string name="overlay_no_permission_desc">HomeFeeder needs \"Notification access\" to show notifications atop other apps.</string>
+    <string name="overlay_no_permission_snackbar">Please verify you have allowed \"Notification access\" permission and try again.</string>
+    <string name="pref_syscolors">Use system wallpaper colors</string>
+    <string name="pref_syscolors_desc">instead of \"Launcher:\" options</string>
+    <string name="pref_syscolors_disabled">Requires Android 8.1 or newer</string>
+    <string name="action_reload">Reload</string>
+    <string name="action_restart">Restart app</string>
+    <string name="pm_empty">No sources installed</string>
+    <string name="pm_desc">HomeFeeder uses them to display data</string>
+    <string name="add_rss">Add new RSS</string>
+    <string name="failed_to_parse">Could not parse %1$s</string>
+    <string name="edit_rss">Edit Feed Item</string>
+    <string name="add_input_hint" translatable="false">URL</string>
+    <string name="title">Title</string>
+    <string name="source_tags">Tags</string>
+    <string name="description">Description</string>
+    <string name="add_feed_search_hint">Feed URL</string>
+    <string name="invalid_url">Not a valid URL</string>
+    <string name="go_back">Go back</string>
+    <string name="remove_title">Confirm action</string>
+    <string name="remove_desc">Remove %s from feed sources\?</string>
+    <string name="remove_action_yes">Yes</string>
+    <string name="news_image_text">news story image</string>
+    <string name="title_feed_list">Feed List</string>
+    <string name="theme_auto_launcher">Automatically (from launcher)</string>
+    <string name="theme_auto_system">Automatically (from system)</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="sync_half_hour_minutes">30 minutes</string>
+    <string name="sync_range_one_day">1 day</string>
+    <string name="sync_range_two_days">2 days</string>
+    <string name="sync_range_three_days">3 days</string>
+    <string name="sync_range_one_week">1 week</string>
+    <string name="sync_range_one_month">1 month</string>
+    <string name="sync_one_hour">One Hour</string>
+    <string name="sync_two_hours">Two Hours</string>
+    <string name="sync_three_hours">Three Hours</string>
+    <string name="sync_six_hours">Six Hours</string>
+    <string name="transparency_non_transparent">Non Transparent</string>
+    <string name="transparency_low_transparency">75% transparent</string>
+    <string name="transparency_mid_transparency">50% transparent</string>
+    <string name="transparency_high_transparency">25% transparent</string>
+    <string name="transparency_transparent">Transparent</string>
+    <string name="background_theme_option">Theme based</string>
+    <string name="background_white">White</string>
+    <string name="background_amoled">Black</string>
+    <string name="background_primary_color">Launcher: Primary color</string>
+    <string name="background_secondary_color">Launcher: Secondary color</string>
+    <string name="background_tertiary_color">Launcher: Tertiary color</string>
+    <string name="debug_logcat_printing">Extensive logcat printing</string>
+    <string name="debug_content_printing">Log notification content</string>
+    <string name="summary_feed_list">Add or remove RSS sources</string>
+    <string name="source_code_url" translatable="false">https://github.com/NeoApplications/Neo-Feed</string>
+    <string name="telegram_channel" translatable="false">t.me/neo_launcher</string>
+    <string name="title_plugin_list">Plugin List</string>
+    <string name="touch_to_play_video">Touch to play video</string>
+    <string name="fetch_full_articles_by_default">Fetch full articles by default</string>
+    <string name="article_not_found">Local article not found</string>
+    <string name="no_articles_found">No articles found</string>
+    <string name="on_date" translatable="false">%1$s</string>
+    <string name="by_author_on_date">%1$s, %2$s</string>
+
+    <string name="source_enabled">Is Enabled</string>
+    <string name="sources_import_opml">Import feeds from OPML</string>
+    <string name="sources_export_opml">Export feeds to OPML</string>
+    <string name="failed_to_import_OPML">"Failed to import OPML"</string>
+    <string name="failed_to_export_OPML">"Failed to export OPML"</string>
+    <string name="share">Share</string>
+    <string name="delete_feed">Delete feed</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="bookmark_remove">Remove bookmark</string>
+    <string name="action_show_bookmarks">Show bookmarks</string>
+    <string name="action_hide_bookmarks">Hide bookmarks</string>
+    <string name="title_bookmarks">Bookmarks</string>
+    <string name="summary_bookmarks">See your bookmarked articles</string>
+    <string name="title_service">Service</string>
+    <string name="title_other">Other</string>
+    <string name="no_activity_for_link">Web browser not found</string>
+    <string name="title_overlay">Overlay</string>
+    <string name="add_feed">Add feed</string>
+    <string name="pref_remove_duplicates">Remove duplicate article from different sources</string>
+    <string name="theme_auto_system_black">Automatically (from system; black)</string>
+    <string name="theme_black">Black</string>
+    <string name="sort_filter">Sort and filter</string>
+    <string name="state_modified">Modified</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_reset">Reset</string>
+    <string name="sorting_order">Sorting order</string>
+    <string name="sorting_chronological">Chronological</string>
+    <string name="sorting_title">Title</string>
+    <string name="sorting_source">Source</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
+    <string name="select_all">Select all</string>
+    <string name="deselect_all">Deselect all</string>
+    <string name="item_selected">Item selected</string>
+
+    <string name="collapse_handle_description">Drag to collapse bottom sheet</string>
+    <string name="section_icon_description">Section icon</string>
+    <string name="expand_section_description">Expand section</string>
+    <string name="collapse_section_description">Collapse section</string>
+    <string name="date_at_time_FORMAT">%1$s at %2$s</string>
+    <string name="draw_permission_required">This application requires the permission to draw over other apps, without it feed items would not open on click</string>
+    <string name="go_to_settings">Go to settings</string>
+    <string name="file_share_text">File from Neo Feed</string>
+    <string name="sources_import_bookmarks">Import bookmarks</string>
+    <string name="sources_export_bookmarks">Export bookmarks</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_save">Save</string>
+    <string name="action_open_smry">Open in SMRY</string>
+
+    <string name="add_mastodon_account">Add Mastodon account</string>
+    <string name="mastodon_instance_hint">Instance (e.g. mastodon.social)</string>
+    <string name="mastodon_connect">Connect account</string>
+    <string name="mastodon_auth_loading">Opening Mastodon authorization…</string>
+    <string name="mastodon_auth_error">Mastodon authorization failed: %1$s</string>
+    <string name="mastodon_account_added">Mastodon account added</string>
+    <string name="mastodon_require_link">Must contain a link</string>
+    <string name="mastodon_require_image">Must contain a picture</string>
+    <string name="mastodon_exclude_replies">Hide replies</string>
+    <string name="pref_cat_filters">Filters</string>
+    <string name="pref_blocked_words">Blocked words</string>
+    <string name="pref_blocked_words_summary">Hide articles containing these words</string>
+    <string name="blocked_words_title">Blocked words</string>
+    <string name="blocked_words_hint">Add a word</string>
+    <string name="blocked_words_add">Add</string>
+    <string name="blocked_words_empty">No blocked words</string>
+    <string name="mastodon_no_token">No Mastodon token found for this account</string>
+</resources>

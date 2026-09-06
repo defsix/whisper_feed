@@ -1,0 +1,29 @@
+<!--
+  ~ This file is part of Neo Feed
+  ~ Copyright (c) 2024   NeoApplications Team
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as
+  ~ published by the Free Software Foundation, either version 3 of the
+  ~ License, or (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:height="24dp"
+    android:viewportHeight="256"
+    android:viewportWidth="256"
+    android:width="24dp">
+
+    <path
+        android:fillColor="#000000"
+        android:pathData="M128,80a48,48 0,1 0,48 48A48.06,48.06 0,0 0,128 80ZM128,160a32,32 0,1 1,32 -32A32,32 0,0 1,128 160ZM223.68,66.15L135.68,18a15.88,15.88 0,0 0,-15.36 0l-88,48.17a16,16 0,0 0,-8.32 14v95.64a16,16 0,0 0,8.32 14l88,48.17a15.88,15.88 0,0 0,15.36 0l88,-48.17h0a16,16 0,0 0,8.32 -14L232,80.18A16,16 0,0 0,223.68 66.15ZM128,224 L40,175.82L40,80.18L128,32l88,48.17v95.64Z" />
+
+</vector>

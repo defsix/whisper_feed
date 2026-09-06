@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dialog_actions_list_container"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/vkim_bg_overlay"
+    android:backgroundTint="?android:windowBackground"
+    android:elevation="4dp"
+    android:padding="16dp">
+
+    <com.saulhdev.feeder.ui.views.MenuListView
+        android:id="@+id/dialog_actions_list_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:fadingEdge="none"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp"
+        app:dividerColor="?android:textColorSecondary"
+        app:dividerHeight="8dp"
+        app:dividerSize="0.5dp"
+        app:optionBackground="?selectableItemBackground"
+        app:optionIconLabelSpace="16dp"
+        app:optionIconTint="?colorAccent"
+        app:optionLabelTextColor="?android:textColorPrimary"
+        app:optionLabelTextSize="13sp"
+        app:optionPaddingEnd="16dp"
+        app:optionPaddingStart="16dp" />
+</LinearLayout>

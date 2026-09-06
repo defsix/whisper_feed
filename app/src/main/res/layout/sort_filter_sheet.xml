@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ This file is part of Neo Feed
+  ~ Copyright (c) 2025   Neo Feed Team
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as
+  ~ published by the Free Software Foundation, either version 3 of the
+  ~ License, or (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/sort_filter_sheet"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bottom_sheet_background"
+    android:paddingTop="@dimen/standard_padding"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:id="@+id/collapse_handle"
+        android:layout_width="48dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="@dimen/standard_margin"
+        android:background="?attr/colorOnSurface"
+        android:contentDescription="@string/collapse_handle_description" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="true"
+        android:clipChildren="true"
+        android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/standard_padding">
+
+            <com.saulhdev.feeder.ui.views.ExpandableCardView
+                android:id="@+id/sortingCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/MaterialCard"
+                app:sectionIcon="@drawable/ic_sort_ascending"
+                app:sectionTitle="@string/sorting_order"
+                app:iconContentDescription="@string/section_icon_description"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.saulhdev.feeder.ui.views.ExpandableCardView
+                android:id="@+id/sourcesCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/standard_margin"
+                style="@style/MaterialCard"
+                app:sectionIcon="@drawable/ic_graph"
+                app:sectionTitle="@string/title_sources"
+                app:iconContentDescription="@string/section_icon_description"
+                app:layout_constraintTop_toBottomOf="@id/sortingCard"
+                app:layout_constraintVertical_chainStyle="spread" />
+
+            <com.saulhdev.feeder.ui.views.ExpandableCardView
+                android:id="@+id/tagsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/standard_margin"
+                style="@style/MaterialCard"
+                app:sectionIcon="@drawable/ic_news"
+                app:sectionTitle="@string/source_tags"
+                app:iconContentDescription="@string/section_icon_description"
+                app:layout_constraintTop_toBottomOf="@id/sourcesCard" />
+
+            <LinearLayout
+                android:id="@+id/actionButtons"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end"
+                android:layout_marginTop="@dimen/standard_margin"
+                app:layout_constraintTop_toBottomOf="@id/tagsCard"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_reset"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/action_reset" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_apply"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/small_margin"
+                    android:text="@string/action_apply" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+</FrameLayout>

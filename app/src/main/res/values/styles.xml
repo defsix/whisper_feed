@@ -1,0 +1,67 @@
+<resources>
+    <style name="BaseTheme" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+        <item name="toolbarStyle">@style/Widget.Material3.Toolbar</item>
+        <item name="materialCardViewStyle">@style/MaterialCard</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="alertDialogTheme">@style/AlertDialogTheme</item>
+        <!--Status bar theme -->
+        <item name="android:windowLightStatusBar">@bool/isLight</item>
+        <item name="bottomSheetDialogTheme">@style/bottomSheetDialogTheme</item>
+        <item name="android:textColorSecondary">#A8A7A7</item>
+        <item name="colorOnSurface">#3C3C3C</item>
+    </style>
+
+    <style name="bottomSheetDialogTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">
+        <item name="android:colorEdgeEffect">?android:attr/textColorSecondary</item>
+        <item name="android:colorPrimary">@color/grey_100</item>
+        <item name="android:background">@color/bottom_sheet_background</item>
+        <item name="android:windowBackground">@color/bottom_sheet_background</item>
+        <item name="bottomSheetScrimColor">@color/grey_100</item>
+        <item name="bottomSheetNavBarColor">#66000000</item>
+        <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
+    </style>
+
+    <style name="BottomSheetStyle" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearanceMediumComponent">@style/RoundShapeAppearance</item>
+    </style>
+
+    <style name="AlertDialogTheme" parent="MaterialAlertDialog.Material3">
+        <item name="shapeAppearanceMediumComponent">@style/RoundShapeAppearance</item>
+    </style>
+
+    <style name="RoundShapeAppearance" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="MaterialCard" parent="Widget.Material3.CardView.Filled">
+        <item name="background">?background</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Card</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.Card" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="AppTheme" parent="BaseTheme">
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="WindowTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+    </style>
+</resources>

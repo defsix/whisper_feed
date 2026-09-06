@@ -1,0 +1,8 @@
+Add: Pref to remove duplicate articles
+Add: Main pager with Feed, Settings & Feeds
+Add: Share button as action to articles
+Fix: Applying updated Overlay theme
+Update: App icon
+Update: Migrate DI from KodeIn to Koin
+Update: Revamp preferences, articles and feed layouts
++ more in more than 120 commits & 10 translation contributions

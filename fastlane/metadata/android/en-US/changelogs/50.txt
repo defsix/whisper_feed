@@ -1,0 +1,6 @@
+Add: Bookmarking
+Add: Share & open-in-browser buttons
+Add: Dynamic colors
+Add: Monochrome app icon
+Update: Revamp all layouts
+Fix: Editing feeds

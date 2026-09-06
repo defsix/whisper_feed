@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.saulhdev.feeder.ui.views.BaseBottomSheet
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_gravity="bottom"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    android:elevation="2dp"
+    android:orientation="vertical"
+    android:theme="?attr/bottomSheetDialogTheme">
+
+    <FrameLayout
+        android:id="@+id/sheet_contents"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <View
+        android:id="@+id/nav_bar_bg"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="bottom"
+        android:background="#66000000"
+        android:focusable="false" />
+
+</com.saulhdev.feeder.ui.views.BaseBottomSheet>

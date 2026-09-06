@@ -1,0 +1,20 @@
+# Java class files
+*.class
+
+# Generated files
+.project
+.classpath
+.project.properties
+bin/
+build/
+gen/
+out/
+.idea/
+.kotlin/
+
+# Gradle files
+.gradle/
+google-gsa/build/
+app/build/
+release/
+neo/
