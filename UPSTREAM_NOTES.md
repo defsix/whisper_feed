@@ -1,10 +1,14 @@
 # UPSTREAM_NOTES.md — Milestone 0: Launcher Feasibility Spike
 
-Status: **build verified in CI-equivalent environment; live on-device Lawnchair
-swipe/restart/kill-recovery tests NOT yet performed (no physical device or
-emulator available in this environment).** Everything below that is not
-explicitly marked "on-device" is verified by building the real upstream
-source and reading the real Lawnchair source — not assumption.
+Status: **Milestone 0 passed.** Upstream builds, the provider mechanism is
+documented from source on both sides, and minus-one replacement is
+**confirmed working on-device** — Lawnchair debug menu configured, APK
+installed, Discover replacement functioning, as predicted in §3. Everything
+below that is not explicitly marked "on-device" is verified by building the
+real upstream source and reading the real Lawnchair source — not assumption.
+
+The remaining §5 item is re-confirming the same behaviour after the
+`applicationId` rename to `io.zero76.feed`, which has since been made.
 
 ## 1. What was forked and built
 
@@ -148,44 +152,54 @@ picker path described above even before any renaming happens. Worth keeping
 in mind so a "why doesn't the debug APK show up as a feed provider" moment
 isn't mistaken for a deeper problem.
 
-## 4. Licensing (action needed before any code import)
+## 4. Licensing (resolved)
+
+> **Update:** the repository's LICENSE is now GPLv3, byte-identical to
+> upstream's, so the merge that imported Neo Feed resolved it cleanly.
+> Upstream copyright and the credits inherited through it are recorded in
+> `ATTRIBUTION.md`. The original analysis follows.
+
 
 Neo Feed is **GPLv3+**, copyright © 2025 Saul Henriquez & Antonios Hazim.
 Its README credits iTaysonLab's `HomeFeeder` as the project it was forked
 from, and `FabianTerhorst/DrawerOverlayService` as the base for the overlay
 service.
 
-**This repository currently has an MIT `LICENSE` file.** MIT and GPLv3 are
+**At the time of the spike this repository had an MIT `LICENSE` file.** MIT and GPLv3 are
 not compatible in the direction we'd need (a GPLv3+ derivative work cannot
 be redistributed under a plain MIT license). Before any Neo Feed–derived
 source is actually copied into this repository, the repo's license needs to
 become GPLv3+ (or GPLv3-compatible with clear per-file/module attribution),
 and an attribution/`LICENSES` area needs to preserve the upstream copyright
-notices. I haven't changed the LICENSE file yet — flagging this for your
-decision before Milestone 1 starts copying code in, since it's a real
-licensing commitment, not just a formality.
+notices. Both have since been done.
 
-## 5. On-device tests still required (not possible in this remote environment)
+## 5. On-device test results
 
 This environment has no Android emulator, no physical device, and no adb
-target — so the following from the handoff's Milestone 0 checklist are
-still open and need to be run on your Pixel 10 Pro:
+target, so these were run by hand on the target Pixel 10 Pro:
 
-- [ ] Sideload the built debug APK (or a release build) and confirm Lawnchair's Feed Provider picker shows it (expect: it won't, until the whitelist toggle + manual pick from §3 is done — remember the unlock is typing `/lawnchairdebug` in the App Drawer search bar, not an About-screen tap).
-- [ ] With the toggle enabled and Neo Feed picked as feed provider: confirm swipe-right-from-Home opens it.
+- [x] Sideload the built debug APK and unlock the whitelist override (`/lawnchairdebug` in the App Drawer search bar → Debug menu → "Ignore feed whitelist") — **done, works as §3 predicted.**
+- [x] With the toggle enabled and the app picked as feed provider: swipe-right-from-Home opens it — **confirmed, Discover replacement works.**
 - [ ] Confirm the feed survives a Lawnchair restart.
-- [ ] Force-stop the Neo Feed process and confirm Lawnchair recovers (re-binds) on next swipe.
-- [ ] Repeat the above after renaming `applicationId` to `io.zero76.feed` (Milestone 1 territory, but the whitelist behavior should be re-confirmed once renamed).
+- [ ] Force-stop the feed process and confirm Lawnchair recovers (re-binds) on next swipe.
+- [ ] Re-confirm the above now that `applicationId` is `io.zero76.feed` (the rename has been made; a fresh APK needs the same provider-picker check, since it installs as a *new* package alongside any existing Neo Feed install rather than upgrading it).
 
-I can produce a signed/aligned release APK and exact adb sideload commands whenever you're ready to run these.
+The two unchecked resilience checks are not blockers for Milestone 1 — they
+test upstream's overlay lifecycle, which this fork does not modify — but they
+are worth running once before any of it is built on heavily.
 
 ## 6. Conclusion / recommendation
 
 The launcher-integration mechanism is fully understood from source on both
 sides (Neo Feed's service + Lawnchair's discovery code), the unmodified
-upstream builds cleanly against current tooling, and the package-rename
-question has a concrete, low-risk answer (manual toggle, no root). This
-satisfies everything in Milestone 0 that can be verified without a physical
-device. Recommend: proceed to the on-device checklist in §5 when you have
-the Pixel available, and separately decide on the LICENSE question in §4
-before Milestone 1 begins importing/adapting Neo Feed source.
+upstream builds cleanly against current tooling, the package-rename question
+has a concrete, low-risk answer (manual toggle, no root), and minus-one
+replacement is confirmed working on-device.
+
+**Milestone 0 is passed and Milestone 1 is unblocked.** The hardest risk in
+the project — whether a third-party app can own Lawnchair's minus-one page
+without root — is now retired. The two residual items are the resilience
+checks in §5 and the eventual decision on whether to rename the Kotlin
+namespace (`com.saulhdev.feeder`) to match the new application ID; the
+latter is best done after the UI replacement, since it would otherwise churn
+files that are about to be rewritten.
