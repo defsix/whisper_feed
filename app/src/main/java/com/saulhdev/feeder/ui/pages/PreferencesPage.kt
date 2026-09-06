@@ -74,6 +74,7 @@ fun PreferencesPage(
         prefs.overlayTransparency,
     )
     val debugPrefs = listOf(
+        prefs.exportDiagnostics,
         prefs.about,
     )
 

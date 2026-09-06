@@ -18,6 +18,7 @@
 package com.saulhdev.feeder.data.content
 
 import android.content.Context
+import android.widget.Toast
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -43,6 +44,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Swatches
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.ui.navigation.NavRoute
+import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.getItemsPerFeed
 import com.saulhdev.feeder.utils.getMastodonItemsPerFeed
 import com.saulhdev.feeder.utils.getSortingOptions
@@ -54,6 +56,10 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 class FeedPreferences private constructor(val context: Context) : KoinComponent {
@@ -198,6 +204,34 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.About
     )
 
+    /**
+     * Writes a diagnostics report to Downloads.
+     *
+     * Deliberately reachable from the phone alone: this app is developed and
+     * tested on device, where adb needs a network that is not always available,
+     * and an app can read its own logcat without any permission. See Diagnostics.
+     */
+    var exportDiagnostics = StringPref(
+        titleId = R.string.pref_export_diagnostics,
+        summaryId = R.string.pref_export_diagnostics_summary,
+        icon = Phosphor.Bug,
+        key = EXPORT_DIAGNOSTICS,
+        dataStore = dataStore,
+        onClick = {
+            CoroutineScope(Dispatchers.IO).launch {
+                val location = Diagnostics.export(context)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        location?.let { context.getString(R.string.diagnostics_saved, it) }
+                            ?: context.getString(R.string.diagnostics_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    )
+
     var debugging = BooleanPref(
         titleId = R.string.debug_logcat_printing,
         defaultValue = false,
@@ -264,6 +298,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
         val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
+        val EXPORT_DIAGNOSTICS = stringPreferencesKey("pref_export_diagnostics")
 
         /** Open the tapped article in 076 Feed's own reader, using cached content. */
         const val OPEN_MODE_READER = "reader"
