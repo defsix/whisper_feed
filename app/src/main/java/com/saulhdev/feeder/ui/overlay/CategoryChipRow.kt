@@ -36,6 +36,16 @@ import com.saulhdev.feeder.R
  * Selection maps onto the existing tag filter, so choosing a chip filters the
  * feed through the same path the filter sheet already uses. Selecting none is
  * "All": an empty tag set is what the article query treats as unfiltered.
+ *
+ * The "All" chip is always drawn, even with no categories to sit beside it.
+ * That is partly so the row is visibly present before any source has been
+ * tagged, and partly because an empty row is indistinguishable from one that
+ * failed to render — which is precisely what made the first version of this
+ * hard to verify on device.
+ *
+ * The permanent categories the design calls for (Unread, Saved, Recently
+ * Added) are not here yet: articles currently carry no read state at all, so
+ * they need the article-state model rather than a chip that lies.
  */
 @Composable
 fun CategoryChipRow(
@@ -47,7 +57,6 @@ fun CategoryChipRow(
     // Sources default to an empty tag and the query does not exclude it, so an
     // untagged feed otherwise shows up here as a nameless chip.
     val named = categories.filter { it.isNotBlank() }
-    if (named.isEmpty()) return
 
     LazyRow(
         modifier = modifier,
