@@ -50,12 +50,17 @@ For production-ready use, the final logo/icon set should be recreated cleanly as
 - **Palette** — Cobalt `#2563EB` is the seed the app's Material 3 scheme is
   generated from (`OverlayTheme.WhisperSeed`), rather than the roles being
   hand-picked. The full palette is also in `res/values/colors.xml`.
-- **Launcher icon** — `res/drawable/ic_launcher_foreground.xml` is a **vector
-  reconstruction** of the symbol mark: three round-capped slanted strokes, sized
-  to the adaptive-icon safe zone, with a matching monochrome layer for themed
-  icons. It is drawn from these rasters, not exported from the master artwork,
-  so it will not be pixel-identical. Replace it with paths derived from the real
-  SVG when that exists.
+- **Launcher icon** — `res/mipmap-*/ic_launcher_foreground.png` is the supplied
+  `07_production/symbol_white.png`, cropped to its alpha bounds and centred in
+  the adaptive-icon safe zone. Nothing is redrawn. The same file backs the
+  `<monochrome>` layer; the background is flat Cobalt `#2563EB`.
 - **Not yet used** — the wordmark lockups, favicons and splash/onboarding
   mockups. The splash screen and About screen are the obvious next places for
   them.
+
+## Which files to use
+
+`07_production/` holds the **production-ready** artwork and supersedes the
+crops in `01_logos/` – `06_ui_mockups/`, which came from the concept board and
+still show an earlier symbol design. See `07_production/README.md`. Use the
+concept crops for reference only; ship from `07_production/`.

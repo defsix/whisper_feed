@@ -80,9 +80,11 @@ why the permission is needed.
 
 ## Brand
 
-Brand assets and the palette live in [`docs/brand/`](docs/brand/). The app's
-launcher icon is a vector reconstruction of the mark rather than an export of
-the master artwork — see that directory's README.
+Brand assets and the palette live in [`docs/brand/`](docs/brand/). The
+production-ready artwork is in
+[`docs/brand/07_production/`](docs/brand/07_production/) and is what the app
+ships; the other directories are concept-board crops kept for reference and
+show an earlier version of the symbol.
 
 ## Licence and attribution
 
