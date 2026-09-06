@@ -4,42 +4,34 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.appcompat.view.ContextThemeWrapper
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePadding
 import androidx.core.view.doOnAttach
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.libraries.gsa.d.a.OverlayController
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.entity.MenuItem
 import com.saulhdev.feeder.manager.sync.SyncRestClient
-import com.saulhdev.feeder.ui.feed.FeedAdapter
 import com.saulhdev.feeder.ui.navigation.Routes
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.ui.overlay.CategoryChipRow
+import androidx.compose.ui.platform.LocalDensity
+import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.ui.overlay.FeedScaffold
+import com.saulhdev.feeder.utils.extensions.launchView
+import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import androidx.compose.material3.MaterialTheme
 import com.saulhdev.feeder.ui.theme.CardTheme
 import com.saulhdev.feeder.ui.theme.OverlayTheme
@@ -48,9 +40,6 @@ import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
 import com.saulhdev.feeder.ui.views.DialogMenu
 import com.saulhdev.feeder.ui.views.FilterBottomSheet
-import com.saulhdev.feeder.utils.Android
-import com.saulhdev.feeder.utils.LinearLayoutManagerWrapper
-import com.saulhdev.feeder.utils.extensions.isDark
 import com.saulhdev.feeder.utils.extensions.safeStartActivity
 import com.saulhdev.feeder.utils.extensions.setCustomTheme
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
@@ -87,13 +76,27 @@ class OverlayView(val context: Context) :
         OverlayTheme.schemeFor(context, "auto_system", dynamic = true)
     )
 
-    private var categoryChipsAdded = false
+    private var feedAdded = false
 
-    var bookmarkVisible = false
+    /** Feed content, mirrored from the view model into Compose state. */
+    private val articlesState = mutableStateOf<List<FeedItem>>(emptyList())
+    private val bookmarksState = mutableStateOf<List<FeedItem>>(emptyList())
+    private val isSyncingState = mutableStateOf(false)
+    private val showBookmarks = mutableStateOf(false)
+
+    /**
+     * System bar insets, in pixels, as reported to the overlay's root view.
+     *
+     * Passed into Compose rather than read there via WindowInsets: this window
+     * is created against the launcher's token with an unusual flag set, and the
+     * overlay's own inset listener is the value already known to be right.
+     */
+    private val topInsetPx = mutableStateOf(0)
+    private val bottomInsetPx = mutableStateOf(0)
+
     private var pendingCloseOnResume = false
 
     private lateinit var rootView: View
-    private lateinit var adapter: FeedAdapter
 
     private val closeSystemDialogsReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, intent: Intent?) {
@@ -129,25 +132,21 @@ class OverlayView(val context: Context) :
         getWindow().setBackgroundDrawable((bgColor and 0x00ffffff).toDrawable())
 
         initInsets()
-        initRecyclerView()
-        initHeader()
         // Compose content can only go in once the window exists, and the attach
         // itself is the reliable signal for that — unlike onResume. post() keeps
         // the insertion out of the attach traversal, where mutating the hierarchy
         // is unsafe.
-        rootView.doOnAttach { it.post { initCategoryChips() } }
+        rootView.doOnAttach { it.post { initFeed() } }
         refreshNotifications()
 
         syncScope.launch {
             viewModel.articleListState.collect {
-                mainScope.launch {
-                    adapter.replace(it.articles)
-                    mainScope.launch {
-                        rootView.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh).isRefreshing =
-                            it.isSyncing
-                    }
-                }
+                articlesState.value = it.articles
+                isSyncingState.value = it.isSyncing
             }
+        }
+        syncScope.launch {
+            viewModel.bookmarksState.collect { bookmarksState.value = it.bookmarkedArticles }
         }
         syncScope.launch {
             prefs.overlayTheme.get().collect {
@@ -195,7 +194,7 @@ class OverlayView(val context: Context) :
         // updateActivityState(), i.e. when the launcher signals a resume, which a
         // swipe into the overlay does not necessarily do. The attach hook set up
         // in onCreate is what actually drives this; both are idempotent.
-        initCategoryChips()
+        initFeed()
         if (pendingCloseOnResume) {
             pendingCloseOnResume = false
             closePanelIfNeeded(1)
@@ -203,9 +202,9 @@ class OverlayView(val context: Context) :
     }
 
     private fun updateTheme(force: String? = null) {
+        // The feed reads overlayScheme directly, so setting the scheme is the
+        // whole update; there are no View widgets left here to re-tint.
         setTheme(force)
-        updateStubUi()
-        adapter.setTheme(themeHolder.currentTheme)
     }
 
     private fun setTheme(force: String?) {
@@ -223,20 +222,6 @@ class OverlayView(val context: Context) :
         setCustomTheme()
     }
 
-    private fun updateStubUi() {
-        // The current theme already carries the right on-surface colour for its
-        // own background, so this reads it directly rather than re-deriving a
-        // light/dark palette from scratch — which was how the header could end
-        // up tinted from a different palette than the one actually drawn.
-        val onSurface = themeHolder.currentTheme.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal)
-        val tint = ColorStateList.valueOf(onSurface)
-
-        rootView.findViewById<MaterialButton>(R.id.header_settings).iconTint = tint
-        rootView.findViewById<MaterialButton>(R.id.header_filter).iconTint = tint
-        rootView.findViewById<MaterialButton>(R.id.header_bookmark).iconTint = tint
-        rootView.findViewById<TextView>(R.id.header_title).setTextColor(onSurface)
-    }
-
     private fun getStatusBarHeight(): Int {
         val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
         return if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
@@ -249,25 +234,8 @@ class OverlayView(val context: Context) :
     }
 
     private fun applyInsets(statusBarTop: Int, navBarBottom: Int, left: Int = 0, right: Int = 0) {
-        val top = maxOf(statusBarTop, getStatusBarHeight())
-        val bottom = maxOf(navBarBottom, getNavigationBarHeight())
-        val density = context.resources.displayMetrics.density
-
-        rootView.findViewById<View>(R.id.app_bar)?.updatePadding(top = top)
-
-        rootView.findViewById<RecyclerView>(R.id.recycler)?.updatePadding(
-            left = left,
-            right = right,
-            bottom = bottom
-        )
-
-        rootView.findViewById<FloatingActionButton>(R.id.button_return_to_top)?.let { fab ->
-            fab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = (64 * density).toInt() + bottom
-                rightMargin = (24 * density).toInt() + right
-            }
-        }
-
+        topInsetPx.value = maxOf(statusBarTop, getStatusBarHeight())
+        bottomInsetPx.value = maxOf(navBarBottom, getNavigationBarHeight())
     }
 
     private fun initInsets() {
@@ -290,122 +258,6 @@ class OverlayView(val context: Context) :
         })
     }
 
-    private fun initRecyclerView() {
-        val recyclerView = rootView.findViewById<RecyclerView>(R.id.recycler)
-        val buttonReturnToTop =
-            rootView.findViewById<FloatingActionButton>(R.id.button_return_to_top).apply {
-                visibility = View.GONE
-                setOnClickListener {
-                    visibility = View.GONE
-                    recyclerView.smoothScrollToPosition(0)
-
-                }
-            }
-
-        rootView.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh).setOnRefreshListener {
-            rootView.findViewById<RecyclerView>(R.id.recycler).recycledViewPool.clear()
-            refreshNotifications()
-        }
-
-        adapter = FeedAdapter()
-        recyclerView.apply {
-            layoutManager = LinearLayoutManagerWrapper(context, LinearLayoutManager.VERTICAL, false)
-            adapter = this@OverlayView.adapter
-        }
-
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                if ((recyclerView.layoutManager as LinearLayoutManager)
-                        .findFirstCompletelyVisibleItemPosition() < 5
-                ) {
-                    buttonReturnToTop.visibility = View.GONE
-                } else if ((recyclerView.layoutManager as LinearLayoutManager)
-                        .findFirstCompletelyVisibleItemPosition() > 5
-                ) {
-                    buttonReturnToTop.visibility = View.VISIBLE
-                }
-            }
-        })
-    }
-
-    private fun updateToggleColor(button: MaterialButton, isChecked: Boolean) {
-        val context = button.context
-        val darkTheme = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal).isDark()
-        val a14 = Android.sdk(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-        val a12 = Android.sdk(Build.VERSION_CODES.S)
-        val backgroundTint = when {
-            !isChecked       -> Color.TRANSPARENT
-
-            a14 && darkTheme -> ContextCompat.getColor(
-                context,
-                android.R.color.system_on_primary_container_dark
-            )
-
-            a14              -> ContextCompat.getColor(
-                context,
-                android.R.color.system_primary_container_light
-            )
-
-            a12              -> ContextCompat.getColor(
-                context,
-                android.R.color.system_accent1_400
-            )
-
-            else             -> ContextCompat.getColor(
-                context,
-                R.color.md_theme_primary
-            )
-        }
-        button.backgroundTintList = ColorStateList.valueOf(backgroundTint)
-
-    }
-
-    private fun initHeader() {
-        val toggleButton = rootView.findViewById<MaterialButton>(R.id.header_bookmark)
-
-        updateToggleColor(toggleButton, bookmarkVisible)
-        toggleButton.setOnClickListener {
-            mainScope.launch {
-                if (bookmarkVisible) {
-                    bookmarkVisible = false
-                    toggleButton.isChecked = bookmarkVisible
-                    updateToggleColor(toggleButton, bookmarkVisible)
-                    viewModel.articleListState.collect {
-                        adapter.replace(it.articles)
-                        adapter.notifyDataSetChanged()
-                    }
-                } else {
-                    bookmarkVisible = true
-                    toggleButton.isChecked = bookmarkVisible
-                    updateToggleColor(toggleButton, bookmarkVisible)
-                    viewModel.bookmarksState.collect {
-                        adapter.replace(it.bookmarkedArticles)
-                        adapter.notifyDataSetChanged()
-                    }
-                }
-            }
-        }
-
-        rootView.findViewById<MaterialButton>(R.id.header_filter).apply {
-            setOnClickListener {
-                if (AbstractFloatingView.isAnyOpen()) {
-                    AbstractFloatingView.closeAllOpenViews(context)
-                    return@setOnClickListener
-                } else {
-                    FilterBottomSheet.show(context, true)
-                }
-            }
-        }
-
-
-        rootView.findViewById<MaterialButton>(R.id.header_settings).apply {
-            setOnClickListener {
-                openMenu(it)
-            }
-        }
-    }
-
     private fun openMenu(view: View) {
         val popup = DialogMenu(view)
         popup.show(createMenuList()) {
@@ -422,10 +274,7 @@ class OverlayView(val context: Context) :
                     }
                 }
 
-                "reload"  -> {
-                    rootView.findViewById<RecyclerView>(R.id.recycler).recycledViewPool.clear()
-                    refreshNotifications()
-                }
+                "reload"  -> refreshNotifications()
 
                 "restart" -> {
                     val application: NeoApp by inject(NeoApp::class.java)
@@ -436,46 +285,77 @@ class OverlayView(val context: Context) :
     }
 
     /**
-     * Adds the Compose category strip, once, after the overlay's window exists.
+     * Adds the Compose feed, once, after the overlay's window exists.
      *
      * Deliberately not done in [onCreate]: composition is created when a
      * ComposeView attaches to a window, and during onCreate the overlay's window
-     * has not been added yet, so the attach — and any failure in it — happens
-     * later inside upstream's Java setup where it cannot be caught and takes the
-     * whole feed down. Adding the view to an already-attached parent makes the
-     * attach synchronous, so a failure degrades to "no chip row" instead.
+     * has not been added yet, so the attach — and any failure in it — would
+     * happen inside upstream's Java setup where it cannot be caught. Adding the
+     * view to an already-attached parent makes the attach synchronous, so a
+     * failure is catchable here.
      */
-    private fun initCategoryChips() {
-        if (categoryChipsAdded) return
-        val host = rootView.findViewById<ViewGroup>(R.id.header_categories) ?: return
-        categoryChipsAdded = true
+    private fun initFeed() {
+        if (feedAdded) return
+        val host = rootView.findViewById<ViewGroup>(R.id.feed_host) ?: return
+        feedAdded = true
 
         try {
-            host.addView(
-                ComposeView(host.context).apply { setChipContent() }
-            )
+            host.addView(ComposeView(host.context).apply { setFeedContent() })
         } catch (t: Throwable) {
-            Log.e("OverlayView", "Category chips failed to compose; hiding the row", t)
+            Log.e("OverlayView", "Feed failed to compose", t)
             host.removeAllViews()
         }
     }
 
-    private fun ComposeView.setChipContent() {
+    private fun ComposeView.setFeedContent() {
         setContent {
             MaterialTheme(colorScheme = overlayScheme.value, typography = Typography) {
+                val density = LocalDensity.current
                 val categories by sourcesRepo.getAllTagsFlow()
                     .collectAsState(initial = emptyList())
                 val selected by prefs.tagsFilter.get()
                     .collectAsState(initial = emptySet())
 
-                CategoryChipRow(
+                FeedScaffold(
+                    articles = if (showBookmarks.value) bookmarksState.value
+                    else articlesState.value,
                     categories = categories,
-                    selected = selected,
+                    selectedCategories = selected,
+                    isRefreshing = isSyncingState.value,
+                    topInset = with(density) { topInsetPx.value.toDp() },
+                    bottomInset = with(density) { bottomInsetPx.value.toDp() },
                     // setValue blocks on the datastore write, so keep it off the
                     // main thread; the feed updates through the existing flow.
-                    onSelectedChange = { syncScope.launch { prefs.tagsFilter.setValue(it) } },
+                    onCategoriesChange = { syncScope.launch { prefs.tagsFilter.setValue(it) } },
+                    onRefresh = { refreshNotifications() },
+                    onArticleClick = { openArticle(it) },
+                    onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
+                    onShare = { context.safeShareIntent(it.link, it.contentTitle) },
+                    onFilterClick = {
+                        if (AbstractFloatingView.isAnyOpen()) {
+                            AbstractFloatingView.closeAllOpenViews(context)
+                        } else {
+                            FilterBottomSheet.show(context, true)
+                        }
+                    },
+                    // Replaces a click handler that started a new collector on the
+                    // view model every press without ever cancelling the previous
+                    // one; both lists are now collected once and simply chosen
+                    // between here.
+                    onBookmarksClick = { showBookmarks.value = !showBookmarks.value },
+                    onOverflowClick = { openMenu(this@setFeedContent) },
                 )
             }
+        }
+    }
+
+    private fun openArticle(item: FeedItem) {
+        if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+            context.launchView(item.link)
+        } else {
+            context.safeStartActivity(
+                MainActivity.navigateIntent(context, "${Routes.ARTICLE_VIEW}/${item.id}")
+            )
         }
     }
 
@@ -516,9 +396,12 @@ class OverlayView(val context: Context) :
     }
 
     override fun applyCompactCard(value: Boolean) {
-        adapter = FeedAdapter()
-        adapter.setTheme(themeHolder.currentTheme)
-        rootView.findViewById<RecyclerView>(R.id.recycler).adapter = adapter
+        // Upstream swapped the RecyclerView's adapter here to switch card
+        // density. There is no adapter now, and "compact" is really one of the
+        // layout modes the design calls for (Cards, Magazine, List, Mosaic),
+        // so it belongs with those rather than as a lone boolean. The callback
+        // stays wired and refreshes; the density itself does nothing until the
+        // layout modes land. It is not currently reachable from settings.
         refreshNotifications()
     }
 

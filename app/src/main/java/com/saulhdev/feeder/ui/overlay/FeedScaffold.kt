@@ -1,0 +1,197 @@
+/*
+ * This file is part of 076 Feed
+ * Copyright (c) 2026   076 Feed contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+package com.saulhdev.feeder.ui.overlay
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.saulhdev.feeder.R
+import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
+import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
+import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
+import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
+import kotlinx.coroutines.launch
+
+/**
+ * The whole minus-one surface: header, category strip and article list.
+ *
+ * These are one composable rather than three converted pieces because they are
+ * joined by scrolling. The View version coupled them through CoordinatorLayout
+ * — the app bar collapsed in response to the RecyclerView's nested scroll, a
+ * SwipeRefreshLayout wrapped the list, and a scroll listener drove the
+ * scroll-to-top button. Converting the header or the list alone would have
+ * meant building View/Compose nested-scroll interop to preserve that, only to
+ * delete it when the other half followed. Here the coupling is native.
+ *
+ * Insets are passed in rather than read from `WindowInsets`. This window is
+ * created against the launcher's token with an unusual flag set, so the
+ * overlay's own inset listener is the value already known to be correct.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FeedScaffold(
+    articles: List<FeedItem>,
+    categories: List<String>,
+    selectedCategories: Set<String>,
+    isRefreshing: Boolean,
+    topInset: Dp,
+    bottomInset: Dp,
+    onCategoriesChange: (Set<String>) -> Unit,
+    onRefresh: () -> Unit,
+    onArticleClick: (FeedItem) -> Unit,
+    onBookmark: (FeedItem, Boolean) -> Unit,
+    onShare: (FeedItem) -> Unit,
+    onFilterClick: () -> Unit,
+    onBookmarksClick: () -> Unit,
+    onOverflowClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val appBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+
+    // Matches the old scroll listener's threshold, which only offered the jump
+    // back once a few articles had gone by.
+    val showScrollToTop by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 5 }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onFilterClick) {
+                        Icon(Phosphor.FunnelSimple, stringResource(R.string.pref_cat_filters))
+                    }
+                    IconButton(onClick = onBookmarksClick) {
+                        Icon(Phosphor.BookBookmark, stringResource(R.string.title_bookmarks))
+                    }
+                    IconButton(onClick = onOverflowClick) {
+                        Icon(Phosphor.DotsThreeVertical, stringResource(R.string.title_settings))
+                    }
+                },
+                // The overlay draws its own background, so the bar stays
+                // transparent and the feed shows through behind it.
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                scrollBehavior = scrollBehavior,
+                modifier = Modifier.padding(top = topInset),
+            )
+
+            CategoryChipRow(
+                categories = categories,
+                selected = selectedCategories,
+                onSelectedChange = onCategoriesChange,
+            )
+
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 4.dp,
+                        bottom = bottomInset + 16.dp,
+                    ),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(articles, key = { it.id }) { item ->
+                        ArticleCard(
+                            item = item,
+                            onClick = { onArticleClick(item) },
+                            onBookmark = { onBookmark(item, it) },
+                            onShare = { onShare(item) },
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showScrollToTop,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 24.dp, bottom = bottomInset + 24.dp),
+        ) {
+            FloatingActionButton(
+                onClick = { scope.launch { listState.animateScrollToItem(0) } },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(Phosphor.CaretUp, stringResource(R.string.back_to_top))
+            }
+        }
+    }
+}
