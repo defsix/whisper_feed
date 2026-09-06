@@ -1,4 +1,4 @@
-name: Neo Feeder CI
+name: 076 Feed CI
 on:
   push:
     branches: [ main ]

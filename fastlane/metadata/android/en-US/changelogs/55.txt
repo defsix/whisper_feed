@@ -1,1 +1,0 @@
-Replace: bookmark button with favorite button

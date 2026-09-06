@@ -1,5 +1,0 @@
-Add: Black themes
-Fix: Crashing offline reader on certain systems
-Update: Selection dialog layout
-TargetSDK 34
-1 translation contribution

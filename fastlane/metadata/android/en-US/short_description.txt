@@ -1,1 +1,0 @@
-a custom Google Now Feed alternative for launchers

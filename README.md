@@ -1,88 +1,76 @@
-<h1 align="center">
-  <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Neo Store's icon" width="192" height="192"/>
-  <br>
-  Neo Feed
-  <a href="https://shields.rbtlog.dev/com.machiav3lli.fdroid">
-    <img alt="Reproducible build badge" src="https://shields.rbtlog.dev/simple/com.saulhdev.neofeed?style=flat&labelColor=A8F8A5&color=98E796"/>
-  </a>
-</h1>
+# 076 Feed
 
-<p align="center"><strong>Custom Google Discover Feed replacement for launchers!</strong></p>
+**A Pixel-quality, Lawnchair-native RSS feed with user-controlled sources, multiple layouts, transparent personalisation, and private cross-device sync.**
 
-<div align="center">
+076 Feed occupies Lawnchair's left-most **minus-one** page — the slot the Pixel
+Launcher reserves for Google Discover. Swipe right from Home and you get a
+continuously scrolling, personalised feed built from RSS/Atom sources you chose
+yourself.
 
-[![GitHub repo stars](https://img.shields.io/github/stars/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/stargazers)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/NeoApplications/Neo-Feed/android.yml?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/actions?query=workflow%3A%22Omega+Feeder+CI%22+event%3Apush)
-[![GitHub License](https://img.shields.io/github/license/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/blob/main/LICENSE)
-[![GitHub All Releases](https://img.shields.io/github/downloads/NeoApplications/Neo-Feed/total.svg?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/releases/)
-[![GitHub release](https://img.shields.io/github/v/release/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/releases/latest)
+It is a genuine native launcher overlay surface, **not** a home-screen widget.
 
-</div>
+```
+Home screen → swipe right → 076 Feed
+```
 
-<div align="center">
+## Status
 
-[<img src="get_iod.svg" alt="Get it on IzzyOnDroid" width="24%" align="center">](https://apt.izzysoft.de/fdroid/index/apk/com.saulhdev.neofeed)
-[<img src="get_codeberg.svg" alt="Get it on Codeberg" width="24%" align="center">](https://codeberg.org/NeoApplications/Neo-Feed/releases)
-[<img src="get_github.svg" alt="Get it on GitHub" width="24%" align="center">](https://github.com/NeoApplications/Neo-Feed/releases)
+Early development. See `UPSTREAM_NOTES.md` for the launcher-integration
+findings that the project is built on.
 
-</div>
+- **Milestone 0 — launcher feasibility: complete.** Upstream builds, the
+  overlay provider mechanism is documented, and minus-one replacement is
+  confirmed working on-device against Lawnchair.
+- **Milestone 1 — Material shell: in progress.** App identity is renamed to
+  `io.zero76.feed` / "076 Feed"; the UI is still upstream's.
 
-[![Neo Applications Banner](neo_banner.png)](https://github.com/NeoApplications)
+## Principles
 
-## Screenshots :framed_picture:
+- Pixel/Material 3 quality, with Material You dynamic colour and light/dark/system themes.
+- Local-first: Room is the source of truth; the app works fully offline and without any account.
+- You own your sources — add, remove, edit, categorise, reorder, mute, import and export freely.
+- Transparent personalisation. "More like this" / "Less like this" signals you can inspect and reset, never a mandatory opaque algorithm.
+- Chronological ordering is always available and is the default.
+- Feedly-compatible via OPML, never Feedly-dependent.
+- No ads, no sponsored stories, no analytics or telemetry by default.
 
-### Neo Launcher integration, local reader and feeds customization
+## Explicit non-goals
 
-| <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/01.png" alt="" width="330" align="center"> | <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/02.png" alt="" width="330" align="center"> | <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/03.png" alt="" width="330" align="center"> |
-|:---------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------:|
+076 Feed does not ingest, scrape, or synchronise a user's actual Google
+Discover stream. There is no supported public API for that, and the
+alternatives (scraping the Google app, accessibility hacks, reverse-engineering
+private endpoints) are brittle and inappropriate. The goal is to reproduce the
+*quality of the experience* with sources you control.
 
-### Supports wide screens like tablets and TVs
+## Building
 
-| <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/04.png" alt="" width="1000" align="center"> |
-|:----------------------------------------------------------------------------------------------------------------------:|
+Requires JDK 17+ and an Android SDK with platform 37 and build-tools 36.
 
-### Supported launchers
+```bash
+echo "sdk.dir=/path/to/android-sdk" > local.properties
+./gradlew assembleDebug
+```
 
-Any launcher with custom feed provider support. For example:
+The APK lands in `app/build/outputs/apk/debug/`.
 
-- Neo Launcher
-- LawnChair
-- Shade Launcher
+### Getting Lawnchair to use it
 
-## Community :speech_balloon:
+Lawnchair only accepts feed providers on a hardcoded package whitelist, and
+`io.zero76.feed` is not on it. To use a local build, unlock Lawnchair's debug
+menu and turn the whitelist check off:
 
-You can join either our [Telegram](https://t.me/neo_launcher) or [Matrix](https://matrix.to/#/#neo-launcher:matrix.org) groups to make suggestions, ask questions, receive news, install test builds, or just chat.
+1. Open the App Drawer, tap the search field, and type `/lawnchairdebug`.
+2. Open Lawnchair Settings — a build icon now appears in the overflow area — and go to **Debug menu**.
+3. Enable **Ignore feed whitelist**.
+4. In **Home screen settings → Feed provider**, select **076 Feed**.
 
-<p align="center">
-<a href="https://t.me/neo_launcher"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Join Telegram Channel" width="11%" align="center"></a>
-<a href="https://matrix.to/#/#neo-launcher:matrix.org"><img src="https://docs.cloudron.io/img/element-logo.png" alt="Join Matrix Channel" width="11%" align="center" /></a>
-</p>
+No root, LSPosed, or Shizuku is required. The mechanism and the reasoning
+behind it are documented in `UPSTREAM_NOTES.md` §3.
 
-## Translation :left_speech_bubble: 
-[<img align="right" src="https://hosted.weblate.org/widgets/neo-feed/-/287x66-white.png" alt="Translation stats" width="40%" />](https://hosted.weblate.org/engage/neo-feed/?utm_source=widget)
+## Licence and attribution
 
-Contribute your translations to Neo Feed on [Hosted Weblate](https://hosted.weblate.org/engage/neo-feed/). <br> Adding new languages is always accepted and supported.
+076 Feed is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
 
-[![Translation stats](https://hosted.weblate.org/widgets/neo-feed/-/multi-auto.svg)](https://hosted.weblate.org/engage/neo-feed/?utm_source=widget)
-
-## Special Thanks :heart:
-
-[iTaysonLab](https://github.com/iTaysonLab) as the project is a fork of his HomeFeeder.
-
-[DrawerOverlayService](https://github.com/FabianTerhorst/DrawerOverlayService) as base for overlay service.
-
-[Helena Zheng](https://helenazhang.com/) & [Tobias Fried](https://tobiasfried.com/) for the great [Phosphor Icons](https://phosphoricons.com/), we gladly use.
-
-### Contributors :handshake:
-
-<a href="https://github.com/NeoApplications/Neo-Feed/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=NeoApplications/Neo-Feed"  alt="Icons of contributors to Neo Store"/>
-</a>
-
-## Copylefted Libre License :scroll:
-
-Licensed under the [GPLv3+](/LICENSE).
-
-Copyright © 2025 [Saul Henriquez](https://github.com/machiav3lli) & [Antonios Hazim](https://github.com/machiav3lli)
-
-![Star History Chart](https://api.star-history.com/svg?repos=NeoApplications/Neo-Feed&type=Date)
+It is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed), whose
+launcher-overlay implementation it retains. See
+[`ATTRIBUTION.md`](ATTRIBUTION.md) for full upstream copyright and credits.
