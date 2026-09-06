@@ -79,13 +79,24 @@ class OverlayComposeHost : LifecycleOwner, ViewModelStoreOwner, SavedStateRegist
     }
 
     /**
-     * Publishes this host on [view]'s tree so any `ComposeView` beneath it can
-     * find the owners it needs. Call on the overlay's root, once, after
-     * [onCreate].
+     * Publishes this host on each of [views] so a `ComposeView` in the tree can
+     * find the owners it needs. Call after [onCreate], before anything attaches
+     * to a window.
+     *
+     * Which view this goes on is not a free choice, and getting it wrong throws
+     * "ViewTreeLifecycleOwner not found" at attach time. Compose does not search
+     * upward from the `ComposeView` itself: `View.windowRecomposer` first walks
+     * up to the window's *content child* — the view whose parent carries
+     * `android.R.id.content` — and only then calls `findViewTreeLifecycleOwner()`
+     * starting at that node. Owners set anywhere below it are invisible to that
+     * lookup. Here the content child is the overlay's `slidingPanelLayout`, so
+     * that is the node that must carry them.
      */
-    fun attachTo(view: View) {
-        view.setViewTreeLifecycleOwner(this)
-        view.setViewTreeViewModelStoreOwner(this)
-        view.setViewTreeSavedStateRegistryOwner(this)
+    fun attachTo(vararg views: View?) {
+        views.filterNotNull().forEach { view ->
+            view.setViewTreeLifecycleOwner(this)
+            view.setViewTreeViewModelStoreOwner(this)
+            view.setViewTreeSavedStateRegistryOwner(this)
+        }
     }
 }

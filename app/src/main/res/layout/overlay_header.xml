@@ -72,11 +72,14 @@
 </LinearLayout>
 
     <!--
-      The Material shell is being built in Compose while the feed list is still
-      the upstream RecyclerView, so the two coexist here for now. See
-      OverlayComposeHost for how Compose is hosted in a launcher-owned window.
+      Host for the Compose category strip. The ComposeView is added into this at
+      runtime rather than declared here on purpose: composition starts when the
+      view attaches to a window, so a ComposeView inflated into this layout would
+      compose during the overlay's window setup, where a failure is thrown from
+      upstream Java and takes the whole feed down. Added programmatically once
+      the window is up, the same failure is catchable. See OverlayView.
     -->
-    <androidx.compose.ui.platform.ComposeView
+    <FrameLayout
         android:id="@+id/header_categories"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

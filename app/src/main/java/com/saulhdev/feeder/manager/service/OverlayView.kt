@@ -83,6 +83,8 @@ class OverlayView(val context: Context) :
      */
     private val overlayIsDark = mutableStateOf(true)
 
+    private var categoryChipsAdded = false
+
     var bookmarkVisible = false
     private var pendingCloseOnResume = false
 
@@ -100,12 +102,13 @@ class OverlayView(val context: Context) :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Both of these must precede inflation. The layout contains a ComposeView,
-        // and Compose resolves its owners by walking up the view tree the moment
-        // the view attaches to a window — which can happen during inflation, since
-        // the container is already part of the overlay's window.
+        // Owners must exist before any Compose content is added later in onResume.
+        // slidingPanelLayout is the load-bearing one: it is what Compose resolves
+        // as the window's content child, and owners placed below it are not found.
+        // Both it and the container are assigned before this runs. See
+        // OverlayComposeHost.attachTo for why the node matters.
         composeHost.onCreate()
-        composeHost.attachTo(this.container)
+        composeHost.attachTo(this.slidingPanelLayout, this.container)
 
         rootView = View.inflate(
             ContextThemeWrapper(this, R.style.AppTheme),
@@ -124,7 +127,6 @@ class OverlayView(val context: Context) :
         initInsets()
         initRecyclerView()
         initHeader()
-        initCategoryChips()
         refreshNotifications()
 
         syncScope.launch {
@@ -173,6 +175,9 @@ class OverlayView(val context: Context) :
 
     override fun onResume() {
         super.onResume()
+        // Runs here rather than onCreate so the window already exists; see
+        // initCategoryChips. Self-guards against the repeat calls onResume gets.
+        initCategoryChips()
         if (pendingCloseOnResume) {
             pendingCloseOnResume = false
             closePanelIfNeeded(1)
@@ -427,8 +432,33 @@ class OverlayView(val context: Context) :
         }
     }
 
+    /**
+     * Adds the Compose category strip, once, after the overlay's window exists.
+     *
+     * Deliberately not done in [onCreate]: composition is created when a
+     * ComposeView attaches to a window, and during onCreate the overlay's window
+     * has not been added yet, so the attach — and any failure in it — happens
+     * later inside upstream's Java setup where it cannot be caught and takes the
+     * whole feed down. Adding the view to an already-attached parent makes the
+     * attach synchronous, so a failure degrades to "no chip row" instead.
+     */
     private fun initCategoryChips() {
-        rootView.findViewById<ComposeView>(R.id.header_categories).setContent {
+        if (categoryChipsAdded) return
+        val host = rootView.findViewById<ViewGroup>(R.id.header_categories) ?: return
+        categoryChipsAdded = true
+
+        try {
+            host.addView(
+                ComposeView(host.context).apply { setChipContent() }
+            )
+        } catch (t: Throwable) {
+            Log.e("OverlayView", "Category chips failed to compose; hiding the row", t)
+            host.removeAllViews()
+        }
+    }
+
+    private fun ComposeView.setChipContent() {
+        setContent {
             AppTheme(darkTheme = overlayIsDark.value) {
                 val categories by sourcesRepo.getAllTagsFlow()
                     .collectAsState(initial = emptyList())
