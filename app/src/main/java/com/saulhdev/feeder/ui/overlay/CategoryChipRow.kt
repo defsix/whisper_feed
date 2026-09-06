@@ -44,7 +44,10 @@ fun CategoryChipRow(
     onSelectedChange: (Set<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (categories.isEmpty()) return
+    // Sources default to an empty tag and the query does not exclude it, so an
+    // untagged feed otherwise shows up here as a nameless chip.
+    val named = categories.filter { it.isNotBlank() }
+    if (named.isEmpty()) return
 
     LazyRow(
         modifier = modifier,
@@ -61,7 +64,7 @@ fun CategoryChipRow(
             )
         }
 
-        items(categories, key = { it }) { category ->
+        items(named, key = { it }) { category ->
             val isSelected = category in selected
             FilterChip(
                 selected = isSelected,

@@ -19,6 +19,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.core.view.doOnAttach
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -102,7 +103,7 @@ class OverlayView(val context: Context) :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Owners must exist before any Compose content is added later in onResume.
+        // Owners must exist before any Compose content is added on window attach.
         // slidingPanelLayout is the load-bearing one: it is what Compose resolves
         // as the window's content child, and owners placed below it are not found.
         // Both it and the container are assigned before this runs. See
@@ -127,6 +128,11 @@ class OverlayView(val context: Context) :
         initInsets()
         initRecyclerView()
         initHeader()
+        // Compose content can only go in once the window exists, and the attach
+        // itself is the reliable signal for that — unlike onResume. post() keeps
+        // the insertion out of the attach traversal, where mutating the hierarchy
+        // is unsafe.
+        rootView.doOnAttach { it.post { initCategoryChips() } }
         refreshNotifications()
 
         syncScope.launch {
@@ -175,8 +181,10 @@ class OverlayView(val context: Context) :
 
     override fun onResume() {
         super.onResume()
-        // Runs here rather than onCreate so the window already exists; see
-        // initCategoryChips. Self-guards against the repeat calls onResume gets.
+        // Backstop only. onResume is not guaranteed here: upstream fires it from
+        // updateActivityState(), i.e. when the launcher signals a resume, which a
+        // swipe into the overlay does not necessarily do. The attach hook set up
+        // in onCreate is what actually drives this; both are idempotent.
         initCategoryChips()
         if (pendingCloseOnResume) {
             pendingCloseOnResume = false
