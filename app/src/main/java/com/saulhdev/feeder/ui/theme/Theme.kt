@@ -3,6 +3,7 @@ package com.saulhdev.feeder.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import com.materialkolor.dynamicColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -44,8 +45,12 @@ fun AppTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        // Same brand-first rule as the overlay; see OverlayTheme.
+        else -> dynamicColorScheme(
+            seedColor = OverlayTheme.WhisperSeed,
+            isDark = darkTheme,
+            isAmoled = false,
+        )
     }
 
     MaterialTheme(

@@ -1,6 +1,6 @@
 /*
- * This file is part of 076 Feed
- * Copyright (c) 2026   076 Feed contributors
+ * This file is part of Whisper
+ * Copyright (c) 2026   Whisper contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -54,7 +54,7 @@ object Diagnostics : KoinComponent {
     suspend fun collect(context: Context): String = buildString {
         val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
 
-        appendLine("076 Feed diagnostics")
+        appendLine("Whisper diagnostics")
         appendLine("Generated: $now")
         appendLine()
 

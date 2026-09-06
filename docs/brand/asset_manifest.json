@@ -1,0 +1,15 @@
+{
+  "name": "Whisper",
+  "tagline": "Your feeds, your focus.",
+  "descriptor": "RSS Reader",
+  "theme": "Android / Material You",
+  "palette": {
+    "Cobalt": "#2563EB",
+    "Indigo": "#4F46E5",
+    "Sky": "#7DD3FC",
+    "Slate": "#475569",
+    "Soft": "#E5E7EB"
+  },
+  "source_board": "/mnt/data/whisper_rss_brand_toolkit_board.png",
+  "asset_count": 22
+}

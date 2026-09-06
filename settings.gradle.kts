@@ -23,6 +23,6 @@ dependencyResolutionManagement {
 include(":google-gsa")
 project(":google-gsa").projectDir = File(rootDir, "google-gsa")
 
-rootProject.name = "076 Feed"
+rootProject.name = "Whisper"
 include(":app")
  

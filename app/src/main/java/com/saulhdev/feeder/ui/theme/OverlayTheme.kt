@@ -1,6 +1,6 @@
 /*
- * This file is part of 076 Feed
- * Copyright (c) 2026   076 Feed contributors
+ * This file is part of Whisper
+ * Copyright (c) 2026   Whisper contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -22,10 +22,9 @@ import android.content.res.Configuration
 import android.os.Build
 import android.util.SparseIntArray
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import com.materialkolor.dynamicColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
@@ -46,6 +45,10 @@ import androidx.compose.ui.graphics.toArgb
  * the existing View code has to change.
  */
 object OverlayTheme {
+
+    /** Whisper Cobalt — the brand seed every non-dynamic scheme is built from. */
+    val WhisperSeed = Color(0xFF2563EB)
+
 
     /**
      * Builds the scheme for a saved theme preference.
@@ -75,8 +78,13 @@ object OverlayTheme {
             dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                 if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
 
-            dark -> darkColorScheme()
-            else -> lightColorScheme()
+            // Whisper's own palette, generated as a full Material 3 scheme from
+            // the brand seed rather than hand-picked role by role. This is the
+            // default: the brand should be what the app looks like out of the
+            // box, with wallpaper theming available to anyone who prefers it.
+            // It also covers API 26-30, where Android has no dynamic colour to
+            // offer at all.
+            else -> dynamicColorScheme(seedColor = WhisperSeed, isDark = dark, isAmoled = false)
         }
 
         // "Black" is the dark scheme pushed to true black for OLED, which is a

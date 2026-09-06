@@ -4,7 +4,7 @@ Findings from reading the source of comparable projects, recorded so the
 Milestone 1+ work can lift proven solutions instead of rediscovering them.
 
 **Licence position:** every project below is **GPLv3**, the same licence as
-076 Feed. Code may be adapted directly, provided the upstream copyright and
+Whisper. Code may be adapted directly, provided the upstream copyright and
 origin are preserved in the adapted files and recorded in `ATTRIBUTION.md`.
 Nothing here has been copied into the tree yet.
 

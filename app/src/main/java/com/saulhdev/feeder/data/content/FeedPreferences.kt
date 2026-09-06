@@ -74,12 +74,19 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getThemes(context)
     )
 
+    /**
+     * Wallpaper-derived theming, off by default.
+     *
+     * Whisper ships looking like Whisper: the brand palette is the default and
+     * Material You is opt-in for anyone who would rather the app follow their
+     * wallpaper. See OverlayTheme for how the brand scheme is generated.
+     */
     val dynamicColor = BooleanPref(
         titleId = R.string.pref_dynamic_color,
         icon = Phosphor.Swatches,
         key = OVERLAY_DYNAMIC_THEME,
         dataStore = dataStore,
-        defaultValue = true
+        defaultValue = false
     )
 
     var overlayTransparency = FloatPref(
@@ -320,7 +327,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")
         val EXPORT_DIAGNOSTICS = stringPreferencesKey("pref_export_diagnostics")
 
-        /** Open the tapped article in 076 Feed's own reader, using cached content. */
+        /** Open the tapped article in Whisper's own reader, using cached content. */
         const val OPEN_MODE_READER = "reader"
 
         /** Hand the article's URL to the device's default browser. */

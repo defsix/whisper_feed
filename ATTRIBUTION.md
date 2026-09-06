@@ -1,12 +1,12 @@
 # Attribution
 
-076 Feed is a derivative work and is distributed under the **GNU General Public
+Whisper is a derivative work and is distributed under the **GNU General Public
 License v3.0 or later**, the same licence as the project it forks. The full
 licence text is in [`LICENSE`](LICENSE).
 
 ## Neo Feed
 
-076 Feed is a fork of **Neo Feed**.
+Whisper is a fork of **Neo Feed**.
 
 - Source: https://github.com/NeoApplications/Neo-Feed
 - Forked at commit: `42e023c2f454229055bca35bebdbdbd18ad5f0e3`
@@ -16,7 +16,7 @@ licence text is in [`LICENSE`](LICENSE).
 Neo Feed contributed the entire initial codebase, and most importantly the
 launcher minus-one overlay integration — the `OverlayService` and the
 `:google-gsa` module that together implement the
-`com.android.launcher3.WINDOW_OVERLAY` provider protocol. 076 Feed retains
+`com.android.launcher3.WINDOW_OVERLAY` provider protocol. Whisper retains
 that work rather than reimplementing it.
 
 ## Upstream of Neo Feed
@@ -37,10 +37,10 @@ The `:google-gsa` module implements Google's launcher overlay protocol so that
 launchers such as Lawnchair can bind to this app as a feed provider. It is an
 independent reimplementation for interoperability, inherited from upstream. It
 is not affiliated with, endorsed by, or derived from Google source code, and
-076 Feed is not affiliated with Google, Lawnchair, or Feedly.
+Whisper is not affiliated with Google, Lawnchair, or Feedly.
 
 ## Source availability
 
-As required by the GPL, the complete corresponding source for 076 Feed is
+As required by the GPL, the complete corresponding source for Whisper is
 available at the repository this file ships in. Any redistributed binary must
 be accompanied by, or offer access to, that source under the same licence.

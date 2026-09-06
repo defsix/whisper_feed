@@ -8,7 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="md_theme_primary">#6750A4</color>
-    <color name="ic_launcher_background">#F9FCF6</color>
+    <!-- Whisper brand palette -->
+    <color name="whisper_cobalt">#2563EB</color>
+    <color name="whisper_indigo">#4F46E5</color>
+    <color name="whisper_sky">#7DD3FC</color>
+    <color name="whisper_slate">#475569</color>
+    <color name="whisper_soft">#E5E7EB</color>
+    <color name="ic_launcher_background">#2563EB</color>
     <color name="globalAccent">#4285f4</color>
     <color name="textColorPrimary">#000000</color>
     <color name="toggle_checked">#6200EE</color>

@@ -26,7 +26,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.zero76.feed"
+        applicationId = "io.zero76.whisper"
         minSdk = 26
         targetSdk = 37
         versionCode = 1900
@@ -97,7 +97,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             val versionName = output.versionName.get()
-            output.outputFileName.set("076_Feed_${versionName}_${variant.name}.apk")
+            output.outputFileName.set("Whisper_${versionName}_${variant.name}.apk")
         }
     }
 }
@@ -123,6 +123,7 @@ dependencies {
     implementation(libs.datetime)
     implementation(libs.material)
     implementation(libs.browser)
+    implementation(libs.materialkolor)
     implementation(libs.collections.immutable)
 
     implementation(libs.datastore.preferences)

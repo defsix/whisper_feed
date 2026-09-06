@@ -1,8 +1,10 @@
-# 076 Feed
+# Whisper
+
+**Your feeds, your focus.**
 
 **A Pixel-quality, Lawnchair-native RSS feed with user-controlled sources, multiple layouts, transparent personalisation, and private cross-device sync.**
 
-076 Feed occupies Lawnchair's left-most **minus-one** page — the slot the Pixel
+Whisper occupies Lawnchair's left-most **minus-one** page — the slot the Pixel
 Launcher reserves for Google Discover. Swipe right from Home and you get a
 continuously scrolling, personalised feed built from RSS/Atom sources you chose
 yourself.
@@ -10,7 +12,7 @@ yourself.
 It is a genuine native launcher overlay surface, **not** a home-screen widget.
 
 ```
-Home screen → swipe right → 076 Feed
+Home screen → swipe right → Whisper
 ```
 
 ## Status
@@ -22,7 +24,7 @@ findings that the project is built on.
   overlay provider mechanism is documented, and minus-one replacement is
   confirmed working on-device against Lawnchair.
 - **Milestone 1 — Material shell: in progress.** App identity is renamed to
-  `io.zero76.feed` / "076 Feed"; the UI is still upstream's.
+  `io.zero76.whisper` / "Whisper"; the UI is still upstream's.
 
 ## Principles
 
@@ -36,7 +38,7 @@ findings that the project is built on.
 
 ## Explicit non-goals
 
-076 Feed does not ingest, scrape, or synchronise a user's actual Google
+Whisper does not ingest, scrape, or synchronise a user's actual Google
 Discover stream. There is no supported public API for that, and the
 alternatives (scraping the Google app, accessibility hacks, reverse-engineering
 private endpoints) are brittle and inappropriate. The goal is to reproduce the
@@ -56,13 +58,13 @@ The APK lands in `app/build/outputs/apk/debug/`.
 ### Getting Lawnchair to use it
 
 Lawnchair only accepts feed providers on a hardcoded package whitelist, and
-`io.zero76.feed` is not on it. To use a local build, unlock Lawnchair's debug
+`io.zero76.whisper` is not on it. To use a local build, unlock Lawnchair's debug
 menu and turn the whitelist check off:
 
 1. Open the App Drawer, tap the search field, and type `/lawnchairdebug`.
 2. Open Lawnchair Settings — a build icon now appears in the overflow area — and go to **Debug menu**.
 3. Enable **Ignore feed whitelist**.
-4. In **Home screen settings → Feed provider**, select **076 Feed**.
+4. In **Home screen settings → Feed provider**, select **Whisper**.
 
 No root, LSPosed, or Shizuku is required. The mechanism and the reasoning
 behind it are documented in `UPSTREAM_NOTES.md` §3.
@@ -72,13 +74,19 @@ behind it are documented in `UPSTREAM_NOTES.md` §3.
 The app needs this permission to open articles you tap — the feed itself
 renders without it, but taps do nothing. On a sideloaded build the toggle is
 greyed out, because Android restricts sensitive permissions for apps not
-installed from an app store. Unblock it via **Settings → Apps → 076 Feed → ⋮
+installed from an app store. Unblock it via **Settings → Apps → Whisper → ⋮
 → Allow restricted settings**, then grant it. See `UPSTREAM_NOTES.md` §3b for
 why the permission is needed.
 
+## Brand
+
+Brand assets and the palette live in [`docs/brand/`](docs/brand/). The app's
+launcher icon is a vector reconstruction of the mark rather than an export of
+the master artwork — see that directory's README.
+
 ## Licence and attribution
 
-076 Feed is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
+Whisper is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
 
 It is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed), whose
 launcher-overlay implementation it retains. See
