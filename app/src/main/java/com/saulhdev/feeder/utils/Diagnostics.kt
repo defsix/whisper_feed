@@ -76,7 +76,13 @@ object Diagnostics : KoinComponent {
             val prefs = get<FeedPreferences>()
             appendLine("Article open mode: ${prefs.articleOpenMode.getValue()}")
             appendLine("Overlay theme:     ${prefs.overlayTheme.getValue()}")
-            appendLine("Selected tags:     ${prefs.tagsFilter.getValue()}")
+            // Two different things, easily confused: categoryFilter is what the
+            // chips select (include), tagsFilter is what the filter sheet mutes
+            // (exclude). Reporting only one of them is how a misleading report
+            // gets written.
+            appendLine("Selected categories: ${prefs.categoryFilter.getValue()}")
+            appendLine("Muted tags:          ${prefs.tagsFilter.getValue()}")
+            appendLine("Muted sources:       ${prefs.sourcesFilter.getValue()}")
         }.onFailure { appendLine("Preferences unavailable: $it") }
 
         // Worth reporting explicitly: an empty tag list is the ordinary reason the
