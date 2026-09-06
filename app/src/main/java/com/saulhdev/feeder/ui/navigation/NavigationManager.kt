@@ -83,6 +83,8 @@ fun NavigationManager(
                 val args = it.toRoute<NavRoute.Main>()
                 MainPage(args.page)
             }
+            composable<NavRoute.Settings> { PreferencesPage() }
+            composable<NavRoute.Sources> { SourceListPage() }
             composable<NavRoute.About> { AboutPage() }
             composable<NavRoute.License> { LicensePage() }
             composable<NavRoute.Changelog> { ChangelogPage() }
@@ -134,19 +136,16 @@ sealed class NavItem(
             ArticleListPage()
         })
 
-    data object Settings :
-        NavItem(R.string.title_settings, Phosphor.GearSix, {
-            PreferencesPage()
-        })
-
-    data object Sources :
-        NavItem(R.string.title_sources, Phosphor.Graph, {
-            SourceListPage()
-        })
 }
 
 @Serializable
 open class NavRoute {
+    @Serializable
+    data object Settings : NavRoute()
+
+    @Serializable
+    data object Sources : NavRoute()
+
     @Serializable
     data object About : NavRoute()
 

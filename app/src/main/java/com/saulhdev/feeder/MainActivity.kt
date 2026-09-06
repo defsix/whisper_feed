@@ -31,6 +31,8 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.manager.sync.FeedSyncer
 import com.saulhdev.feeder.ui.navigation.NAV_BASE
 import com.saulhdev.feeder.ui.navigation.NavigationManager
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.utils.extensions.isDarkTheme
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -48,12 +50,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             navController = rememberNavController()
             TransparentSystemBars()
+            // Collected rather than read once, so changing the theme or the
+            // typeface in Settings is reflected immediately instead of on the
+            // next app start.
+            val themeMode by prefs.overlayTheme.get()
+                .collectAsState(initial = prefs.overlayTheme.getValue())
+            val dynamic by prefs.dynamicColor.get()
+                .collectAsState(initial = prefs.dynamicColor.getValue())
+            val fontPref by prefs.appFont.get()
+                .collectAsState(initial = prefs.appFont.getValue())
+
             AppTheme(
-                darkTheme = when (com.saulhdev.feeder.manager.sync.prefs.overlayTheme.getValue()) {
-                    "auto_system" -> isSystemInDarkTheme()
-                    else          -> isDarkTheme
-                },
-                dynamicColor = prefs.dynamicColor.getValue(),
+                mode = themeMode,
+                dynamicColor = dynamic,
+                fontPref = fontPref,
             ) {
                 NavigationManager(
                     modifier = Modifier.imePadding(),

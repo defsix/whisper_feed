@@ -1,61 +1,36 @@
 package com.saulhdev.feeder.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import com.materialkolor.dynamicColorScheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
-
+/**
+ * The app's theme.
+ *
+ * This used to be a second, independent implementation of the same rule the
+ * overlay applies, and the two had already drifted: it took a plain
+ * `darkTheme: Boolean`, so the "Black" and "Automatic (from system; black)"
+ * options collapsed into ordinary dark, and it carried an unused Purple/Pink
+ * palette left over from the project template. It now delegates to
+ * [OverlayTheme.schemeFor], which is what the launcher surface uses, so both
+ * answer the colour question the same way.
+ *
+ * @param mode a key from `getThemes()`: auto_system, auto_system_black, light,
+ *   dark, black.
+ * @param dynamicColor whether to derive colours from the wallpaper.
+ * @param fontPref the saved `appFont` value: "inter" or "system".
+ */
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    mode: String,
+    dynamicColor: Boolean,
+    fontPref: String,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        // Same brand-first rule as the overlay; see OverlayTheme.
-        else -> dynamicColorScheme(
-            seedColor = OverlayTheme.WhisperSeed,
-            isDark = darkTheme,
-            isAmoled = false,
-        )
-    }
-
+    val context = LocalContext.current
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
+        colorScheme = OverlayTheme.schemeFor(context, mode, dynamicColor),
+        typography = typographyFor(fontFamilyFor(fontPref)),
         content = content
     )
 }

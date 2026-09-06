@@ -69,8 +69,9 @@ fun PreferencesPage(
         prefs.blockedWords,
     )
     val themePrefs = listOf(
-        prefs.dynamicColor,
         prefs.overlayTheme,
+        prefs.appFont,
+        prefs.dynamicColor,
         prefs.overlayTransparency,
     )
     val debugPrefs = listOf(

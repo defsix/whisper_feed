@@ -38,7 +38,11 @@
     <string name="pref_cat_debug">Debug</string>
     <string name="pref_transparency">Overlay background opacity</string>
     <string name="pref_dynamic_color">Dynamic Color</string>
-    <string name="pref_ovr_theme">Overlay theme</string>
+    <string name="pref_ovr_theme">Theme</string>
+    <string name="pref_app_font">Font</string>
+    <string name="font_inter" translatable="false">Inter</string>
+    <string name="font_system">System default</string>
+    <string name="title_data_sources">Data sources</string>
     <string name="pref_article_open_mode">Open articles with</string>
     <string name="article_open_reader">Built-in reader</string>
     <string name="article_open_browser">Default browser</string>

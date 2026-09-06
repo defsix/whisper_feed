@@ -35,7 +35,8 @@ import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import androidx.compose.material3.MaterialTheme
 import com.saulhdev.feeder.ui.theme.CardTheme
 import com.saulhdev.feeder.ui.theme.OverlayTheme
-import com.saulhdev.feeder.ui.theme.Typography
+import com.saulhdev.feeder.ui.theme.fontFamilyFor
+import com.saulhdev.feeder.ui.theme.typographyFor
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
 import com.saulhdev.feeder.ui.views.DialogMenu
@@ -82,6 +83,9 @@ class OverlayView(val context: Context) :
     private val articlesState = mutableStateOf<List<FeedItem>>(emptyList())
     private val bookmarksState = mutableStateOf<List<FeedItem>>(emptyList())
     private val isSyncingState = mutableStateOf(false)
+
+    /** Typeface preference, mirrored so the overlay matches the app. */
+    private val overlayFont = mutableStateOf(prefs.appFont.getValue())
     private val showBookmarks = mutableStateOf(false)
     private val isFilterActive = mutableStateOf(false)
 
@@ -149,6 +153,9 @@ class OverlayView(val context: Context) :
         }
         syncScope.launch {
             viewModel.bookmarksState.collect { bookmarksState.value = it.bookmarkedArticles }
+        }
+        syncScope.launch {
+            prefs.appFont.get().collect { overlayFont.value = it }
         }
         syncScope.launch {
             prefs.overlayTheme.get().collect {
@@ -311,7 +318,10 @@ class OverlayView(val context: Context) :
 
     private fun ComposeView.setFeedContent() {
         setContent {
-            MaterialTheme(colorScheme = overlayScheme.value, typography = Typography) {
+            MaterialTheme(
+                colorScheme = overlayScheme.value,
+                typography = typographyFor(fontFamilyFor(overlayFont.value)),
+            ) {
                 val density = LocalDensity.current
                 val categories by sourcesRepo.getAllTagsFlow()
                     .collectAsState(initial = emptyList())

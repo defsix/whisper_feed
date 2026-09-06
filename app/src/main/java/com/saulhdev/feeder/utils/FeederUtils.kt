@@ -45,6 +45,13 @@ fun getThemes(context: Context): Map<String, String> {
     )
 }
 
+fun getFonts(context: Context): Map<String, String> {
+    return mapOf(
+        "inter" to context.resources.getString(R.string.font_inter),
+        "system" to context.resources.getString(R.string.font_system),
+    )
+}
+
 fun getSortingOptions(context: Context): Map<String, String> {
     return mapOf(
         SORT_CHRONOLOGICAL to context.resources.getString(R.string.sorting_chronological),

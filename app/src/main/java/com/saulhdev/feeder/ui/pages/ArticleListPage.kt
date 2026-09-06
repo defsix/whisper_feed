@@ -86,7 +86,11 @@ import com.saulhdev.feeder.ui.icons.phosphor.Bookmarks
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Filter
 import com.saulhdev.feeder.ui.icons.phosphor.Filtered
+import com.saulhdev.feeder.ui.icons.phosphor.GearSix
+import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Power
+import com.saulhdev.feeder.ui.navigation.LocalNavController
+import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -110,6 +114,7 @@ fun ArticleListPage(
     viewModel: ArticleListViewModel = koinNeoViewModel(),
 ) {
     val context = LocalContext.current
+    val navController = LocalNavController.current
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState()
     val paneNavigator = rememberListDetailPaneScaffoldNavigator<Any>()
@@ -195,6 +200,38 @@ fun ArticleListPage(
                                     }
 
                                     OverflowMenu {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(text = stringResource(id = R.string.title_sources))
+                                            },
+                                            onClick = {
+                                                hideMenu()
+                                                navController.navigate(NavRoute.Sources)
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Phosphor.Graph,
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(text = stringResource(id = R.string.title_settings))
+                                            },
+                                            onClick = {
+                                                hideMenu()
+                                                navController.navigate(NavRoute.Settings)
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Phosphor.GearSix,
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        )
+                                        HorizontalDivider()
+
                                         DropdownMenuItem(
                                             text = {
                                                 Text(text = stringResource(id = R.string.action_reload))

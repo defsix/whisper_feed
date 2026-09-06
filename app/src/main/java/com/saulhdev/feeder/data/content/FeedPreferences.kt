@@ -32,6 +32,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.entity.SORT_CHRONOLOGICAL
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
+import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Browser
 import com.saulhdev.feeder.ui.icons.phosphor.Bug
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
@@ -50,6 +51,7 @@ import com.saulhdev.feeder.utils.getMastodonItemsPerFeed
 import com.saulhdev.feeder.utils.getSortingOptions
 import com.saulhdev.feeder.utils.getSyncFrequency
 import com.saulhdev.feeder.utils.getSyncRange
+import com.saulhdev.feeder.utils.getFonts
 import com.saulhdev.feeder.utils.getThemes
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -87,6 +89,20 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = OVERLAY_DYNAMIC_THEME,
         dataStore = dataStore,
         defaultValue = false
+    )
+
+    /**
+     * Typeface. Inter is the brand face and the default; "System default" hands
+     * typography back to the device, which also respects a user's own font
+     * choice on OEMs that offer one.
+     */
+    var appFont = StringSelectionPref(
+        titleId = R.string.pref_app_font,
+        icon = Phosphor.BracketsSquare,
+        key = APP_FONT,
+        dataStore = dataStore,
+        defaultValue = "inter",
+        entries = getFonts(context)
     )
 
     var overlayTransparency = FloatPref(
@@ -322,6 +338,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
 
         val OVERLAY_THEME = stringPreferencesKey("pref_overlay_theme")
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
+        val APP_FONT = stringPreferencesKey("pref_app_font")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
         val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
         val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")
