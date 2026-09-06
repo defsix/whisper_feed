@@ -30,10 +30,16 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -59,21 +65,64 @@ class ArticleListViewModel(
             SortFilterModel()
         )
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val articleListState: StateFlow<ArticleListState> = combine(
+    /**
+     * Articles for the current category selection, with sync-time invalidation
+     * bursts collapsed.
+     *
+     * A sync writes `currentlySyncing` to Feeds twice per source and inserts
+     * that source's articles, and every one of those writes invalidates this
+     * query — which joins Feeds. Syncing fifty imported sources therefore
+     * re-ran the whole query, its relation join and the processing below well
+     * over a hundred times, each time handing Compose a fresh list to diff.
+     *
+     * The first emission after a category change is passed straight through, so
+     * tapping a chip stays immediate; only the invalidations that follow are
+     * held back and coalesced.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private val categoryArticles: Flow<List<FeedItem>> =
         // Categories narrow the feed (include); the filter sheet's tagsFilter
         // mutes (exclude) and is applied in processArticles. These were the same
         // preference read both ways, so any selection cancelled itself out.
-        prefs.categoryFilter.get().flatMapLatest { categories ->
-            if (categories.any()) articleRepo.getFeedItemsByTags(categories)
-            else articleRepo.getEnabledFeedItems()
-        },
+        prefs.categoryFilter.get()
+            .distinctUntilChanged()
+            .flatMapLatest { categories ->
+                val source =
+                    if (categories.any()) articleRepo.getFeedItemsByTags(categories)
+                    else articleRepo.getEnabledFeedItems()
+                var isFirst = true
+                source.debounce {
+                    if (isFirst) {
+                        isFirst = false
+                        0L
+                    } else {
+                        INVALIDATION_DEBOUNCE_MS
+                    }
+                }
+            }
+            .conflate()
+
+    /**
+     * The expensive part — deduplication, muting and sorting — kept off the flow
+     * that carries sync status. `isSyncing` toggles independently of the
+     * content, and combining the two meant every toggle re-sorted the whole
+     * list for a result that was identical to the one before it.
+     */
+    private val processedArticles: Flow<List<FeedItem>> = combine(
+        categoryArticles,
         sortFilterState,
         prefs.removeDuplicates.get(),
+    ) { articles, sfm, removeDuplicate ->
+        processArticles(articles, sfm, removeDuplicate)
+    }.flowOn(Dispatchers.Default)
+
+    val articleListState: StateFlow<ArticleListState> = combine(
+        processedArticles,
+        sortFilterState,
         feedsRepo.isSyncing
-    ) { articles, sfm, removeDuplicate, isSyncing ->
+    ) { articles, sfm, isSyncing ->
         ArticleListState(
-            articles = processArticles(articles, sfm, removeDuplicate),
+            articles = articles,
             isFilterModified = sfm != SortFilterModel(),
             isSyncing = isSyncing
         )
@@ -83,14 +132,21 @@ class ArticleListViewModel(
         ArticleListState()
     )
 
-    val bookmarksState: StateFlow<BookmarksState> = combine(
-        articleRepo.getBookmarkedFeedItems(),
+    @OptIn(FlowPreview::class)
+    private val processedBookmarks: Flow<List<FeedItem>> = combine(
+        articleRepo.getBookmarkedFeedItems().debounce(INVALIDATION_DEBOUNCE_MS).conflate(),
         sortFilterState,
         prefs.removeDuplicates.get(),
+    ) { articles, sfm, removeDuplicate ->
+        processArticles(articles, sfm, removeDuplicate)
+    }.flowOn(Dispatchers.Default)
+
+    val bookmarksState: StateFlow<BookmarksState> = combine(
+        processedBookmarks,
         feedsRepo.isSyncing
-    ) { articles, sfm, removeDuplicate, isSyncing ->
+    ) { articles, isSyncing ->
         BookmarksState(
-            bookmarkedArticles = processArticles(articles, sfm, removeDuplicate),
+            bookmarkedArticles = articles,
             isSyncing = isSyncing
         )
     }.stateIn(
@@ -154,6 +210,13 @@ class ArticleListViewModel(
             }
     }
 }
+
+/**
+ * How long to wait for a burst of database invalidations to settle before
+ * rebuilding the list. Long enough to swallow a whole feed's inserts, short
+ * enough that finished sources appear while a sync is still running.
+ */
+private const val INVALIDATION_DEBOUNCE_MS = 300L
 
 data class ArticleListState(
     val articles: List<FeedItem> = emptyList(),

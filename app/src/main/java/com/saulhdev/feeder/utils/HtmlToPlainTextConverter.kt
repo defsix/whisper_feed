@@ -13,6 +13,14 @@ import java.io.IOException
 import java.io.StringReader
 import java.util.Stack
 
+/**
+ * TagSoup's HTMLSchema builds a large element table in its constructor, and the
+ * converter used to build a fresh one for every article parsed. It is read-only
+ * once constructed, so one shared instance serves every parse — including the
+ * parallel ones a sync runs.
+ */
+private val sharedHtmlSchema: HTMLSchema by lazy { HTMLSchema() }
+
 class HtmlToPlainTextConverter : ContentHandler {
     private val parser: Parser = Parser()
     private var builder: StringBuilder? = null
@@ -26,7 +34,7 @@ class HtmlToPlainTextConverter : ContentHandler {
 
     init {
         try {
-            parser.setProperty(Parser.schemaProperty, HTMLSchema())
+            parser.setProperty(Parser.schemaProperty, sharedHtmlSchema)
             parser.contentHandler = this
         } catch (e: SAXNotRecognizedException) {
             throw RuntimeException(e)
@@ -40,6 +48,9 @@ class HtmlToPlainTextConverter : ContentHandler {
      */
     fun convert(source: String): String {
         this.builder = StringBuilder()
+        listings.clear()
+        ignoreCount = 0
+        lastImageAlt = null
 
         try {
             parser.parse(InputSource(StringReader(source)))

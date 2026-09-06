@@ -211,26 +211,31 @@ interface FeedArticleDao {
     )
     suspend fun getFeedItemsByFeedIds(feedIds: List<Long>): List<FeedItem>
 
+    /**
+     * Writes a feed's articles in one transaction and returns them paired with
+     * their body text, uuids assigned, for the caller to persist to disk.
+     *
+     * The blob writes used to happen inside this transaction, one file at a
+     * time, via a `withContext(Dispatchers.IO)` callback. That held the write
+     * lock for the whole of a feed's disk I/O and switched dispatchers inside a
+     * Room transaction, which Room confines to its own. Inserts were also issued
+     * one row at a time despite a list overload existing.
+     */
     @Transaction
     suspend fun insertOrUpdate(
-        itemsWithText: List<Pair<Article, String>>,
-        block: suspend (Article, String) -> Unit
-    ) {
+        itemsWithText: List<Pair<Article, String>>
+    ): List<Pair<Article, String>> {
         val (toUpdateItems, toInsertItems) = itemsWithText.partition { (item, _) ->
             item.uuid.isNotEmpty()
         }
 
         updateFeedArticle(toUpdateItems.map { (item, _) -> item })
-        toUpdateItems.forEach { (item, text) ->
-            block(item, text)
-        }
 
-        toInsertItems.map { (item, text) -> item.copy(uuid = UUID.randomUUID().toString()) to text }
-            .apply {
-                forEach { (article, text) ->
-                    insertFeedArticle(article)
-                    block(article, text)
-                }
-            }
+        val inserted = toInsertItems.map { (item, text) ->
+            item.copy(uuid = UUID.randomUUID().toString()) to text
+        }
+        insertFeedArticle(inserted.map { (article, _) -> article })
+
+        return toUpdateItems + inserted
     }
 }

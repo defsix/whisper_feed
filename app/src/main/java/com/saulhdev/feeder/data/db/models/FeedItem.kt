@@ -50,8 +50,13 @@ data class FeedItem(
     val contentTitle: String
         get() = article.title
 
+    /**
+     * The column the feed is ordered by. SQL already orders on primarySortTime
+     * and the card renders it, but this sorted on pubDate — so the list order
+     * and the dates shown on it were derived from different columns.
+     */
     val timeMillis: Long
-        get() = article.pubDate
+        get() = article.primarySortTime.toEpochMilliseconds()
 
     val bookmarked: Boolean
         get() = article.bookmarked

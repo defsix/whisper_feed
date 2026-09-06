@@ -46,7 +46,7 @@ const val ID_ALL: Long = -1L
         Feed::class,
         Article::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -220,7 +220,37 @@ abstract class NeoFeedDb : RoomDatabase() {
     class RemoveLegacyPubDate : AutoMigrationSpec
 }
 
-val allMigrations = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+val allMigrations = arrayOf(
+    MIGRATION_1_2,
+    MIGRATION_2_3,
+    MIGRATION_7_8,
+    MIGRATION_8_9,
+    MIGRATION_9_10,
+    MIGRATION_10_11,
+    MIGRATION_11_12,
+)
+
+@Suppress("ClassName")
+object MIGRATION_11_12 : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Every feed query orders by primarySortTime, which had no index.
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_Article_primarySortTime ON Article (primarySortTime)"
+        )
+        // Repair rows written before updateFromParsedEntry's primarySortTime was
+        // fixed. It referenced the pre-copy() pubDate, which is 0 for a newly
+        // parsed article, so every article stored the moment it was synced
+        // instead of the moment it was published. Recompute it the way the fixed
+        // code does: the earlier of first sync and publication.
+        db.execSQL(
+            """
+            UPDATE Article
+            SET primarySortTime = MIN(firstSyncedTime, pubDateV2)
+            WHERE pubDateV2 > 0 AND primarySortTime > pubDateV2
+            """.trimIndent()
+        )
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_10_11 : Migration(10, 11) {

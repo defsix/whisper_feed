@@ -64,6 +64,13 @@ val prefs: FeedPreferences by inject(FeedPreferences::class.java)
 val singleThreadedSync = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 const val TAG = "RssLocalSync"
 
+/**
+ * One client for every feed. A fresh OkHttpClient was being built per feed, so a
+ * sync of an imported OPML created dozens of connection pools and thread pools
+ * that could share nothing — no connection reuse, no keep-alive across feeds.
+ */
+private val syncHttpClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
+
 suspend fun syncFeeds(
     context: Context,
     feedId: Long = ID_UNSET,
@@ -195,10 +202,8 @@ private suspend fun syncFeed(
         return
     }
 
-    val okHttpClient = OkHttpClient.Builder()
-        .build()
     val response: Response =
-        okHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)
+        syncHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)
     val feedParser = FeedParser()
     val feed: JsonFeed = response.use {
         response.body.let { responseBody ->

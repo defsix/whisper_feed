@@ -43,6 +43,9 @@ import kotlin.time.Instant
         Index(value = ["feedId", "guid"]),
         Index(value = ["uuid", "link"]),
         Index(value = ["feedId"]),
+        // Every feed query orders by primarySortTime; without this SQLite sorted
+        // the whole result set on each one.
+        Index(value = ["primarySortTime"]),
     ],
     foreignKeys = [
         ForeignKey(
@@ -82,14 +85,16 @@ data class Article constructor(
         feed: JsonFeed,
         feedId: Long,
     ): Article {
-        val converter = HtmlToPlainTextConverter()
         // Be careful about nulls.
         val text = entry.content_html ?: entry.content_text ?: ""
-        val description = (entry.summary ?: entry.content_text ?: converter.convert(text)).trim()
-        val summary: String = (
-                entry.summary ?: entry.content_text
-                ?: converter.convert(text)
-                ).take(200)
+        // Both description and summary used to call convert() independently, so
+        // every article with only content_html was parsed through TagSoup twice.
+        val plain: String by lazy(LazyThreadSafetyMode.NONE) {
+            HtmlToPlainTextConverter().convert(text)
+        }
+        val fullText = entry.summary ?: entry.content_text ?: plain
+        val description = fullText.trim()
+        val summary: String = fullText.take(200)
 
         // Make double sure no base64 images are used as thumbnails
         val safeImage = when {
@@ -107,6 +112,27 @@ data class Article constructor(
         }
 
         val plainTitle = entry.title?.take(200) ?: this.plainTitle
+
+        // Computed up front rather than inline in copy(): named arguments in a
+        // copy() call cannot see each other, so `primarySortTime`'s reference to
+        // `pubDate` resolved to the *existing* row's value, which is 0 for every
+        // newly parsed article. Every new article therefore sorted and displayed
+        // as its sync time instead of its publication time.
+        val newPubDate = try {
+            // Allow an actual pubdate to be updated
+            Instant.parse(entry.date_published?.substringBefore('[') ?: "")
+                .toEpochMilliseconds()
+        } catch (_: Throwable) {
+            // If a pubDate is missing, then don't update if one is already set
+            this.pubDate.takeIf { it > 0L }
+                ?: Clock.System.now().toEpochMilliseconds()
+        }
+        val newSortTime = if (newPubDate > 0L) {
+            minOf(firstSyncedTime, Instant.fromEpochMilliseconds(newPubDate))
+        } else {
+            firstSyncedTime
+        }
+
         return copy(
             guid = entryGuid,
             plainTitle = plainTitle,
@@ -117,23 +143,8 @@ data class Article constructor(
             enclosureLink = entry.attachments?.firstOrNull()?.url,
             author = entry.author?.name ?: feed.author?.name,
             link = entry.url,
-            pubDate = try {
-                // Allow an actual pubdate to be updated
-                Instant.parse(entry.date_published?.substringBefore('[') ?: "")
-                    .toEpochMilliseconds()
-            } catch (_: Throwable) {
-                // If a pubDate is missing, then don't update if one is already set
-                this.pubDate.takeIf { it > 0L }
-                    ?: Clock.System.now().toEpochMilliseconds()
-            },
-            primarySortTime = if (pubDate > 0L) {
-                minOf(
-                    firstSyncedTime,
-                    Instant.fromEpochMilliseconds(pubDate) ?: firstSyncedTime
-                )
-            } else {
-                firstSyncedTime
-            },
+            pubDate = newPubDate,
+            primarySortTime = newSortTime,
             feedId = feedId,
         )
     }

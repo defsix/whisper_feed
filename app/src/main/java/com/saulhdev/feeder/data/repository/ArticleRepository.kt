@@ -86,11 +86,17 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.getFeedItemsByTagsSimple(tags)
             .flowOn(cc)
 
+    /**
+     * Persists articles, then writes their bodies to disk *outside* the database
+     * transaction — the writes are per-article file I/O and have no business
+     * holding the write lock while they run.
+     */
     suspend fun updateOrInsertArticle(
         itemsWithText: List<Pair<Article, String>>,
         block: suspend (Article, String) -> Unit
     ) = withContext(jcc) {
-        articlesDao.insertOrUpdate(itemsWithText, block)
+        val stored = articlesDao.insertOrUpdate(itemsWithText)
+        stored.forEach { (article, text) -> block(article, text) }
     }
 
     suspend fun bookmarkArticle(
