@@ -83,6 +83,7 @@ class OverlayView(val context: Context) :
     private val bookmarksState = mutableStateOf<List<FeedItem>>(emptyList())
     private val isSyncingState = mutableStateOf(false)
     private val showBookmarks = mutableStateOf(false)
+    private val isFilterActive = mutableStateOf(false)
 
     /**
      * System bar insets, in pixels, as reported to the overlay's root view.
@@ -143,6 +144,7 @@ class OverlayView(val context: Context) :
             viewModel.articleListState.collect {
                 articlesState.value = it.articles
                 isSyncingState.value = it.isSyncing
+                isFilterActive.value = it.isFilterModified
             }
         }
         syncScope.launch {
@@ -322,6 +324,8 @@ class OverlayView(val context: Context) :
                     categories = categories,
                     selectedCategories = selected,
                     isRefreshing = isSyncingState.value,
+                    isFilterActive = isFilterActive.value,
+                    isShowingBookmarks = showBookmarks.value,
                     topInset = with(density) { topInsetPx.value.toDp() },
                     bottomInset = with(density) { bottomInsetPx.value.toDp() },
                     // setValue blocks on the datastore write, so keep it off the

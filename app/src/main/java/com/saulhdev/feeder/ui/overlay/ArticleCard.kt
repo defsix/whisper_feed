@@ -119,9 +119,16 @@ fun ArticleCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
+                        // Two things to get right here. The helper takes
+                        // seconds, not milliseconds — passing millis dated
+                        // articles to the year 58651. And the field shown is
+                        // primarySortTime rather than pubDate: pubDate defaults
+                        // to 0 when a feed omits one, and the list is ordered by
+                        // primarySortTime, so showing pubDate meant the date on
+                        // a card could disagree with the order it appeared in.
                         text = RelativeTimeHelper.getDateFormattedRelative(
                             context,
-                            item.timeMillis
+                            item.article.primarySortTime.toEpochMilliseconds() / 1000
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

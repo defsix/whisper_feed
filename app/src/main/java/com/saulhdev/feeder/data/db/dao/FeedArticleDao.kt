@@ -134,6 +134,7 @@ interface FeedArticleDao {
     fun getAllBookmarked(): Flow<List<Article>>
 
     // Embedded FeedItem
+    @Transaction
     @Query(
         """
     SELECT Article.* FROM Article
@@ -144,6 +145,7 @@ interface FeedArticleDao {
     )
     fun getAllEnabledFeedItems(): Flow<List<FeedItem>>
 
+    @Transaction
     @Query(
         """
     SELECT Article.* FROM Article
@@ -154,6 +156,7 @@ interface FeedArticleDao {
     )
     fun getAllBookmarkedFeedItems(): Flow<List<FeedItem>>
 
+    @Transaction
     @Query(
         """
     SELECT Article.* FROM Article
@@ -164,6 +167,7 @@ interface FeedArticleDao {
     )
     fun getFeedItemsByTagsSimple(tags: Set<String>): Flow<List<FeedItem>>
 
+    @Transaction
     @Query(
         """
     SELECT Article.* FROM Article
@@ -174,6 +178,7 @@ interface FeedArticleDao {
     )
     fun getFeedItemsForFeed(feedId: Long): Flow<List<FeedItem>>
 
+    @Transaction
     @Query(
         """
     SELECT Article.* FROM Article

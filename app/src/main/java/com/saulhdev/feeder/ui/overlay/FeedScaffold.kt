@@ -31,7 +31,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +87,8 @@ fun FeedScaffold(
     categories: List<String>,
     selectedCategories: Set<String>,
     isRefreshing: Boolean,
+    isFilterActive: Boolean,
+    isShowingBookmarks: Boolean,
     topInset: Dp,
     bottomInset: Dp,
     onCategoriesChange: (Set<String>) -> Unit,
@@ -122,12 +127,22 @@ fun FeedScaffold(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onFilterClick) {
-                        Icon(Phosphor.FunnelSimple, stringResource(R.string.pref_cat_filters))
-                    }
-                    IconButton(onClick = onBookmarksClick) {
-                        Icon(Phosphor.BookBookmark, stringResource(R.string.title_bookmarks))
-                    }
+                    // Both of these are modes rather than one-shot actions, so
+                    // they have to show when they are on — the View header only
+                    // ever tinted the bookmark toggle, and the filter gave no
+                    // indication at all that it was narrowing the feed.
+                    ToggleAction(
+                        icon = Phosphor.FunnelSimple,
+                        description = stringResource(R.string.pref_cat_filters),
+                        active = isFilterActive,
+                        onClick = onFilterClick,
+                    )
+                    ToggleAction(
+                        icon = Phosphor.BookBookmark,
+                        description = stringResource(R.string.title_bookmarks),
+                        active = isShowingBookmarks,
+                        onClick = onBookmarksClick,
+                    )
                     IconButton(onClick = onOverflowClick) {
                         Icon(Phosphor.DotsThreeVertical, stringResource(R.string.title_settings))
                     }
@@ -193,5 +208,31 @@ fun FeedScaffold(
                 Icon(Phosphor.CaretUp, stringResource(R.string.back_to_top))
             }
         }
+    }
+}
+
+/**
+ * A header action that is a toggle, not a command: filled while it is on so the
+ * state of the feed is legible from the header alone.
+ */
+@Composable
+private fun ToggleAction(
+    icon: ImageVector,
+    description: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    if (active) {
+        FilledIconButton(
+            onClick = onClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
+        ) {
+            Icon(icon, description)
+        }
+    } else {
+        IconButton(onClick = onClick) { Icon(icon, description) }
     }
 }
