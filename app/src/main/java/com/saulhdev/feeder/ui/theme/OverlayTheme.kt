@@ -25,6 +25,10 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import com.materialkolor.dynamicColorScheme
+import com.saulhdev.feeder.utils.LEGACY_THEME_BLACK
+import com.saulhdev.feeder.utils.LEGACY_THEME_SYSTEM_BLACK
+import com.saulhdev.feeder.utils.THEME_DARK
+import com.saulhdev.feeder.utils.THEME_LIGHT
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
@@ -53,26 +57,33 @@ object OverlayTheme {
     /**
      * Builds the scheme for a saved theme preference.
      *
-     * @param mode one of the keys from `getThemes()`: auto_system,
-     *   auto_system_black, light, dark, black.
+     * @param mode one of the keys from `getThemes()`: auto_system, light, dark.
+     *   The two retired values are still accepted, because a preference written
+     *   before they were split can reach here before the migration lands.
      * @param dynamic whether to derive colours from the wallpaper. Only possible
      *   on API 31+; below that Material You has no system source to read, and
      *   the M3 baseline palette is used instead.
+     * @param pureBlack true black rather than dark grey, and only meaningful
+     *   when the resolved scheme is a dark one.
      */
-    fun schemeFor(context: Context, mode: String, dynamic: Boolean): ColorScheme {
+    fun schemeFor(
+        context: Context,
+        mode: String,
+        dynamic: Boolean,
+        pureBlack: Boolean = false,
+    ): ColorScheme {
         val systemInDark = context.resources.configuration.uiMode
             .and(Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         val dark = when (mode) {
-            "light" -> false
-            "dark", "black" -> true
-            else -> systemInDark // auto_system, auto_system_black
+            THEME_LIGHT -> false
+            THEME_DARK, LEGACY_THEME_BLACK -> true
+            else -> systemInDark
         }
-        val black = when (mode) {
-            "black" -> true
-            "auto_system_black" -> systemInDark
-            else -> false
-        }
+        // Black is a dark scheme taken further, never a light one — asking for
+        // it in light mode has to be a no-op rather than a black-on-white page.
+        val black = dark && (pureBlack ||
+                mode == LEGACY_THEME_BLACK || mode == LEGACY_THEME_SYSTEM_BLACK)
 
         val base = when {
             dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->

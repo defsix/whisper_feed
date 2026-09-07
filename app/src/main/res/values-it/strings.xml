@@ -109,8 +109,6 @@
     <string name="title_service">Servizio</string>
     <string name="title_other">Altro</string>
     <string name="no_activity_for_link">Browser web non trovato</string>
-    <string name="theme_auto_system_black">Automaticamente (dal sistema; nero)</string>
-    <string name="theme_black">Nero</string>
     <string name="state_modified">Modificato</string>
     <string name="action_reset">Reimposta</string>
     <string name="sorting_order">Preferenza di ordinamento</string>

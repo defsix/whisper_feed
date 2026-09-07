@@ -108,6 +108,4 @@
     <string name="sources_import_opml">OPML இலிருந்து ஊட்டங்களை இறக்குமதி செய்யுங்கள்</string>
     <string name="sources_export_opml">OPML க்கு ஊட்டங்களை ஏற்றுமதி செய்யுங்கள்</string>
     <string name="failed_to_import_OPML">OPML ஐ இறக்குமதி செய்யத் தவறிவிட்டது</string>
-    <string name="theme_auto_system_black">தானாக (கணினியிலிருந்து; கருப்பு)</string>
-    <string name="theme_black">கருப்பு</string>
 </resources>

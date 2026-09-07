@@ -35,13 +35,23 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
 
+const val THEME_FOLLOW_SYSTEM = "auto_system"
+const val THEME_LIGHT = "light"
+const val THEME_DARK = "dark"
+
+/** Values written by the old five-entry list, kept only so they can be read. */
+const val LEGACY_THEME_SYSTEM_BLACK = "auto_system_black"
+const val LEGACY_THEME_BLACK = "black"
+
 fun getThemes(context: Context): Map<String, String> {
+    // Three modes. "Black" used to be a fourth and fifth entry — "Black" and
+    // "Automatically (from system; black)" — which crossed two independent
+    // questions into one list: whether to be dark, and how dark. It is a
+    // separate switch now, so the list only answers the first.
     return mapOf(
-        "auto_system" to context.resources.getString(R.string.theme_auto_system),
-        "auto_system_black" to context.resources.getString(R.string.theme_auto_system_black),
-        "light" to context.resources.getString(R.string.theme_light),
-        "dark" to context.resources.getString(R.string.theme_dark),
-        "black" to context.resources.getString(R.string.theme_black),
+        THEME_FOLLOW_SYSTEM to context.resources.getString(R.string.theme_auto_system),
+        THEME_LIGHT to context.resources.getString(R.string.theme_light),
+        THEME_DARK to context.resources.getString(R.string.theme_dark),
     )
 }
 

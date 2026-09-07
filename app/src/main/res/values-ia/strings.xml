@@ -109,6 +109,4 @@
     <string name="add_feed">Adder un fluxo</string>
     <string name="pref_remove_duplicates">Remover articulos duplicate ab fontes differente</string>
     <string name="title_overlay">Superposition</string>
-    <string name="theme_auto_system_black">Automaticamente (de systema; nigre)</string>
-    <string name="theme_black">Nigre</string>
 </resources>

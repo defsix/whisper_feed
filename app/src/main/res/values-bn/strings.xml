@@ -58,7 +58,6 @@
     <string name="title_service">সেবা</string>
     <string name="title_other">অন্যান্য</string>
     <string name="title_overlay">অভারলে</string>
-    <string name="theme_black">কালো</string>
     <string name="state_modified">পরিবর্তিত</string>
     <string name="action_apply">প্রয়োগ</string>
     <string name="action_reset">রিসেট</string>

@@ -114,8 +114,6 @@
     <string name="title_overlay">Auflage</string>
     <string name="add_feed">Feed hinzufügen</string>
     <string name="pref_remove_duplicates">Doppelte Artikel aus verschiedenen Quellen entfernen</string>
-    <string name="theme_auto_system_black">Automatisch (vom System; schwarz)</string>
-    <string name="theme_black">Schwarz</string>
     <string name="sort_filter">Sortieren und Filtern</string>
     <string name="state_modified">Modifiziert</string>
     <string name="action_apply">Anwenden</string>

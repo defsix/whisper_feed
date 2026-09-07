@@ -20,6 +20,11 @@ import com.google.android.material.color.DynamicColors
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.utils.LEGACY_THEME_BLACK
+import com.saulhdev.feeder.utils.LEGACY_THEME_SYSTEM_BLACK
+import com.saulhdev.feeder.utils.THEME_DARK
+import com.saulhdev.feeder.utils.THEME_FOLLOW_SYSTEM
+import com.saulhdev.feeder.utils.THEME_LIGHT
 import org.koin.java.KoinJavaComponent.get
 import kotlin.system.exitProcess
 
@@ -194,32 +199,39 @@ fun Context.setCustomTheme() {
     }
 }
 
+// These read the same preference the Compose theme does. They still accept the
+// two retired values, because a stored preference can outlive one launch: the
+// migration runs asynchronously, so the first read after upgrading may still
+// see the old string.
+
+private val Context.themePref
+    get() = get<FeedPreferences>(FeedPreferences::class.java).overlayTheme.getValue()
+
 val Context.isDynamicTheme
-    get() = listOf("auto_system", "auto_system_black")
-        .contains(get<FeedPreferences>(FeedPreferences::class.java).overlayTheme.getValue())
+    get() = themePref in listOf(THEME_FOLLOW_SYSTEM, LEGACY_THEME_SYSTEM_BLACK)
 
 val Context.nightMode
-    get() = when (get<FeedPreferences>(FeedPreferences::class.java).overlayTheme.getValue()) {
-        "light"         -> AppCompatDelegate.MODE_NIGHT_NO
-        "dark", "black" -> AppCompatDelegate.MODE_NIGHT_YES
-        else            -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+    get() = when (themePref) {
+        THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+        THEME_DARK, LEGACY_THEME_BLACK -> AppCompatDelegate.MODE_NIGHT_YES
+        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
     }
 
 val Context.isDarkTheme: Boolean
-    get() = when (get<FeedPreferences>(FeedPreferences::class.java).overlayTheme.getValue()) {
-        "dark", "black"
-            -> true
-
-        "light"
-            -> false
-
-        else -> resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES // "auto_system"
+    get() = when (themePref) {
+        THEME_DARK, LEGACY_THEME_BLACK -> true
+        THEME_LIGHT -> false
+        else -> resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }
 
+/**
+ * True black, which is now the switch rather than a theme entry — so this had
+ * to stop testing the mode or it would have reported false for everyone.
+ */
 val Context.isBlackTheme: Boolean
-    get() = when (get<FeedPreferences>(FeedPreferences::class.java).overlayTheme.getValue()) {
-        "black", "auto_system_black"
-            -> true
-
-        else -> false
+    get() {
+        val prefs = get<FeedPreferences>(FeedPreferences::class.java)
+        val legacy = prefs.overlayTheme.getValue() in
+                listOf(LEGACY_THEME_BLACK, LEGACY_THEME_SYSTEM_BLACK)
+        return isDarkTheme && (prefs.pureBlack.getValue() || legacy)
     }

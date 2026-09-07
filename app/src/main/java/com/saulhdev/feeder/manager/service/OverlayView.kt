@@ -165,6 +165,9 @@ class OverlayView(val context: Context) :
             prefs.appFont.get().collect { overlayFont.value = it }
         }
         syncScope.launch {
+            prefs.pureBlack.get().drop(1).collect { mainScope.launch { updateTheme() } }
+        }
+        syncScope.launch {
             glanceHolder.state.collect { glanceState.value = it }
         }
         glanceHolder.refreshIfStale()
@@ -234,6 +237,7 @@ class OverlayView(val context: Context) :
             // Previously ignored on this surface: the overlay always read the
             // dynamic system colours regardless of what the user had chosen.
             dynamic = prefs.dynamicColor.getValue(),
+            pureBlack = prefs.pureBlack.getValue(),
         )
         overlayScheme.value = scheme
         themeHolder.setTheme(

@@ -36,6 +36,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Browser
 import com.saulhdev.feeder.ui.icons.phosphor.Bug
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
+import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
@@ -51,6 +52,10 @@ import com.saulhdev.feeder.utils.getMastodonItemsPerFeed
 import com.saulhdev.feeder.utils.getSortingOptions
 import com.saulhdev.feeder.utils.getSyncFrequency
 import com.saulhdev.feeder.utils.getSyncRange
+import com.saulhdev.feeder.utils.LEGACY_THEME_BLACK
+import com.saulhdev.feeder.utils.LEGACY_THEME_SYSTEM_BLACK
+import com.saulhdev.feeder.utils.THEME_DARK
+import com.saulhdev.feeder.utils.THEME_FOLLOW_SYSTEM
 import com.saulhdev.feeder.utils.getFonts
 import com.saulhdev.feeder.utils.getThemes
 import org.koin.core.component.KoinComponent
@@ -66,6 +71,30 @@ import kotlin.math.roundToInt
 
 class FeedPreferences private constructor(val context: Context) : KoinComponent {
     private val dataStore: DataStore<Preferences> by inject()
+
+    /**
+     * Moves anyone off the retired theme values.
+     *
+     * "black" and "auto_system_black" are no longer entries, so a preference
+     * still holding one would leave the theme dialog with nothing selected.
+     * Each maps onto its base mode plus the pure-black switch, which is what
+     * they always meant.
+     */
+    private fun migrateRetiredThemeValues() {
+        CoroutineScope(Dispatchers.IO).launch {
+            when (overlayTheme.getValue()) {
+                LEGACY_THEME_BLACK -> {
+                    overlayTheme.setValue(THEME_DARK)
+                    pureBlack.setValue(true)
+                }
+
+                LEGACY_THEME_SYSTEM_BLACK -> {
+                    overlayTheme.setValue(THEME_FOLLOW_SYSTEM)
+                    pureBlack.setValue(true)
+                }
+            }
+        }
+    }
     /* Theme */
     var overlayTheme = StringSelectionPref(
         titleId = R.string.pref_ovr_theme,
@@ -74,6 +103,24 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         dataStore = dataStore,
         defaultValue = "auto_system",
         entries = getThemes(context)
+    )
+
+    /**
+     * True black rather than dark grey, for OLED screens.
+     *
+     * Separate from the theme rather than two more entries in its list. "Dark"
+     * and "Black" answered two different questions — whether to be dark, and
+     * how dark — and crossing them meant the list had to carry a "follow
+     * system, but black" entry as well. One switch alongside three modes says
+     * the same thing without the combinatorics.
+     */
+    val pureBlack = BooleanPref(
+        titleId = R.string.pref_pure_black,
+        summaryId = R.string.pref_pure_black_summary,
+        icon = Phosphor.Circle,
+        key = PURE_BLACK,
+        dataStore = dataStore,
+        defaultValue = false
     )
 
     /**
@@ -354,6 +401,10 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         dataStore = dataStore,
     )
 
+    init {
+        migrateRetiredThemeValues()
+    }
+
     companion object {
         val prefsModule = module {
             singleOf(::FeedPreferences)
@@ -377,6 +428,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val OVERLAY_THEME = stringPreferencesKey("pref_overlay_theme")
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
         val APP_FONT = stringPreferencesKey("pref_app_font")
+        val PURE_BLACK = booleanPreferencesKey("pref_pure_black")
         val GLANCE_ENABLED = booleanPreferencesKey("pref_glance_enabled")
         val GLANCE_PLACE_NAME = stringPreferencesKey("pref_glance_place_name")
         val GLANCE_PLACE_COORDS = stringPreferencesKey("pref_glance_place_coords")

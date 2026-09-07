@@ -119,8 +119,10 @@
     <string name="title_feed_list">Feed List</string>
     <string name="theme_auto_launcher">Automatically (from launcher)</string>
     <string name="theme_auto_system">Follow system</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark grey</string>
+    <string name="pref_pure_black">Pure black</string>
+    <string name="pref_pure_black_summary">Use true black in dark modes, for OLED screens</string>
+    <string name="theme_light">Light mode</string>
+    <string name="theme_dark">Dark mode</string>
     <string name="sync_half_hour_minutes">30 minutes</string>
     <string name="sync_range_one_day">1 day</string>
     <string name="sync_range_two_days">2 days</string>
@@ -174,8 +176,6 @@
     <string name="title_overlay">Overlay</string>
     <string name="add_feed">Add feed</string>
     <string name="pref_remove_duplicates">Remove duplicate article from different sources</string>
-    <string name="theme_auto_system_black">Follow system · pure black</string>
-    <string name="theme_black">Pure black (AMOLED)</string>
     <string name="sort_filter">Sort and filter</string>
     <string name="state_modified">Modified</string>
     <string name="action_apply">Apply</string>

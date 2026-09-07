@@ -62,10 +62,13 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = prefs.dynamicColor.getValue())
             val fontPref by prefs.appFont.get()
                 .collectAsState(initial = prefs.appFont.getValue())
+            val pureBlack by prefs.pureBlack.get()
+                .collectAsState(initial = prefs.pureBlack.getValue())
 
             AppTheme(
                 mode = themeMode,
                 dynamicColor = dynamic,
+                pureBlack = pureBlack,
                 fontPref = fontPref,
             ) {
                 // The window background comes from the XML theme, whose parent

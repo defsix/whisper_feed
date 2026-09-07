@@ -35,7 +35,6 @@
     <string name="share">Поширити</string>
     <string name="title_other">Інше</string>
     <string name="add_feed">Додати стрічку</string>
-    <string name="theme_black">Чорна</string>
     <string name="action_delete">Видалити</string>
     <string name="action_save">Зберегти</string>
 </resources>

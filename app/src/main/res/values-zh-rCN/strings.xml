@@ -108,8 +108,6 @@
     <string name="title_overlay">叠加层</string>
     <string name="add_feed">添加订阅源</string>
     <string name="pref_remove_duplicates">移除不同来源的重复文章</string>
-    <string name="theme_auto_system_black">自动（跟随系统；黑色）</string>
-    <string name="theme_black">黑色</string>
     <string name="sort_filter">排序和筛选</string>
     <string name="state_modified">修改过的</string>
     <string name="action_apply">应用</string>

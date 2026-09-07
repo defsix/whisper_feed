@@ -112,8 +112,6 @@
     <string name="title_overlay">オーバーレイ</string>
     <string name="add_feed">フィードを追加</string>
     <string name="pref_remove_duplicates">異なる情報源からの重複記事を削除する</string>
-    <string name="theme_auto_system_black">自動的に（システムから；ブラック）</string>
-    <string name="theme_black">ブラック</string>
     <string name="sort_filter">並べ替えとフィルタリング</string>
     <string name="state_modified">修正済み</string>
     <string name="action_apply">適用する</string>

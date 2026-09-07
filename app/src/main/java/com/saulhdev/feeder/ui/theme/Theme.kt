@@ -15,21 +15,22 @@ import androidx.compose.ui.platform.LocalContext
  * [OverlayTheme.schemeFor], which is what the launcher surface uses, so both
  * answer the colour question the same way.
  *
- * @param mode a key from `getThemes()`: auto_system, auto_system_black, light,
- *   dark, black.
+ * @param mode a key from `getThemes()`: auto_system, light or dark.
  * @param dynamicColor whether to derive colours from the wallpaper.
+ * @param pureBlack true black rather than dark grey, in dark modes.
  * @param fontPref the saved `appFont` value: "inter" or "system".
  */
 @Composable
 fun AppTheme(
     mode: String,
     dynamicColor: Boolean,
+    pureBlack: Boolean,
     fontPref: String,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     MaterialTheme(
-        colorScheme = OverlayTheme.schemeFor(context, mode, dynamicColor),
+        colorScheme = OverlayTheme.schemeFor(context, mode, dynamicColor, pureBlack),
         typography = typographyFor(fontFamilyFor(fontPref)),
         shapes = WhisperShapes,
         content = content

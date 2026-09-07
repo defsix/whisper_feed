@@ -119,8 +119,6 @@
     <string name="title_overlay">Katman</string>
     <string name="add_feed">Akış ekle</string>
     <string name="pref_remove_duplicates">Farklı kaynaklardaki yinelenen makaleleri kaldır</string>
-    <string name="theme_auto_system_black">Otomatik (Sistemden; siyah)</string>
-    <string name="theme_black">Siyah</string>
     <string name="sort_filter">Sırala ve filtrele</string>
     <string name="state_modified">Düzenlenmiş</string>
     <string name="action_apply">Uygula</string>

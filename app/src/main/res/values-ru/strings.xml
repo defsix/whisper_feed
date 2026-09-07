@@ -107,8 +107,6 @@
     <string name="no_activity_for_link">Браузер не найден</string>
     <string name="title_overlay">Оверлей</string>
     <string name="pref_offline_reader">Оффлайн-читалка</string>
-    <string name="theme_auto_system_black">Авто (системная; чёрная)</string>
-    <string name="theme_black">Чёрная</string>
     <string name="edit_rss">Изменить ленту</string>
     <string name="select_all">Выбрать все</string>
     <string name="deselect_all">Снять выделение</string>

@@ -74,6 +74,7 @@ fun PreferencesPage(
     )
     val themePrefs = listOf(
         prefs.overlayTheme,
+        prefs.pureBlack,
         prefs.appFont,
         prefs.dynamicColor,
         prefs.overlayTransparency,

@@ -108,6 +108,4 @@
     <string name="title_overlay">Hamparan</string>
     <string name="add_feed">Tambah feed</string>
     <string name="pref_remove_duplicates">Hapus artikel duplikat dari sumber yang berbeda</string>
-    <string name="theme_auto_system_black">Secara otomatis (dari sistem; hitam)</string>
-    <string name="theme_black">Hitam</string>
 </resources>

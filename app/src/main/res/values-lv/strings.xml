@@ -35,7 +35,6 @@
     <string name="bookmark">Pievienot grāmatzīmēm</string>
     <string name="title_bookmarks">Grāmatzīmes</string>
     <string name="title_service">Pakalpojums</string>
-    <string name="theme_black">Melns</string>
     <string name="state_modified">Pēc izmaiņu datuma</string>
     <string name="action_apply">Pielietot</string>
     <string name="action_reset">Atiestatīt</string>

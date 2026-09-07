@@ -104,8 +104,6 @@
     <string name="no_activity_for_link">لم يتم العثور على متصفح ويب</string>
     <string name="title_overlay">تراكب</string>
     <string name="add_feed">إضافة موجز</string>
-    <string name="theme_auto_system_black">تلقائيًا (من النظام؛ أسود)</string>
-    <string name="theme_black">أسود</string>
     <string name="pref_remove_duplicates">إزالة المقالة المكررة من مصادر مختلفة</string>
     <string name="edit_rss">تحرير عنصر الموجز</string>
     <string name="title">العنوان</string>
