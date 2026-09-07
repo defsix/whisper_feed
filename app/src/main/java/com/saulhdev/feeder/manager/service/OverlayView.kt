@@ -424,17 +424,12 @@ class OverlayView(val context: Context) :
                     // one; both lists are now collected once and simply chosen
                     // between here.
                     onBookmarksClick = { showBookmarks.value = !showBookmarks.value },
-                    onReload = { refreshNotifications() },
                     onSettings = {
                         launchKeepingPanel {
                             context.safeStartActivity(
-                                MainActivity.navigateIntent(context, "${Routes.MAIN}/1")
+                                MainActivity.navigateIntent(context, Routes.SETTINGS)
                             )
                         }
-                    },
-                    onRestart = {
-                        val application: NeoApp by inject(NeoApp::class.java)
-                        application.restart(false)
                     },
                 )
             }

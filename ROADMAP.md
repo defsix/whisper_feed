@@ -32,10 +32,11 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
-- ~~**The overflow menu opens over the status bar.**~~ Fixed properly rather
-  than repositioned: the last View-based popup is now a Compose menu, the same
-  component the in-app screens use, so it is positioned against the button it
-  hangs off and goes when the composition does.
+- ~~**The overflow menu opens over the status bar.**~~ Removed rather than
+  repositioned. Reload is what pull-to-refresh is for and Restart was a
+  development leftover, so the menu's only real entry was Settings — which is
+  now a single button straight to it. No dropdown in this window means no
+  dropdown to position in it.
 - ~~**Opening an article from the overlay flashes the home screen, and coming
   back lands there too.**~~ Tapping an article closes the minus-one panel, shows
   the desktop for a frame, and only then opens the browser; pressing back from

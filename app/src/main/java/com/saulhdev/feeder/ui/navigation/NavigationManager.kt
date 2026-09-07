@@ -85,7 +85,14 @@ fun NavigationManager(
                 val args = it.toRoute<NavRoute.Main>()
                 MainPage(args.page)
             }
-            composable<NavRoute.Settings> { PreferencesPage() }
+            // Reachable by deep link so the launcher overlay can open it
+            // directly. It used to send Main/1, from the days when Settings was
+            // the second page of a pager; MainPage has ignored that index since
+            // the pager was removed, so "Settings" in the overlay quietly
+            // opened the article list instead.
+            composable<NavRoute.Settings>(
+                deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.SETTINGS}" })
+            ) { PreferencesPage() }
             composable<NavRoute.GlanceLocation> { GlanceLocationPage() }
             composable<NavRoute.Sources> { SourceListPage() }
             composable<NavRoute.About> { AboutPage() }
