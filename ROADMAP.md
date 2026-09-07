@@ -16,7 +16,7 @@ in the code.
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale and bundled Inter, which the milestone did not ask for |
 | 2 | Cards layout | **Most of it** — cards, images, metadata, pull-to-refresh, save, read state. Missing: per-card overflow menu, hide, More/Less controls |
 | 3 | Remaining layouts | **Not started** — Magazine, List, Adaptive Mosaic |
-| 4 | Source management | **Half** — add, edit, remove, categories, OPML in/out. Missing: autodiscovery, undo remove, category management, reorder |
+| 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
 | 5 | Personalisation | **Not started** |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
@@ -30,30 +30,66 @@ the same as Milestone 3. The rhythm varies weight *within* one layout; Milestone
 
 ## Suggested order
 
-### 1. Finish what is half-built
+### 1. Adding a feed should be forgiving
 
-Ordered by how visible the gap is.
+The whole "add source" flow is the roughest edge left, and it is what a new
+user meets first.
+
+- **Feed autodiscovery from a site URL.** Paste `https://www.howtogeek.com/`
+  and get `https://www.howtogeek.com/feed`. Two stages, and both are needed:
+  first try the site's own HTML for a `<link rel="alternate">` pointing at the
+  feed, which is the correct answer whenever it exists; then fall back to
+  probing the handful of conventional paths — `/feed`, `/rss`, `/feed.xml`,
+  `/rss.xml`, `/atom.xml`, `/index.xml`. Guessing paths first would be wrong
+  often enough to matter, so it is the fallback, not the opener.
+
+  `docs/REFERENCES.md` §1 has the research: Twine's `FeedFetcher` for the
+  HTML stage, and its `FeedUrlResolver` for the sites where discovery cannot
+  work at all — Reddit serves a script shell to non-browsers, Mastodon handles
+  are not URLs, and YouTube needs the channel id rather than the page.
+
+- **Duplicate detection while adding.** Adding a feed already in the list should
+  say so rather than silently creating a second copy. Match on the resolved feed
+  URL after redirects, not the string typed — `example.com/feed` and
+  `https://www.example.com/feed/` are the same subscription. An OPML import
+  should merge against the same rule instead of doubling everything.
+
+- **Undo remove** — deleting a source with dozens of articles is currently
+  irreversible and instant.
+
+### 2. Source management worth the name
+
+Everything above is about one feed at a time. Once someone imports an OPML with
+a hundred sources, one at a time is the wrong unit.
+
+- **Multi-select in the source list**, with mass actions: add a tag, remove a
+  tag, replace tags, enable, disable, delete.
+- **Category management as its own screen** — rename a category everywhere it is
+  used, merge two, delete one and choose what happens to its feeds. Categories
+  are currently a free-text field on each source, so a typo creates a category
+  and nothing can rename it.
+- **Sort and search the source list** — by title, by category, by last
+  successful sync, by whether it is failing.
+- **Surface broken feeds.** A source that has failed to fetch for days looks
+  identical to one that is simply quiet. `lastSync` is already stored; nothing
+  reads it back to the user.
+- **Reorder** sources and categories.
+
+That set is Milestone 4's "complete source management", read literally.
+
+### 3. Finish the card
 
 - **Per-card overflow menu** — hide source, hide topic, not interested, share.
   Milestone 2 asked for it; the concept board shows it; every article currently
   offers only save and share. It is also the surface Milestone 5 hangs off.
-- **The multi-tag filter bug.** `getFeedItemsByTagsSimple` matches with
-  `Feeds.tag IN (:tags)`, but tags are stored comma-separated — so a feed tagged
-  `Tech,News` does not match a `Tech` chip. Single-tag feeds work, which is why
-  it looks fine. Known, reported, not yet fixed.
-- **Feed autodiscovery** — paste a site URL rather than a feed URL. The approach
-  is already researched in `docs/REFERENCES.md` §1; Twine's two-stage
-  resolve-then-discover, including the special cases for Reddit, YouTube and
-  Mastodon handles.
-- **Undo remove**, category management, source reorder — the rest of Milestone 4.
 
-### 2. Layouts (Milestone 3)
+### 4. Layouts (Milestone 3)
 
 Magazine, List, Adaptive Mosaic, over the same domain model. The rhythm work
 already split the card into three shapes with a shared item API, so this is less
 of a jump than it was.
 
-### 3. Personalisation (Milestone 5)
+### 5. Personalisation (Milestone 5)
 
 More/Less like this, source affinity, hide source and topic, reset,
 chronological and smart ordering. `readAt` exists now, which is the first piece
@@ -63,7 +99,7 @@ Worth restating: `docs/REFERENCES.md` §4 found **no open-source prior art** for
 transparent, resettable preference learning in a feed reader. This is
 build-it-ourselves rather than assembly, and should be budgeted that way.
 
-### 4. Sync and backup (Milestone 6)
+### 6. Sync and backup (Milestone 6)
 
 What exists today: OPML import and export, bookmark import and export, both
 manual, both through the file picker. That is a working backup story, just not
@@ -71,23 +107,24 @@ an automatic one.
 
 What is missing: any account, any cloud, any cross-device state.
 
-Two candidates, and they are not alternatives:
+**Decided: Google Reader protocol.** Recorded in `docs/REFERENCES.md` §2 —
+Feedly's own API turned out to be enterprise-gated, but the Google Reader
+protocol is spoken by FreshRSS, Inoreader, Miniflux and BazQux, so one
+implementation buys several services and needs no Google account and no Play
+Services. ReadYou has a complete client (`GoogleReaderAPI.kt`, around 560 lines
+plus DTOs) to work from, under a compatible licence.
 
-- **Google Drive app-data sync**, as the handoff specifies. Private per-app
-  folder, no scopes over the user's own files, sources and article state and
-  preferences replicated. Needs Play Services, which is a dependency the project
-  has avoided so far — worth a decision before it is written.
-- **Google Reader protocol sync**, the correction recorded in
-  `docs/REFERENCES.md` §2. Feedly's API turned out to be enterprise-gated, but
-  the Google Reader protocol is spoken by FreshRSS, Inoreader, Miniflux and
-  BazQux — one implementation, several services, and no Google account. ReadYou
-  has a complete client to work from.
+The shape to copy with it is ReadYou's `AbstractRssRepository`: one base class
+where only `sync()` is abstract and everything else has a working *local*
+implementation that remote providers override selectively. That matches the
+local-first rule exactly — the app stays fully functional with no account, and
+sync is genuinely additive rather than a mode.
 
-Drive syncs *your own devices*. Google Reader syncs *your reading with a
-service*. A local-first reader probably wants both eventually; Reader protocol
-is the more useful first because it needs no proprietary dependency.
+Google Drive app-data sync is **not** being pursued. It syncs your own devices
+rather than your reading, and it would put a Play Services dependency into an
+app that has avoided one everywhere else.
 
-### 5. Ship it
+### 7. Ship it
 
 - **The Lawnchair whitelist PR** — see below. This is the single highest-value
   item for anyone other than us using the app.
@@ -137,16 +174,20 @@ PR and no debug toggle. It would also collide with every real Neo Feed install,
 break their updates, and pass this app off as someone else's. It is worth
 knowing the hole is there, and worth not climbing through it.
 
-### If the launcher dependency is unacceptable
+### Shipping our own launcher — decided against
 
-The only way to own the experience end to end is to **ship a launcher** — fork
-Lawnchair, wire the feed in directly, distribute one app. That removes the
-whitelist, the debug toggle and the "install Lawnchair first" step in one go.
+The only way to own the experience end to end would be to fork Lawnchair, wire
+the feed in directly and distribute one app. That removes the whitelist, the
+debug toggle and the "install Lawnchair first" step together.
 
-It also turns a feed reader into a launcher project, with a home screen, an app
-drawer, widget hosting, gestures, backup and every device quirk that comes with
-being the thing that runs when someone presses Home. That is a different and
-much larger product. Naming it as an option, not recommending it.
+It also turns a feed reader into a launcher project — home screen, app drawer,
+widget hosting, gestures, backup, and every device quirk that comes with being
+what runs when someone presses Home. **Off the table**, decided rather than
+merely unattempted.
+
+Which leaves Lawnchair's whitelist as the one route worth spending effort on,
+and makes the standalone app the primary product with the minus-one surface as
+a bonus for the people running a launcher that supports it.
 
 ---
 
@@ -158,7 +199,7 @@ Small, and cheaper now than later.
   from the code and measured where it could be measured — text widths against
   the real font, icon alpha, migration SQL. The on-device checks have all been
   yours. Emulator-based screenshot tests would change that.
-- **Test coverage is 8 unit tests**, all on article age. The sync and filter
+- **Test coverage is 13 unit tests**, on article age and tag splitting. The sync and filter
   performance work, the theme resolution and the day/night rule are all
   untested and all have the shape that benefits most from tests.
 - **Dead code**: `NavigationSuite.kt` and `Pager.kt` went unreferenced when the
