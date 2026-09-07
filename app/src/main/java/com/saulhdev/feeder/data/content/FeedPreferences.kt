@@ -105,6 +105,43 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getFonts(context)
     )
 
+    /* Glance row */
+
+    /**
+     * The strip of status chips above the category filters.
+     *
+     * Off by default: the weather chip is the only part of the app that talks to
+     * a third party at all, so it is something a user opts into rather than
+     * something they have to discover and turn off.
+     */
+    val glanceEnabled = BooleanPref(
+        titleId = R.string.pref_glance_row,
+        summaryId = R.string.pref_glance_row_summary,
+        icon = Phosphor.Clock,
+        key = GLANCE_ENABLED,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
+    /** Display name of the chosen place, empty until one is picked. */
+    val glancePlaceName = StringPref(
+        titleId = R.string.pref_glance_place,
+        icon = Phosphor.Clock,
+        key = GLANCE_PLACE_NAME,
+        dataStore = dataStore,
+        defaultValue = "",
+        route = NavRoute.GlanceLocation
+    )
+
+    /** "lat,lon" for the chosen place. Stored as text to avoid a float pref pair. */
+    val glancePlaceCoords = StringPref(
+        titleId = R.string.pref_glance_place,
+        icon = Phosphor.Clock,
+        key = GLANCE_PLACE_COORDS,
+        dataStore = dataStore,
+        defaultValue = ""
+    )
+
     var overlayTransparency = FloatPref(
         titleId = R.string.pref_transparency,
         icon = Phosphor.SubtractSquare,
@@ -339,6 +376,9 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val OVERLAY_THEME = stringPreferencesKey("pref_overlay_theme")
         val OVERLAY_DYNAMIC_THEME = booleanPreferencesKey("pref_dynamic_theme")
         val APP_FONT = stringPreferencesKey("pref_app_font")
+        val GLANCE_ENABLED = booleanPreferencesKey("pref_glance_enabled")
+        val GLANCE_PLACE_NAME = stringPreferencesKey("pref_glance_place_name")
+        val GLANCE_PLACE_COORDS = stringPreferencesKey("pref_glance_place_coords")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
         val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
         val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")

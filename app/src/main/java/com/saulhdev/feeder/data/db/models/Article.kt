@@ -78,6 +78,15 @@ data class Article constructor(
     val categories: ArrayList<String> = arrayListOf(),
     val pinned: Boolean = false,
     val bookmarked: Boolean = false,
+    /**
+     * When the article was opened, in epoch millis; 0 means unread.
+     *
+     * Nothing tracked reads before this, so "unread" and "read today" could not
+     * be answered at all. Set when an article is opened, and never cleared by a
+     * sync — re-parsing an existing entry keeps whatever is already stored.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val readAt: Long = 0L,
 ) {
     fun updateFromParsedEntry(
         entry: Item,

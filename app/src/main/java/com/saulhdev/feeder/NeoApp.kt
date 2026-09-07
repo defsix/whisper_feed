@@ -12,6 +12,8 @@ import com.jakewharton.threetenabp.AndroidThreeTen
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.repository.ArticleRepository
+import com.saulhdev.feeder.manager.glance.GlanceStateHolder
+import com.saulhdev.feeder.manager.glance.WeatherRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.mastodon.MastodonApi
 import com.saulhdev.feeder.manager.mastodon.MastodonAuth
@@ -73,6 +75,8 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         singleOf(::MastodonStorage)
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
+        singleOf(::WeatherRepository)
+        singleOf(::GlanceStateHolder)
     }
 
     private val coreModule = module {

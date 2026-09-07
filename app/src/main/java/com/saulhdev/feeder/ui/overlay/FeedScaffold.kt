@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.manager.glance.GlanceState
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
@@ -89,6 +90,7 @@ fun FeedScaffold(
     isRefreshing: Boolean,
     isFilterActive: Boolean,
     isShowingBookmarks: Boolean,
+    glanceState: GlanceState,
     topInset: Dp,
     bottomInset: Dp,
     onCategoriesChange: (Set<String>) -> Unit,
@@ -159,6 +161,11 @@ fun FeedScaffold(
                 modifier = Modifier.padding(top = topInset),
             )
 
+            GlanceRow(
+                state = glanceState,
+                onSetLocation = onOverflowClick,
+            )
+
             CategoryChipRow(
                 categories = categories,
                 selected = selectedCategories,
@@ -180,9 +187,10 @@ fun FeedScaffold(
                     ),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(articles, key = { it.id }) { item ->
-                        ArticleCard(
+                    itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
+                        FeedArticleItem(
                             item = item,
+                            index = index,
                             onClick = { onArticleClick(item) },
                             onBookmark = { onBookmark(item, it) },
                             onShare = { onShare(item) },

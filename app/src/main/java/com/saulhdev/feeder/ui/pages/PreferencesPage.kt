@@ -68,6 +68,10 @@ fun PreferencesPage(
     val filterPrefs = listOf(
         prefs.blockedWords,
     )
+    val glancePrefs = listOf(
+        prefs.glanceEnabled,
+        prefs.glancePlaceName,
+    )
     val themePrefs = listOf(
         prefs.overlayTheme,
         prefs.appFont,
@@ -110,6 +114,13 @@ fun PreferencesPage(
                 PreferenceGroup(
                     stringResource(id = R.string.pref_cat_filters),
                     prefs = filterPrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
+            item(key = R.string.pref_glance_row) {
+                PreferenceGroup(
+                    stringResource(id = R.string.pref_glance_row),
+                    prefs = glancePrefs,
                     onPrefDialog = onPrefDialog
                 )
             }

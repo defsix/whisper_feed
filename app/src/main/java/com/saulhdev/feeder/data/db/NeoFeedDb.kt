@@ -46,7 +46,7 @@ const val ID_ALL: Long = -1L
         Feed::class,
         Article::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -228,7 +228,17 @@ val allMigrations = arrayOf(
     MIGRATION_9_10,
     MIGRATION_10_11,
     MIGRATION_11_12,
+    MIGRATION_12_13,
 )
+
+@Suppress("ClassName")
+object MIGRATION_12_13 : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Read state did not exist. Existing articles start unread rather than
+        // being guessed at, so the first count after upgrading is honest.
+        db.execSQL("ALTER TABLE Article ADD COLUMN readAt INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_11_12 : Migration(11, 12) {

@@ -33,6 +33,8 @@ import com.saulhdev.feeder.ui.overlay.FeedScaffold
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import androidx.compose.material3.MaterialTheme
+import com.saulhdev.feeder.manager.glance.GlanceState
+import com.saulhdev.feeder.manager.glance.GlanceStateHolder
 import com.saulhdev.feeder.ui.theme.CardTheme
 import com.saulhdev.feeder.ui.theme.OverlayTheme
 import com.saulhdev.feeder.ui.theme.fontFamilyFor
@@ -86,6 +88,10 @@ class OverlayView(val context: Context) :
 
     /** Typeface preference, mirrored so the overlay matches the app. */
     private val overlayFont = mutableStateOf(prefs.appFont.getValue())
+
+    /** Weather, sunset and counts for the strip above the categories. */
+    private val glanceHolder: GlanceStateHolder by inject()
+    private val glanceState = mutableStateOf(GlanceState())
     private val showBookmarks = mutableStateOf(false)
     private val isFilterActive = mutableStateOf(false)
 
@@ -157,6 +163,10 @@ class OverlayView(val context: Context) :
         syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
         }
+        syncScope.launch {
+            glanceHolder.state.collect { glanceState.value = it }
+        }
+        glanceHolder.refreshIfStale()
         syncScope.launch {
             prefs.overlayTheme.get().collect {
                 mainScope.launch {
@@ -336,6 +346,7 @@ class OverlayView(val context: Context) :
                     isRefreshing = isSyncingState.value,
                     isFilterActive = isFilterActive.value,
                     isShowingBookmarks = showBookmarks.value,
+                    glanceState = glanceState.value,
                     topInset = with(density) { topInsetPx.value.toDp() },
                     bottomInset = with(density) { bottomInsetPx.value.toDp() },
                     // setValue blocks on the datastore write, so keep it off the
@@ -364,6 +375,9 @@ class OverlayView(val context: Context) :
     }
 
     private fun openArticle(item: FeedItem) {
+        // Counts on the glance row have to reflect reading done here too, not
+        // only in the app — this is the surface most articles are opened from.
+        syncScope.launch { viewModel.markRead(item.id) }
         if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
             context.launchView(item.link)
         } else {

@@ -161,6 +161,13 @@ class ArticleListViewModel(
         }
     }
 
+    /** Records that an article was opened, for the unread and read-today counts. */
+    fun markRead(id: String) {
+        viewModelScope.launch {
+            articleRepo.markRead(id)
+        }
+    }
+
     fun bookmarkArticle(id: String, boolean: Boolean) {
         viewModelScope.launch {
             articleRepo.bookmarkArticle(id, boolean)

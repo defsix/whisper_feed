@@ -120,6 +120,31 @@ interface FeedArticleDao {
         minKeptPubDate: Long,
     ): List<String>
 
+    @Query(
+        """
+        UPDATE Article SET readAt = :readAt WHERE uuid = :id AND readAt = 0
+        """
+    )
+    suspend fun markRead(id: String, readAt: Long): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM Article
+        JOIN Feeds ON Article.feedId = Feeds.id
+        WHERE Feeds.isEnabled = 1 AND Article.readAt = 0
+        """
+    )
+    fun countUnread(): Flow<Int>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM Article
+        JOIN Feeds ON Article.feedId = Feeds.id
+        WHERE Feeds.isEnabled = 1 AND Article.readAt >= :since
+        """
+    )
+    fun countReadSince(since: Long): Flow<Int>
+
     @Query("SELECT * FROM ArticleIdWithLink")
     fun getArticleIdLinks(): Flow<List<ArticleIdWithLink>>
 

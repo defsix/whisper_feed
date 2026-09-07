@@ -47,6 +47,7 @@ import com.saulhdev.feeder.ui.pages.LicensePage
 import com.saulhdev.feeder.ui.pages.MainPage
 import com.saulhdev.feeder.ui.pages.MastodonAddPage
 import com.saulhdev.feeder.ui.pages.MastodonCallbackPage
+import com.saulhdev.feeder.ui.pages.GlanceLocationPage
 import com.saulhdev.feeder.ui.pages.PreferencesPage
 import com.saulhdev.feeder.ui.pages.SourceAddPage
 import com.saulhdev.feeder.ui.pages.SourceListPage
@@ -84,6 +85,7 @@ fun NavigationManager(
                 MainPage(args.page)
             }
             composable<NavRoute.Settings> { PreferencesPage() }
+            composable<NavRoute.GlanceLocation> { GlanceLocationPage() }
             composable<NavRoute.Sources> { SourceListPage() }
             composable<NavRoute.About> { AboutPage() }
             composable<NavRoute.License> { LicensePage() }
@@ -145,6 +147,9 @@ open class NavRoute {
 
     @Serializable
     data object Sources : NavRoute()
+
+    @Serializable
+    data object GlanceLocation : NavRoute()
 
     @Serializable
     data object About : NavRoute()

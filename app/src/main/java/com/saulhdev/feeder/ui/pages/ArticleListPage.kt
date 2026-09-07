@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BottomSheetScaffold
@@ -56,6 +57,7 @@ import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaf
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -96,7 +98,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
-import com.saulhdev.feeder.ui.overlay.ArticleCard
+import com.saulhdev.feeder.ui.overlay.FeedArticleItem
+import com.saulhdev.feeder.ui.overlay.GlanceRow
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
 import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
@@ -111,11 +114,13 @@ fun ArticleListPage(
     prefs: FeedPreferences = koinInject(),
     syncClient: SyncRestClient = koinInject(),
     sourcesRepo: SourcesRepository = koinInject(),
+    glanceHolder: com.saulhdev.feeder.manager.glance.GlanceStateHolder = koinInject(),
     viewModel: ArticleListViewModel = koinNeoViewModel(),
 ) {
     val context = LocalContext.current
     val navController = LocalNavController.current
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { glanceHolder.refreshIfStale() }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val paneNavigator = rememberListDetailPaneScaffoldNavigator<Any>()
     val articleId = remember { mutableStateOf("") }
@@ -306,6 +311,12 @@ fun ArticleListPage(
                             val selectedCategories by prefs.categoryFilter.get()
                                 .collectAsState(initial = emptySet())
 
+                            val glance by glanceHolder.state.collectAsState()
+                            GlanceRow(
+                                state = glance,
+                                onSetLocation = { navController.navigate(NavRoute.Settings) },
+                            )
+
                             CategoryChipRow(
                                 categories = categories,
                                 selected = selectedCategories,
@@ -322,10 +333,15 @@ fun ArticleListPage(
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     contentPadding = PaddingValues(8.dp)
                                 ) {
-                                    items(bookmarked.bookmarkedArticles, key = { it.id }) { item ->
-                                        ArticleCard(
+                                    itemsIndexed(
+                                        bookmarked.bookmarkedArticles,
+                                        key = { _, item -> item.id },
+                                    ) { index, item ->
+                                        FeedArticleItem(
                                             item = item,
+                                            index = index,
                                             onClick = {
+                                                viewModel.markRead(item.id)
                                                 if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {
@@ -352,13 +368,19 @@ fun ArticleListPage(
                                     onRefresh = { syncClient.syncAllFeeds() },
                                     listState = listState,
                                     content = {
-                                        items(state.articles, key = { it.id }) { item ->
-                                            // The same card the launcher feed
-                                            // draws, so the two surfaces are not
-                                            // mistaken for different apps.
-                                            ArticleCard(
+                                        itemsIndexed(
+                                            state.articles,
+                                            key = { _, item -> item.id },
+                                        ) { index, item ->
+                                            // The same shapes and the same
+                                            // rhythm the launcher feed draws, so
+                                            // the two surfaces are not mistaken
+                                            // for different apps.
+                                            FeedArticleItem(
                                                 item = item,
+                                                index = index,
                                                 onClick = {
+                                                    viewModel.markRead(item.id)
                                                     if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                                                         context.launchView(item.link)
                                                     } else {

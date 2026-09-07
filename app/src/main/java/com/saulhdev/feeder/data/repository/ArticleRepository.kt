@@ -99,6 +99,15 @@ class ArticleRepository(db: NeoFeedDb) {
         stored.forEach { (article, text) -> block(article, text) }
     }
 
+    /** Records that an article was opened. First open wins; re-opens are a no-op. */
+    suspend fun markRead(articleId: String) = withContext(jcc) {
+        articlesDao.markRead(articleId, System.currentTimeMillis())
+    }
+
+    fun countUnread(): Flow<Int> = articlesDao.countUnread().flowOn(cc)
+
+    fun countReadSince(since: Long): Flow<Int> = articlesDao.countReadSince(since).flowOn(cc)
+
     suspend fun bookmarkArticle(
         articleId: String,
         bookmark: Boolean,
