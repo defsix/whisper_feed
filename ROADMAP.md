@@ -14,7 +14,7 @@ in the code.
 |---|---|---|
 | 0 | Launcher feasibility | **Done** — builds, installs, minus-one works, mechanism documented in `UPSTREAM_NOTES.md` |
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale and bundled Inter, which the milestone did not ask for |
-| 2 | Cards layout | **Most of it** — cards, images, metadata, pull-to-refresh, save, read state. Missing: per-card overflow menu, hide, More/Less controls |
+| 2 | Cards layout | **Most of it** — cards, images, metadata, pull-to-refresh, save, read state. Missing: per-card overflow menu, source favicon, hide, More/Less controls |
 | 3 | Remaining layouts | **Not started** — Magazine, List, Adaptive Mosaic |
 | 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
 | 5 | Personalisation | **Not started** |
@@ -82,6 +82,24 @@ That set is Milestone 4's "complete source management", read literally.
 - **Per-card overflow menu** — hide source, hide topic, not interested, share.
   Milestone 2 asked for it; the concept board shows it; every article currently
   offers only save and share. It is also the surface Milestone 5 hangs off.
+- **Source favicon on the card** — the meta row names the source in text only.
+  Discover puts the site's mark beside it, and it is what makes a source
+  recognisable at a glance in a mixed feed.
+
+  Where the image comes from, cheapest first: the feed's own `<image>` or
+  `<icon>` element (many carry one and it is already parsed past), then
+  `/favicon.ico`, then the `<link rel="icon">` set in the site's HTML head.
+  Resolve **once per source, not per article** — store the URL on `Feed` and
+  the bytes in the existing blob directory, refreshed only when a feed is
+  edited or fails to load. Falling back to a tinted monogram of the source's
+  first letter keeps the row from collapsing when a site has nothing usable,
+  which is common enough on small blogs to be the default case rather than an
+  edge one.
+
+  Note the privacy cost and keep it honest: fetching a favicon is a request to
+  the site's own server, no third-party favicon service. Google's
+  `s2/favicons` endpoint is the easy path and it tells Google every source the
+  user reads — it should not be used.
 
 ### 4. Layouts (Milestone 3)
 
@@ -99,7 +117,56 @@ Worth restating: `docs/REFERENCES.md` §4 found **no open-source prior art** for
 transparent, resettable preference learning in a feed reader. This is
 build-it-ourselves rather than assembly, and should be budgeted that way.
 
-### 6. Sync and backup (Milestone 6)
+### 6. Breaking news, sticky and pinned
+
+Three related asks, in increasing order of difficulty.
+
+**Pinning is the easy one and should be built first.** A user pins an article
+they are following; it holds the top of the feed until unpinned. It needs one
+boolean on `Article`, an entry in the per-card overflow menu (§3), and a rule
+that pinned items sort above everything regardless of the active sort. No
+inference, no clustering, nothing to get wrong. It also happens to be the
+manual escape hatch for whenever the automatic detection below gets it wrong,
+so it is worth having in place before the automatic version ships.
+
+**Breaking news detection — clustering.** The signal is the right one: when
+five sources publish about the same thing inside an hour, that is a story, and
+a single-source post is not. The hard part is "the same thing". Options, and
+the honest cost of each:
+
+- *Title similarity* — normalise, strip the source suffix, then compare on
+  token overlap or trigram Jaccard. Runs locally, no network, no model, a few
+  milliseconds over a few hundred articles. Misses stories that are worded
+  differently and joins ones that merely share a proper noun. Cheap enough to
+  try first and see how it reads on a real feed.
+- *Shared outbound links* — articles about one event tend to cite the same
+  source document. Precise when it fires, silent when it does not.
+- *Embeddings* — accurate, and a model in the APK plus per-article inference
+  on a phone, for a feed of a few hundred items. Not for a first pass.
+
+Whichever is used, the cluster is what gets promoted, not the article: one
+representative gets the hero slot, and the others become a "N sources" line
+under it. That also answers a question the current rhythm cannot — which of
+five near-identical articles to show.
+
+Guard against the obvious failure: one prolific feed posting six times about
+its own topic is not breaking news. Require the cluster to span **distinct
+sources**, and require recency, or a chatty feed will hold the hero slot all
+day.
+
+**Sticky until scrolled past.** A user setting, off by default. The promoted
+cluster holds the top of the viewport until the user scrolls past it, then
+releases and behaves like any other card. In Compose this is a sticky header
+in the `LazyColumn` rather than a separate overlay, so it costs little — but
+it interacts with the rhythm in §4 and with pinning above, and those three
+need one ordering rule between them, not three competing ones. Decide that
+rule when the layouts land.
+
+Settings this adds: highlight breaking news (on/off), keep it at the top until
+scrolled past (on/off). Both belong with the personalisation switches in §5,
+not in a category of their own.
+
+### 7. Sync and backup (Milestone 6)
 
 What exists today: OPML import and export, bookmark import and export, both
 manual, both through the file picker. That is a working backup story, just not
@@ -124,7 +191,7 @@ Google Drive app-data sync is **not** being pursued. It syncs your own devices
 rather than your reading, and it would put a Play Services dependency into an
 app that has avoided one everywhere else.
 
-### 7. Ship it
+### 8. Ship it
 
 - **The Lawnchair whitelist PR** — see below. This is the single highest-value
   item for anyone other than us using the app.
