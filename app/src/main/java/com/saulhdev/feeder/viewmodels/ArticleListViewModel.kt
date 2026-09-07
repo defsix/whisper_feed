@@ -187,8 +187,12 @@ class ArticleListViewModel(
                 else list.filterNot { it.sourceId in sfm.sourcesFilter }
             }
             .let { list ->
+                // Any of the source's categories being muted hides it. This
+                // compared the whole comma-separated tag string against the
+                // muted set, so muting a category never hid a feed that had
+                // more than one.
                 if (sfm.tagsFilter.isEmpty()) list
-                else list.filterNot { it.feedTag in sfm.tagsFilter }
+                else list.filterNot { item -> item.feedTags.any { it in sfm.tagsFilter } }
             }
             .let { list ->
                 when (sfm.sort) {

@@ -64,8 +64,16 @@ data class FeedItem(
     val pinned: Boolean
         get() = article.pinned
 
+    /** Every category this article's source carries. */
+    val feedTags: List<String>
+        get() = feed.tags
+
+    /**
+     * The single category shown on a card. A feed tagged "Tech,News" was
+     * drawing the raw string, comma and all.
+     */
     val feedTag: String
-        get() = feed.tag
+        get() = feed.tags.firstOrNull().orEmpty()
 
     val domain: String?
         get() = article.domain

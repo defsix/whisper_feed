@@ -186,11 +186,11 @@ interface FeedArticleDao {
         """
     SELECT Article.* FROM Article
     JOIN Feeds ON Article.feedId = Feeds.id
-    WHERE Feeds.isEnabled = 1 AND Feeds.tag IN (:tags)
+    WHERE Article.feedId IN (:feedIds) AND Feeds.isEnabled = 1
     ORDER BY Article.primarySortTime DESC
     """
     )
-    fun getFeedItemsByTagsSimple(tags: Set<String>): Flow<List<FeedItem>>
+    fun getFeedItemsByFeedIdsFlow(feedIds: List<Long>): Flow<List<FeedItem>>
 
     @Transaction
     @Query(

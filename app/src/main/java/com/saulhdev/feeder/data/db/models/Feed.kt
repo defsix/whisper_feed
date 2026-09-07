@@ -58,4 +58,16 @@ data class Feed(
     val requireImage: Boolean = false,
     @ColumnInfo(defaultValue = "1")
     val excludeReplies: Boolean = true,
-)
+) {
+    /**
+     * The feed's categories.
+     *
+     * `tag` is a comma-separated list, not a single value — the source editor
+     * writes one and the tag list splits one. Several places treated it as a
+     * single value anyway and quietly failed on any feed with more than one
+     * category, so the split lives here now and everything reads it from one
+     * place.
+     */
+    val tags: List<String>
+        get() = tag.split(",").map(String::trim).filter(String::isNotEmpty)
+}

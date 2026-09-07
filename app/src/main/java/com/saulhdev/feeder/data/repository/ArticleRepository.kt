@@ -21,13 +21,18 @@ package com.saulhdev.feeder.data.repository
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
+import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.utils.blobInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -36,6 +41,7 @@ class ArticleRepository(db: NeoFeedDb) {
     private val cc = Dispatchers.IO
     private val jcc = Dispatchers.IO + SupervisorJob()
     private val articlesDao = db.feedArticleDao()
+    private val feedsDao = db.feedSourceDao()
 
     suspend fun deleteArticles(ids: List<String>) = withContext(jcc) {
         articlesDao.deleteArticles(ids)
@@ -82,8 +88,33 @@ class ArticleRepository(db: NeoFeedDb) {
     fun getEnabledFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllEnabledFeedItems()
         .flowOn(cc)
 
+    /**
+     * Articles from every source carrying any of [tags].
+     *
+     * This used to be a single query matching `Feeds.tag IN (:tags)`, which
+     * only ever matched a feed whose *entire* tag string equalled a chip. A
+     * feed tagged "Tech,News" therefore matched neither the Tech chip nor the
+     * News chip and simply disappeared when either was selected — invisibly,
+     * because single-category feeds still worked.
+     *
+     * Matching a comma list needs one LIKE per tag, which Room cannot express
+     * against a set in a static query, so the feeds are resolved first and the
+     * articles fetched by id. The id list is deduplicated before it reaches the
+     * article query: a sync writes `currentlySyncing` to Feeds constantly, and
+     * without that every one of those writes would restart the query for an
+     * identical set of ids.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun getFeedItemsByTags(tags: Set<String>): Flow<List<FeedItem>> =
-        articlesDao.getFeedItemsByTagsSimple(tags)
+        feedsDao.getEnabledFeeds()
+            .map { feeds ->
+                feeds.filter { feed -> feed.tags.any { it in tags } }.map(Feed::id)
+            }
+            .distinctUntilChanged()
+            .flatMapLatest { ids ->
+                if (ids.isEmpty()) flowOf(emptyList())
+                else articlesDao.getFeedItemsByFeedIdsFlow(ids)
+            }
             .flowOn(cc)
 
     /**
