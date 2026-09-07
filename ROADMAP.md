@@ -28,7 +28,28 @@ the same as Milestone 3. The rhythm varies weight *within* one layout; Milestone
 
 ---
 
+## Reported bugs
+
+Found on device, so they take precedence over anything below when they are in
+the way.
+
+- **Opening an article from the overlay flashes the home screen, and coming
+  back lands there too.** Tapping an article closes the minus-one panel, shows
+  the desktop for a frame, and only then opens the browser; pressing back from
+  the browser returns to the home screen rather than to the feed. Both halves
+  are the same cause: the overlay is a window on the launcher's token, not an
+  activity with its own task, so the browser starts into the launcher's task
+  and there is nothing for back to return to. Worth reading
+  `OverlayView.closePanelIfNeeded` and the `pendingCloseOnResume` flag together
+  with how the view intent is launched — the fix is likely to be starting the
+  browser in its own task and closing the panel after, not before, it is up.
+
+---
+
 ## Suggested order
+
+The numbers are labels, not a schedule — they stay put so they can be referred
+to. The working order set by the user is 1, 3, 4, 2, then the rest.
 
 ### 1. Adding a feed should be forgiving
 
@@ -74,14 +95,36 @@ a hundred sources, one at a time is the wrong unit.
   identical to one that is simply quiet. `lastSync` is already stored; nothing
   reads it back to the user.
 - **Reorder** sources and categories.
+- **Tags should be picked, not typed.** The source editor's Tags field is free
+  text, so a category is created by spelling it right and lost by spelling it
+  wrong — and the field reads as one value even though the column has always
+  held a comma-separated list. Every tag in use should offer itself as a chip
+  to select, with typing reserved for making a new one, and several selectable
+  on one feed. Note this is a UI change and a tag registry, not a schema change:
+  `Feeds.tag` already stores a list and `Feed.tags` already reads it.
 
 That set is Milestone 4's "complete source management", read literally.
 
 ### 3. Finish the card
 
-- **Per-card overflow menu** — hide source, hide topic, not interested, share.
-  Milestone 2 asked for it; the concept board shows it; every article currently
-  offers only save and share. It is also the surface Milestone 5 hangs off.
+- **Per-card overflow menu** — the four entries the mockups show, in order:
+  More like this, Less like this, Hide source, Share. The first two are the
+  visible half of Milestone 5 and should be built to record a signal even
+  before anything reads it back, so the menu is not a lie in the meantime.
+  Hide source and Share work on their own from day one. Every article currently
+  offers only save and share.
+- **One symbol for saving.** A heart on the card saves an article and a
+  bookmark ribbon in the header shows the saved ones — two glyphs for one idea,
+  neither of which is ours. Both become a single mark derived from the app
+  symbol: it is three blades, so a three-stroke form is already in the
+  artwork. Vector rather than a bitmap, so it tints with the theme and carries
+  a filled state for saved against an outline for not.
+
+  Decided against, so it does not come back: a **Saved chip in the category
+  row**. That row is topics — All, Misc, News, Tech — and Saved is a state, so
+  the row would answer two questions at once and raise one it cannot (is Saved
+  additive with News, or exclusive?). One route in, through the header toggle,
+  which already shows when it is on.
 - **Source favicon on the card** — the meta row names the source in text only.
   Discover puts the site's mark beside it, and it is what makes a source
   recognisable at a glance in a mixed feed.
@@ -197,6 +240,30 @@ app that has avoided one everywhere else.
   item for anyone other than us using the app.
 - Release signing key, then GitHub Releases → F-Droid → Play, per the staged
   plan in `docs/brand/ASSET_SPEC.md` §8.
+
+### 9. Search, and a filter that explains itself
+
+- **Search the feed** from the header. Nothing in the app can find an article
+  it has already downloaded, which is the first thing anyone reaches for once
+  the feed is longer than a screen. Local first, over titles and content
+  already in the database — it needs no network and no account.
+- **The filter is confusing as it stands.** It is a bottom sheet of sources,
+  tags and sorting reached from an icon that gives no hint of what it will do
+  or whether it is currently doing it. Rework it so the active state is legible
+  from the header, so what it is filtering *by* is visible without opening it,
+  and so it reads as narrowing the feed rather than configuring it.
+
+### 10. Glance and header, once the rest is in
+
+Small, and none of it blocks anything.
+
+- **Chance of precipitation on the weather chip**, beside the condition. The
+  Open-Meteo call already returns it. Optional — the chip reads cleanly as it
+  is, so this is a judgement call to make when it is in front of us.
+- **Account avatar, top right.** Discover puts the signed-in user there and it
+  is where a hand goes looking. It waits on §7: there is no account to show
+  until the Google Reader client exists, and a silhouette that opens nothing
+  would be worse than the space it fills.
 
 ---
 
