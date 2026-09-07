@@ -59,7 +59,7 @@
       just tapped.
     -->
     <style name="SplashTheme" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/whisper_cobalt</item>
+        <item name="windowSplashScreenBackground">@color/whisper_splash_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>

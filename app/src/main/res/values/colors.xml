@@ -15,6 +15,9 @@
     <color name="whisper_slate">#475569</color>
     <color name="whisper_soft">#E5E7EB</color>
     <color name="ic_launcher_background">#FBFCFE</color>
+    <!-- The splash sits on the app icon's own ground, so launching the
+         app is the icon growing into it. -->
+    <color name="whisper_splash_bg">#FBFCFE</color>
     <color name="globalAccent">#4285f4</color>
     <color name="textColorPrimary">#000000</color>
     <color name="toggle_checked">#6200EE</color>

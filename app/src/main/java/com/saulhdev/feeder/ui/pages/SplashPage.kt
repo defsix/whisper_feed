@@ -42,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,9 @@ private const val MINIMUM_MS = 700L
 
 /** And the longest it will wait for content that may never arrive. */
 private const val MAXIMUM_MS = 2_500L
+
+/** How tall the symbol draws here. */
+private val MARK_HEIGHT = 150.dp
 
 /**
  * The loading screen, over the app until it has something to show.
@@ -91,25 +96,38 @@ fun WhisperSplash(
         content()
 
         AnimatedVisibility(visible = visible, exit = fadeOut()) {
+            // Read from the resolved scheme rather than the system setting, so
+            // an app forced to Dark or Pure black gets the dark ground too.
+            val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(WhisperCobalt)
+                    .background(colorResource(R.color.whisper_splash_bg))
                     .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                // The full gradient symbol, on the ground the app icon uses.
+                // Its middle blade is within a few points of WhisperCobalt, so
+                // on the cobalt this screen used to have, two of the three
+                // blades disappeared into the background.
+                // ic_brand_mark, not ic_splash_mark: the latter is padded to
+                // the platform's splash-icon spec, and that transparent margin
+                // counts in layout — it put 90dp of air under the symbol.
                 Image(
-                    painter = painterResource(R.drawable.ic_splash_mark),
+                    painter = painterResource(R.drawable.ic_brand_mark),
                     contentDescription = null,
-                    modifier = Modifier.size(160.dp),
+                    modifier = Modifier.height(MARK_HEIGHT),
                 )
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(28.dp))
                 // The wordmark artwork is the name only — it does not carry
                 // the tagline, which is why removing the text line beneath it
                 // lost the tagline entirely rather than deduplicating it.
                 Image(
-                    painter = painterResource(R.drawable.ic_wordmark_light),
+                    painter = painterResource(
+                        if (dark) R.drawable.ic_wordmark_light
+                        else R.drawable.ic_wordmark_navy
+                    ),
                     contentDescription = stringResource(R.string.app_name),
                     modifier = Modifier.fillMaxWidth(0.62f),
                 )
@@ -117,11 +135,15 @@ fun WhisperSplash(
                 Text(
                     text = stringResource(R.string.app_tagline),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.92f),
+                    color = if (dark) Color.White.copy(alpha = 0.78f)
+                    else colorResource(R.color.whisper_slate),
                 )
                 Spacer(Modifier.height(56.dp))
                 CircularProgressIndicator(
-                    color = Color.White.copy(alpha = 0.9f),
+                    // Cobalt is legible on the light ground but sits close to
+                    // the dark one; sky is the mark's own top blade.
+                    color = if (dark) colorResource(R.color.whisper_sky)
+                    else WhisperCobalt,
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(34.dp),
                 )
