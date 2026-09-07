@@ -40,6 +40,7 @@ import com.saulhdev.feeder.ui.theme.OverlayTheme
 import com.saulhdev.feeder.ui.theme.fontFamilyFor
 import com.saulhdev.feeder.ui.theme.typographyFor
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
+import com.saulhdev.feeder.ui.theme.WhisperShapes
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
 import com.saulhdev.feeder.ui.views.DialogMenu
 import com.saulhdev.feeder.ui.views.FilterBottomSheet
@@ -331,6 +332,7 @@ class OverlayView(val context: Context) :
             MaterialTheme(
                 colorScheme = overlayScheme.value,
                 typography = typographyFor(fontFamilyFor(overlayFont.value)),
+                shapes = WhisperShapes,
             ) {
                 val density = LocalDensity.current
                 val categories by sourcesRepo.getAllTagsFlow()

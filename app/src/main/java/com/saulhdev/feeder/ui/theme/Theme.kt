@@ -31,6 +31,7 @@ fun AppTheme(
     MaterialTheme(
         colorScheme = OverlayTheme.schemeFor(context, mode, dynamicColor),
         typography = typographyFor(fontFamilyFor(fontPref)),
+        shapes = WhisperShapes,
         content = content
     )
 }

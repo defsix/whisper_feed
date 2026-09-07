@@ -29,9 +29,15 @@
         <item name="shapeAppearanceMediumComponent">@style/RoundShapeAppearance</item>
     </style>
 
+    <!--
+      Matches WhisperShapes.extraLarge. Sheets and dialogs are the surfaces
+      Material You rounds most, and these are the View-side counterparts of the
+      Compose shape scale — they have to agree or a bottom sheet looks like it
+      belongs to a different app than the screen behind it.
+    -->
     <style name="RoundShapeAppearance" parent="ShapeAppearance.Material3.MediumComponent">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
+        <item name="cornerSize">28dp</item>
     </style>
 
     <style name="MaterialCard" parent="Widget.Material3.CardView.Filled">

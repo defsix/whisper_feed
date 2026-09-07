@@ -76,10 +76,12 @@ fun SelectChip(
     alwaysShowIcon: Boolean = true,
     onSelected: () -> Unit = {},
 ) {
+    // A shape morph on selection, which is Material You behaviour in its own
+    // right — both ends sit on the shape scale rather than beside it.
     val selectionCornerRadius by animateDpAsState(
         when {
-            checked -> 4.dp
-            else    -> 16.dp
+            checked -> CHIP_CHECKED_CORNER
+            else    -> CHIP_UNCHECKED_CORNER
         }
     )
     val icon by remember(checked) {
@@ -240,3 +242,9 @@ fun DeSelectAll(
         }
     }
 }
+
+/** Matches WhisperShapes.extraSmall. */
+private val CHIP_CHECKED_CORNER = 8.dp
+
+/** Matches WhisperShapes.large, so an unselected chip agrees with the cards. */
+private val CHIP_UNCHECKED_CORNER = 20.dp

@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,7 +76,7 @@ fun CategoryChipRow(
                 // Already unfiltered, so re-tapping "All" should not churn the feed.
                 onClick = { if (selected.isNotEmpty()) onSelectedChange(emptySet()) },
                 label = { Text(stringResource(R.string.all_categories)) },
-                shape = FilterChipDefaults.shape,
+                shape = MaterialTheme.shapes.large,
                 colors = legibleChipColors(),
                 border = null,
             )
@@ -93,7 +92,7 @@ fun CategoryChipRow(
                     )
                 },
                 label = { Text(category) },
-                shape = FilterChipDefaults.shape,
+                shape = MaterialTheme.shapes.large,
                 colors = legibleChipColors(),
                 border = null,
             )
@@ -103,7 +102,7 @@ fun CategoryChipRow(
 
 /** See the note on [CategoryChipRow] for why the unselected state is filled. */
 @Composable
-private fun legibleChipColors() = FilterChipDefaults.filterChipColors(
+private fun legibleChipColors() = androidx.compose.material3.FilterChipDefaults.filterChipColors(
     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
     labelColor = MaterialTheme.colorScheme.onSurface,
     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,

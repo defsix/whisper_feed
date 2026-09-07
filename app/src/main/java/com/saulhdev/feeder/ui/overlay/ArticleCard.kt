@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,7 +100,7 @@ fun ArticleHeroCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -209,7 +208,7 @@ fun ArticleCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(16.dp)),
+                        .clip(MaterialTheme.shapes.medium),
                 )
             }
 
@@ -330,7 +329,7 @@ fun ArticleCompactRow(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(96.dp)
-                        .clip(RoundedCornerShape(14.dp)),
+                        .clip(MaterialTheme.shapes.medium),
                 )
             } else {
                 Spacer(Modifier.width(4.dp))
