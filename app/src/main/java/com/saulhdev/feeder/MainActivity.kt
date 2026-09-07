@@ -19,7 +19,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.asLiveData
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.work.Constraints
@@ -40,7 +39,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.saulhdev.feeder.ui.pages.WhisperSplash
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import com.saulhdev.feeder.ui.theme.AppTheme
-import com.saulhdev.feeder.utils.extensions.isDarkTheme
+import com.saulhdev.feeder.utils.THEME_DARK
+import com.saulhdev.feeder.utils.THEME_LIGHT
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
@@ -58,10 +58,12 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             navController = rememberNavController()
-            TransparentSystemBars()
             // Collected rather than read once, so changing the theme or the
             // typeface in Settings is reflected immediately instead of on the
-            // next app start.
+            // next app start. This is also why the activity no longer
+            // recreate()s itself on a theme change: a full restart to repaint
+            // colours Compose already tracks cost a frame budget and flashed
+            // the splash screen on its way back.
             val themeMode by prefs.overlayTheme.get()
                 .collectAsState(initial = prefs.overlayTheme.getValue())
             val dynamic by prefs.dynamicColor.get()
@@ -70,6 +72,16 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = prefs.appFont.getValue())
             val pureBlack by prefs.pureBlack.get()
                 .collectAsState(initial = prefs.pureBlack.getValue())
+
+            // One place decides light or dark, and the bars follow it rather
+            // than re-deriving it from the preference on their own.
+            val systemDark = isSystemInDarkTheme()
+            val dark = when (themeMode) {
+                THEME_LIGHT -> false
+                THEME_DARK -> true
+                else -> systemDark
+            }
+            TransparentSystemBars(dark = dark)
 
             AppTheme(
                 mode = themeMode,
@@ -105,7 +117,6 @@ class MainActivity : ComponentActivity() {
         }
 
         configurePeriodicSync()
-        observePrefs()
         handleDeepLink(intent)
     }
 
@@ -122,42 +133,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * @param dark whether the resolved scheme is a dark one, passed in rather
+     *   than read here. It used to call `isDarkTheme` and `overlayTheme
+     *   .getValue()`, both of which are blocking DataStore reads, as
+     *   DisposableEffect *keys* — and keys are re-evaluated on every
+     *   recomposition, so this blocked the main thread once per frame.
+     */
     @Composable
-    fun TransparentSystemBars() {
-        DisposableEffect(isDarkTheme, prefs.overlayTheme.getValue()) {
+    fun TransparentSystemBars(dark: Boolean) {
+        DisposableEffect(dark) {
             enableEdgeToEdge(
                 statusBarStyle = SystemBarStyle.auto(
                     android.graphics.Color.TRANSPARENT,
                     android.graphics.Color.TRANSPARENT,
-                ) { isDarkTheme },
+                ) { dark },
                 navigationBarStyle = SystemBarStyle.auto(
                     android.graphics.Color.TRANSPARENT,
                     android.graphics.Color.TRANSPARENT,
-                ) { isDarkTheme },
+                ) { dark },
             )
             onDispose {}
-        }
-    }
-
-    private fun observePrefs() {
-        val oldTheme = prefs.overlayTheme.getValue()
-        val oldTransparency = prefs.overlayTransparency.getValue()
-        val dynamicColor = prefs.dynamicColor.getValue()
-
-        prefs.overlayTheme.get().asLiveData().observe(this) {
-            if (it != oldTheme) {
-                recreate()
-            }
-        }
-        prefs.overlayTransparency.get().asLiveData().observe(this) {
-            if (it != oldTransparency) {
-                recreate()
-            }
-        }
-        prefs.dynamicColor.get().asLiveData().observe(this) {
-            if (it != dynamicColor) {
-                recreate()
-            }
         }
     }
 

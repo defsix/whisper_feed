@@ -90,6 +90,18 @@ class OverlayView(val context: Context) :
     /** Typeface preference, mirrored so the overlay matches the app. */
     private val overlayFont = mutableStateOf(prefs.appFont.getValue())
 
+    /**
+     * Overlay background transparency, mirrored from preferences.
+     *
+     * onScroll runs on every frame of the launcher's swipe, and reading this
+     * from DataStore there blocked each frame on a disk read.
+     */
+    @Volatile
+    private var overlayAlpha = prefs.overlayTransparency.getValue()
+
+    /** Last colour handed to the window, so repeat frames do no work. */
+    private var lastBackgroundColor: Int? = null
+
     /** Weather, sunset and counts for the strip above the categories. */
     private val glanceHolder: GlanceStateHolder by inject()
     private val glanceState = mutableStateOf(GlanceState())
@@ -163,6 +175,9 @@ class OverlayView(val context: Context) :
         }
         syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
+        }
+        syncScope.launch {
+            prefs.overlayTransparency.get().collect { overlayAlpha = it }
         }
         syncScope.launch {
             prefs.pureBlack.get().drop(1).collect { mainScope.launch { updateTheme() } }
@@ -407,8 +422,10 @@ class OverlayView(val context: Context) :
         super.onScroll(f)
 
         val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
-        val alpha = if (f <= 0f) 0f else prefs.overlayTransparency.getValue()
+        val alpha = if (f <= 0f) 0f else overlayAlpha
         val color = (alpha * 255.0f).toInt() shl 24 or (bgColor and 0x00ffffff)
+        if (color == lastBackgroundColor) return
+        lastBackgroundColor = color
         getWindow().setBackgroundDrawable(color.toDrawable())
     }
 

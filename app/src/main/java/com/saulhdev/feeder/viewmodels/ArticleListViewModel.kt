@@ -21,7 +21,6 @@ package com.saulhdev.feeder.viewmodels
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
-import com.saulhdev.feeder.data.entity.SORT_CHRONOLOGICAL
 import com.saulhdev.feeder.data.entity.SORT_SOURCE
 import com.saulhdev.feeder.data.entity.SORT_TITLE
 import com.saulhdev.feeder.data.entity.SortFilterModel
@@ -180,45 +179,34 @@ class ArticleListViewModel(
         sfm: SortFilterModel,
         removeDuplicate: Boolean
     ): List<FeedItem> {
-        return articles
-            .let { if (removeDuplicate) it.distinctBy { item -> item.link } else it }
-            .let { list ->
-                if (sfm.sourcesFilter.isEmpty()) list
-                else list.filterNot { it.sourceId in sfm.sourcesFilter }
-            }
-            .let { list ->
-                // Any of the source's categories being muted hides it. This
-                // compared the whole comma-separated tag string against the
-                // muted set, so muting a category never hid a feed that had
-                // more than one.
-                if (sfm.tagsFilter.isEmpty()) list
-                else list.filterNot { item -> item.feedTags.any { it in sfm.tagsFilter } }
-            }
-            .let { list ->
-                when (sfm.sort) {
-                    SORT_CHRONOLOGICAL if !sfm.sortAsc ->
-                        list.sortedByDescending(FeedItem::timeMillis)
+        // One pass rather than four. Each `let` here used to allocate a whole
+        // new list, so a feed of a few thousand articles built three throwaway
+        // copies before the sort even started — on every emission.
+        val seenLinks = if (removeDuplicate) HashSet<String>() else null
+        val filtered = articles.asSequence()
+            .filter { item ->
+                when {
+                    seenLinks != null && !seenLinks.add(item.link) -> false
+                    item.sourceId in sfm.sourcesFilter -> false
+                    // Any of the source's categories being muted hides it. This
+                    // compared the whole comma-separated tag string against the
+                    // muted set, so muting a category never hid a feed that had
+                    // more than one.
+                    sfm.tagsFilter.isNotEmpty() &&
+                            item.feedTags.any { it in sfm.tagsFilter } -> false
 
-                    SORT_CHRONOLOGICAL if sfm.sortAsc  ->
-                        list.sortedBy(FeedItem::timeMillis)
-
-                    SORT_TITLE if sfm.sortAsc          ->
-                        list.sortedBy(FeedItem::contentTitle)
-
-                    SORT_TITLE if !sfm.sortAsc         ->
-                        list.sortedByDescending(FeedItem::contentTitle)
-
-                    SORT_SOURCE if sfm.sortAsc         ->
-                        list.sortedBy(FeedItem::displayTitle)
-
-                    SORT_SOURCE if !sfm.sortAsc        ->
-                        list.sortedByDescending(FeedItem::displayTitle)
-
-                    else                               -> list.sortedByDescending(
-                        FeedItem::timeMillis
-                    )
+                    else -> true
                 }
             }
+            .toList()
+
+        val comparator = when (sfm.sort) {
+            SORT_TITLE  -> compareBy(FeedItem::contentTitle)
+            SORT_SOURCE -> compareBy(FeedItem::displayTitle)
+            else        -> compareBy(FeedItem::timeMillis)
+        }
+        return if (sfm.sortAsc) filtered.sortedWith(comparator)
+        else filtered.sortedWith(comparator.reversed())
     }
 }
 

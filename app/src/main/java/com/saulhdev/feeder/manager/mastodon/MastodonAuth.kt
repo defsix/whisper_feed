@@ -57,9 +57,9 @@ class MastodonAuth {
                 .build()
 
             val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful || body.isNullOrBlank()) {
-                throw IllegalStateException("Failed to register app: ${response.code} ${body ?: ""}")
+            val body = response.body.string()
+            if (!response.isSuccessful || body.isBlank()) {
+                throw IllegalStateException("Failed to register app: ${response.code} $body")
             }
             json.decodeFromString(MastodonAppCredentials.serializer(), body)
         }
@@ -103,9 +103,9 @@ class MastodonAuth {
                 .build()
 
             val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful || body.isNullOrBlank()) {
-                throw IllegalStateException("Failed to exchange token: ${response.code} ${body ?: ""}")
+            val body = response.body.string()
+            if (!response.isSuccessful || body.isBlank()) {
+                throw IllegalStateException("Failed to exchange token: ${response.code} $body")
             }
             val token = json.decodeFromString(MastodonToken.serializer(), body)
             token.accessToken

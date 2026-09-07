@@ -170,7 +170,4 @@ class ArticleRepository(db: NeoFeedDb) {
 
     fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()
         .flowOn(cc)
-
-    fun getPinnedFeedItems(): Flow<List<FeedItem>> = articlesDao.getPinnedFeedItems()
-        .flowOn(cc)
 }

@@ -83,8 +83,6 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.manager.sync.SyncRestClient
-import com.saulhdev.feeder.ui.components.ArticleItem
-import com.saulhdev.feeder.ui.components.BookmarkItem
 import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.PullToRefreshLazyColumn
 import com.saulhdev.feeder.ui.icons.Phosphor
@@ -131,6 +129,11 @@ fun ArticleListPage(
     val articleId = remember { mutableStateOf("") }
 
     val state by viewModel.articleListState.collectAsState()
+    // Collected once rather than read inside onClick. getValue() is a
+    // runBlocking DataStore read, so reading it there blocked the main thread
+    // on every article tap — the one moment the UI most has to stay responsive.
+    val openMode by prefs.articleOpenMode.get()
+        .collectAsState(initial = prefs.articleOpenMode.getValue())
     val bookmarked by viewModel.bookmarksState.collectAsState()
 
     var showBookmarks by remember { mutableStateOf(false) }
@@ -356,7 +359,7 @@ fun ArticleListPage(
                                             index = index,
                                             onClick = {
                                                 viewModel.markRead(item.id)
-                                                if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {
                                                     scope.launch {
@@ -394,7 +397,7 @@ fun ArticleListPage(
                                                 index = index,
                                                 onClick = {
                                                     viewModel.markRead(item.id)
-                                                    if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                    if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
                                                         context.launchView(item.link)
                                                     } else {
                                                         scope.launch {

@@ -132,7 +132,7 @@ fun ViewWithActionBar(
                     title = { titleContent() },
                     navigationIcon = { navContent() },
                     actions = actions,
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         titleContentColor = MaterialTheme.colorScheme.onBackground,

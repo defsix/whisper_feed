@@ -48,9 +48,9 @@ class MastodonApi {
                 .build()
 
             val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful || body.isNullOrBlank()) {
-                throw IllegalStateException("Failed to fetch timeline: ${response.code} ${body ?: ""}")
+            val body = response.body.string()
+            if (!response.isSuccessful || body.isBlank()) {
+                throw IllegalStateException("Failed to fetch timeline: ${response.code} $body")
             }
             json.decodeFromString(ListSerializer(MastodonStatus.serializer()), body)
         }
@@ -64,9 +64,9 @@ class MastodonApi {
                 .build()
 
             val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (!response.isSuccessful || body.isNullOrBlank()) {
-                throw IllegalStateException("Failed to verify credentials: ${response.code} ${body ?: ""}")
+            val body = response.body.string()
+            if (!response.isSuccessful || body.isBlank()) {
+                throw IllegalStateException("Failed to verify credentials: ${response.code} $body")
             }
             json.decodeFromString(MastodonAccount.serializer(), body)
         }

@@ -73,8 +73,8 @@ fun PagePreference(
     BasePreference(
         modifier = modifier,
         titleId = titleId,
-        startWidget = icon?.let {
-            { Icon(imageVector = icon, contentDescription = stringResource(id = titleId)) }
+        startWidget = {
+            Icon(imageVector = icon, contentDescription = stringResource(id = titleId))
         },
         index = index,
         groupSize = groupSize,
