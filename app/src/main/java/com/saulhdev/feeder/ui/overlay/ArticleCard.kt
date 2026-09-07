@@ -18,6 +18,7 @@
 package com.saulhdev.feeder.ui.overlay
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,8 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -97,11 +97,12 @@ fun ArticleHeroCard(
 ) {
     val context = LocalContext.current
 
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -194,15 +195,12 @@ fun ArticleCard(
 ) {
     val context = LocalContext.current
 
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             val image = item.article.imageUrl
             if (!image.isNullOrBlank()) {
                 AsyncImage(
@@ -275,6 +273,7 @@ fun ArticleCard(
                 }
             }
         }
+        ArticleDivider()
     }
 }
 
@@ -291,14 +290,13 @@ fun ArticleCompactRow(
 ) {
     val context = LocalContext.current
 
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -355,7 +353,26 @@ fun ArticleCompactRow(
                 }
             }
         }
+        ArticleDivider()
     }
+}
+
+/**
+ * The hairline between articles.
+ *
+ * Replaces the rounded container each article used to sit in. A column of
+ * filled boxes puts a border around every headline and reads as a stack of
+ * separate objects; a divider says "next item" with one line and lets the
+ * content own the width. Inset from the left so it starts under the text
+ * rather than cutting across the whole page.
+ */
+@Composable
+private fun ArticleDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 16.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    )
 }
 
 /**

@@ -85,6 +85,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      */
     val dynamicColor = BooleanPref(
         titleId = R.string.pref_dynamic_color,
+        summaryId = R.string.pref_dynamic_color_summary,
         icon = Phosphor.Swatches,
         key = OVERLAY_DYNAMIC_THEME,
         dataStore = dataStore,

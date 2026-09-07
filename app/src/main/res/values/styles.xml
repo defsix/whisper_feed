@@ -9,7 +9,6 @@
         <item name="android:windowLightStatusBar">@bool/isLight</item>
         <item name="bottomSheetDialogTheme">@style/bottomSheetDialogTheme</item>
         <item name="android:textColorSecondary">#A8A7A7</item>
-        <item name="colorOnSurface">#3C3C3C</item>
     </style>
 
     <style name="bottomSheetDialogTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">

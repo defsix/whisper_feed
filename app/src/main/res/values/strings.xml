@@ -37,7 +37,8 @@
     <string name="pref_cat_overlay">Appearance</string>
     <string name="pref_cat_debug">Debug</string>
     <string name="pref_transparency">Overlay background opacity</string>
-    <string name="pref_dynamic_color">Dynamic Color</string>
+    <string name="pref_dynamic_color">Material You colours</string>
+    <string name="pref_dynamic_color_summary">Follow the wallpaper instead of the Whisper palette</string>
     <string name="pref_ovr_theme">Theme</string>
     <string name="pref_app_font">Font</string>
     <string name="pref_glance_row">Glance row</string>

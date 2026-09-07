@@ -33,6 +33,9 @@ import com.saulhdev.feeder.ui.navigation.NAV_BASE
 import com.saulhdev.feeder.ui.navigation.NavigationManager
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.utils.extensions.isDarkTheme
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -65,10 +68,22 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = dynamic,
                 fontPref = fontPref,
             ) {
-                NavigationManager(
-                    modifier = Modifier.imePadding(),
-                    navController = navController,
-                )
+                // The window background comes from the XML theme, whose parent
+                // is a DayNight one — so it follows the *system* light/dark
+                // setting, not the app's own theme preference. With the system
+                // in light mode and the app set to Dark or Pure black, every
+                // pixel Compose did not paint showed through as white. Painting
+                // the background here makes the app's choice the only one that
+                // matters.
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    NavigationManager(
+                        modifier = Modifier.imePadding(),
+                        navController = navController,
+                    )
+                }
             }
         }
 

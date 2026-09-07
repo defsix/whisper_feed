@@ -180,8 +180,6 @@ fun FeedScaffold(
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(
-                        start = 12.dp,
-                        end = 12.dp,
                         top = 4.dp,
                         bottom = bottomInset + 16.dp,
                     ),
@@ -194,7 +192,6 @@ fun FeedScaffold(
                             onClick = { onArticleClick(item) },
                             onBookmark = { onBookmark(item, it) },
                             onShare = { onShare(item) },
-                            modifier = Modifier.padding(bottom = 12.dp),
                         )
                     }
                 }

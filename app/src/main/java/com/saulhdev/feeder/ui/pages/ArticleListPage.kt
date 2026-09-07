@@ -330,8 +330,7 @@ fun ArticleListPage(
                             when {
                                 showBookmarks -> LazyColumn(
                                     state = listState,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(8.dp)
+                                    contentPadding = PaddingValues(vertical = 4.dp)
                                 ) {
                                     itemsIndexed(
                                         bookmarked.bookmarkedArticles,
@@ -358,7 +357,6 @@ fun ArticleListPage(
                                             onShare = {
                                                 context.safeShareIntent(item.link, item.contentTitle)
                                             },
-                                            modifier = Modifier.padding(horizontal = 4.dp),
                                         )
                                     }
                                 }
@@ -398,10 +396,7 @@ fun ArticleListPage(
                                                 onShare = {
                                                     context.safeShareIntent(item.link, item.contentTitle)
                                                 },
-                                                modifier = Modifier.padding(
-                                                    horizontal = 12.dp,
-                                                    vertical = 6.dp,
-                                                ),
+
                                             )
                                         }
                                     }

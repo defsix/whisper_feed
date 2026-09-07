@@ -21,8 +21,10 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +42,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.glance.GlanceState
@@ -48,7 +52,17 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 /** Every chip is this tall, whatever it contains. */
-private val CHIP_HEIGHT = 76.dp
+private val CHIP_HEIGHT = 84.dp
+
+/**
+ * Chip width as a fraction of the screen.
+ *
+ * Just under a half, so two sit side by side and the third is visibly cut off —
+ * which is what tells you the row scrolls. Three equal thirds fitted exactly and
+ * therefore looked complete, but left each chip a 71dp text column: everything
+ * fitted and nothing had any room.
+ */
+private const val CHIP_WIDTH_FRACTION = 0.455f
 
 /** The supplied artwork is rendered at this size; see docs/brand/08_icons. */
 private val ICON_SIZE = 32.dp
@@ -63,12 +77,17 @@ private val HOUR_MINUTE: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm"
  * these are read-only status. Mixing them would make the row's behaviour
  * unguessable — half of it filters, half of it does nothing when tapped.
  *
- * Laid out as three equal columns rather than a scrolling row. A scrolling row
- * sized each chip to its own content, so a long place name made the weather
- * chip half again as wide as the others and its extra line of text made it
- * taller too — the row read as three unrelated boxes. Fixed thirds and one
- * height means the strip reads as a single unit, and the cost is that long
- * place names truncate, which is the right trade for a glanceable row.
+ * A scrolling row of equally sized chips.
+ *
+ * It has been both other things. Sizing each chip to its own content made a
+ * long place name half again as wide as its neighbours, with an extra line of
+ * text that made it taller too, so the strip read as three unrelated boxes.
+ * Fixing that with three equal thirds went too far the other way: everything
+ * fitted exactly, which left each chip a 71dp text column and no room at all.
+ *
+ * One fixed width, just under half the screen, gets both — the chips are
+ * identical, and the third being visibly cut off is what tells you the row
+ * scrolls.
  */
 @Composable
 fun GlanceRow(
@@ -80,56 +99,65 @@ fun GlanceRow(
 
     val weather = state.weather
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    val chipWidth = (LocalConfiguration.current.screenWidthDp * CHIP_WIDTH_FRACTION).dp
+
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (weather != null) {
             val look = weatherLook(weather.weatherCode, weather.isDay)
-            // Condition on top and the place underneath, not the other way
-            // round: a chip is a third of the screen wide, and place names run
-            // long ("Armação de Pêra" is 90dp against a 71dp column). Putting
-            // the place on the line that matters least means the truncation
-            // lands where it costs least.
-            GlanceChip(
-                label = stringResource(look.labelRes),
-                value = "${weather.temperatureC.roundToInt()}°",
-                caption = weather.place.substringBefore(","),
-                iconRes = look.iconRes,
-            )
+            // Condition on top and the place underneath. Place names run long,
+            // and putting the one that can still overflow on the line that
+            // matters least means the truncation lands where it costs least.
+            item {
+                GlanceChip(
+                    width = chipWidth,
+                    label = stringResource(look.labelRes),
+                    value = "${weather.temperatureC.roundToInt()}°",
+                    caption = weather.place.substringBefore(","),
+                    iconRes = look.iconRes,
+                )
+            }
             // After dark, today's sunset is behind us and repeating it is
             // stale — the next thing that happens is sunrise, so the chip
             // becomes that, artwork and label together.
             val sunUp = weather.isDay
             val next = if (sunUp) weather.nextSunset else weather.nextSunrise
-            GlanceChip(
-                label = stringResource(
-                    if (sunUp) R.string.glance_sunset else R.string.glance_sunrise
-                ),
-                value = next?.format(HOUR_MINUTE) ?: "—",
-                iconRes = if (sunUp) R.drawable.ic_glance_sunset
-                else R.drawable.ic_glance_sunrise,
-            )
+            item {
+                GlanceChip(
+                    width = chipWidth,
+                    label = stringResource(
+                        if (sunUp) R.string.glance_sunset else R.string.glance_sunrise
+                    ),
+                    value = next?.format(HOUR_MINUTE) ?: "—",
+                    iconRes = if (sunUp) R.drawable.ic_glance_sunset
+                    else R.drawable.ic_glance_sunrise,
+                )
+            }
         } else {
             // The row is on but has nothing to show without a place, so the chip
-            // is the way to fix that rather than a dead end. It spans the two
-            // slots the weather and sunset chips would occupy.
-            GlanceChip(
-                label = stringResource(R.string.pref_glance_place),
-                value = stringResource(R.string.glance_set_location),
-                iconRes = R.drawable.ic_glance_location,
-                onClick = onSetLocation,
-                weight = 2f,
-            )
+            // is the way to fix that rather than a dead end.
+            item {
+                GlanceChip(
+                    width = chipWidth,
+                    label = stringResource(R.string.pref_glance_place),
+                    value = stringResource(R.string.glance_set_location),
+                    iconRes = R.drawable.ic_glance_location,
+                    onClick = onSetLocation,
+                )
+            }
         }
 
-        GlanceChip(
-            label = stringResource(R.string.glance_read_today),
-            value = state.readToday.toString(),
-            iconRes = R.drawable.ic_glance_articles_read,
-        )
+        item {
+            GlanceChip(
+                width = chipWidth,
+                label = stringResource(R.string.glance_read_today),
+                value = state.readToday.toString(),
+                iconRes = R.drawable.ic_glance_articles_read,
+            )
+        }
     }
 }
 
@@ -140,13 +168,13 @@ fun GlanceRow(
  * that has a third line does not push its neighbours around.
  */
 @Composable
-private fun RowScope.GlanceChip(
+private fun GlanceChip(
+    width: Dp,
     label: String,
     value: String,
     @DrawableRes iconRes: Int,
     caption: String? = null,
     onClick: (() -> Unit)? = null,
-    weight: Float = 1f,
 ) {
     val colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -154,14 +182,14 @@ private fun RowScope.GlanceChip(
     )
     val shape = RoundedCornerShape(20.dp)
     val chipModifier = Modifier
-        .weight(weight)
+        .width(width)
         .height(CHIP_HEIGHT)
 
     val content: @Composable () -> Unit = {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
@@ -170,14 +198,14 @@ private fun RowScope.GlanceChip(
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -185,7 +213,7 @@ private fun RowScope.GlanceChip(
                 if (!caption.isNullOrBlank()) {
                     Text(
                         text = caption,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -193,7 +221,7 @@ private fun RowScope.GlanceChip(
                 }
             }
 
-            Spacer(Modifier.size(4.dp))
+            Spacer(Modifier.size(10.dp))
 
             // Drawn, not tinted: these are full-colour illustrations, so the
             // tinted circular badge that suited a monochrome symbol is gone and
