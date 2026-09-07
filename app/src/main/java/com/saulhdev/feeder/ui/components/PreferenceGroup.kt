@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -83,13 +84,17 @@ fun PreferenceGroupHeading(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .height(48.dp)
-            .padding(horizontal = 32.dp)
+            .padding(horizontal = 24.dp)
             .fillMaxWidth(),
         horizontalAlignment = textAlignment
     ) {
+        // Primary-coloured, which is what makes a settings list read as
+        // themed rather than as a stack of grey rows.
         Text(
             text = heading,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 } else Spacer(modifier = Modifier.requiredHeight(8.dp))

@@ -92,7 +92,7 @@ fun PreferencesPage(
 
     ViewWithActionBar(
         title = title,
-        showBackButton = false,
+        largeTitle = true,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier

@@ -150,6 +150,7 @@ fun SourceListPage(
             AnimatedPane {
                 ViewWithActionBar(
                     title = stringResource(id = R.string.title_sources),
+                    largeTitle = true,
                     showBackButton = false,
                     floatingActionButton = {
                         ExtendedFloatingActionButton(

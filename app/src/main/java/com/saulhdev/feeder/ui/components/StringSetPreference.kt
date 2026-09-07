@@ -41,11 +41,7 @@ fun StringSetPreference(
         groupSize = groupSize,
         isEnabled = isEnabled,
         startWidget = {
-            Icon(
-                imageVector = pref.icon,
-                contentDescription = null,
-                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-            )
+            PreferenceIcon(icon = pref.icon, contentDescription = null)
         },
         onClick = {
             pref.route?.let { navController.navigate(it) }

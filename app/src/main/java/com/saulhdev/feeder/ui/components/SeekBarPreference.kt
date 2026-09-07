@@ -34,10 +34,9 @@ fun SeekBarPreference(
         groupSize = groupSize,
         isEnabled = isEnabled,
         startWidget = {
-            Icon(
-                imageVector = pref.icon,
+            PreferenceIcon(
+                icon = pref.icon,
                 contentDescription = stringResource(id = pref.titleId),
-                tint = MaterialTheme.colorScheme.onSurface,
             )
         },
         bottomWidget = {

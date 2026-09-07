@@ -47,10 +47,9 @@ fun SwitchPreference(
         index = index,
         groupSize = groupSize,
         startWidget = {
-            Icon(
-                imageVector = pref.icon,
+            PreferenceIcon(
+                icon = pref.icon,
                 contentDescription = stringResource(id = pref.titleId),
-                tint = MaterialTheme.colorScheme.onSurface,
             )
         },
         isEnabled = isEnabled,

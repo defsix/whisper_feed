@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -46,6 +47,13 @@ import com.saulhdev.feeder.R
  * The permanent categories the design calls for (Unread, Saved, Recently
  * Added) are not here yet: articles currently carry no read state at all, so
  * they need the article-state model rather than a chip that lies.
+ *
+ * Unselected chips carry a filled container rather than Material's default
+ * outline-over-nothing. The overlay's background opacity is user-adjustable, and
+ * at a low setting an outlined chip has nothing behind it but the wallpaper —
+ * the labels became unreadable on anything busy. A container costs a little of
+ * the "unselected" contrast against the selected chip and buys legibility that
+ * does not depend on what the user's wallpaper happens to be.
  */
 @Composable
 fun CategoryChipRow(
@@ -70,6 +78,8 @@ fun CategoryChipRow(
                 onClick = { if (selected.isNotEmpty()) onSelectedChange(emptySet()) },
                 label = { Text(stringResource(R.string.all_categories)) },
                 shape = FilterChipDefaults.shape,
+                colors = legibleChipColors(),
+                border = null,
             )
         }
 
@@ -84,9 +94,20 @@ fun CategoryChipRow(
                 },
                 label = { Text(category) },
                 shape = FilterChipDefaults.shape,
+                colors = legibleChipColors(),
+                border = null,
             )
         }
     }
 }
+
+/** See the note on [CategoryChipRow] for why the unselected state is filled. */
+@Composable
+private fun legibleChipColors() = FilterChipDefaults.filterChipColors(
+    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    labelColor = MaterialTheme.colorScheme.onSurface,
+    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+)
 
 private const val ALL_CHIP_KEY = "__all__"

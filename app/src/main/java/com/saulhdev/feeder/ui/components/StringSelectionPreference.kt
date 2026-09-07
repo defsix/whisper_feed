@@ -1,11 +1,8 @@
 package com.saulhdev.feeder.ui.components
 
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.saulhdev.feeder.data.content.StringSelectionPref
@@ -19,7 +16,10 @@ fun StringSelectionPreference(
     isEnabled: Boolean = true,
     onClick: (() -> Unit) = {},
 ) {
-    val summary by remember { derivedStateOf { pref.entries[pref.getValue()] } }
+    // Collected, not read once: derivedStateOf over a blocking getValue() never
+    // recomposes, so the row went on showing the previous choice after a change.
+    val current by pref.get().collectAsState(initial = pref.getValue())
+    val summary = pref.entries[current]
     BasePreference(
         modifier = modifier,
         titleId = pref.titleId,
@@ -28,10 +28,9 @@ fun StringSelectionPreference(
         index = index,
         groupSize = groupSize,
         startWidget = {
-            Icon(
-                imageVector = pref.icon,
+            PreferenceIcon(
+                icon = pref.icon,
                 contentDescription = stringResource(id = pref.titleId),
-                tint = MaterialTheme.colorScheme.onSurface,
             )
         },
         isEnabled = isEnabled,

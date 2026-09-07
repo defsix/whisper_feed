@@ -31,12 +31,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarDefaults.enterAlwaysScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -59,24 +61,36 @@ fun ViewWithActionBar(
     bottomBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     showBackButton: Boolean = true,
+    /**
+     * Draws the header as a large collapsing title.
+     *
+     * Material You gives a top-level destination a large title that shrinks as
+     * the content scrolls under it; a fixed 18sp row is what an app looks like
+     * before anyone has themed it. Used for the destinations a user lands on
+     * rather than passes through.
+     */
+    largeTitle: Boolean = false,
     actions: @Composable (RowScope.() -> Unit) = {},
     onBackAction: (() -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val scrollBehavior = enterAlwaysScrollBehavior(rememberTopAppBarState())
+    val appBarState = rememberTopAppBarState()
+    val scrollBehavior =
+        if (largeTitle) TopAppBarDefaults.exitUntilCollapsedScrollBehavior(appBarState)
+        else enterAlwaysScrollBehavior(appBarState)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
+    val titleContent: @Composable () -> Unit = {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                     ) {
+                        // In large mode the app bar supplies the type scale;
+                        // forcing 18sp there would defeat the point of it.
                         Text(
                             text = title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontSize = titleSize,
+                            style = if (largeTitle) MaterialTheme.typography.headlineMedium
+                            else MaterialTheme.typography.titleMedium,
+                            fontSize = if (largeTitle) TextUnit.Unspecified else titleSize,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -90,9 +104,9 @@ fun ViewWithActionBar(
                             )
                         }
                     }
+    }
 
-                },
-                navigationIcon = {
+    val navContent: @Composable () -> Unit = {
                     if (showBackButton) {
                         val backDispatcher =
                             LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
@@ -108,19 +122,39 @@ fun ViewWithActionBar(
                             )
                         }
                     }
-                },
-                actions = actions,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
-                scrollBehavior = scrollBehavior
-            )
+    }
+
+    Scaffold(
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            if (largeTitle) {
+                LargeTopAppBar(
+                    title = { titleContent() },
+                    navigationIcon = { navContent() },
+                    actions = actions,
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
+                    scrollBehavior = scrollBehavior,
+                )
+            } else {
+                TopAppBar(
+                    title = { titleContent() },
+                    navigationIcon = { navContent() },
+                    actions = actions,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         bottomBar = bottomBar,
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = FabPosition.Center,
         content = content,
-        modifier = modifier
     )
 }
 
