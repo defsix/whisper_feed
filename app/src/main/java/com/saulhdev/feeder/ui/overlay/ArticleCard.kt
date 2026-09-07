@@ -55,7 +55,7 @@ import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
 import com.saulhdev.feeder.ui.icons.phosphor.HeartStraightFill
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
-import com.saulhdev.feeder.utils.RelativeTimeHelper
+import com.saulhdev.feeder.utils.formatArticleAge
 
 /**
  * One article in the feed, drawn in whichever shape the rhythm asks for.
@@ -150,12 +150,11 @@ fun ArticleHeroCard(
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${item.feedTitle} · ${item.relativeAge(context)}",
+                    ArticleMeta(
+                        source = item.feedTitle,
+                        age = item.relativeAge(context),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { onBookmark(!item.bookmarked) }) {
@@ -240,18 +239,13 @@ fun ArticleCard(
                     .fillMaxWidth()
                     .padding(top = 10.dp),
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.feedTitle,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = item.relativeAge(context),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                ArticleMeta(
+                    source = item.feedTitle,
+                    age = item.relativeAge(context),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
 
                 IconButton(onClick = { onBookmark(!item.bookmarked) }) {
                     Icon(
@@ -319,12 +313,11 @@ fun ArticleCompactRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "${item.feedTitle} · ${item.relativeAge(context)}",
+                ArticleMeta(
+                    source = item.feedTitle,
+                    age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -358,6 +351,41 @@ fun ArticleCompactRow(
 }
 
 /**
+ * "SFGATE · 10h" — the line under every headline.
+ *
+ * Two texts rather than one string, because a single one puts the ellipsis at
+ * the end and the age is what gets eaten: some feeds title themselves with a
+ * whole sentence ("io9 - We come from the future."), which overruns a compact
+ * row's 231dp on its own. The age is given its intrinsic width first, so only
+ * the source name shortens and the age is always readable.
+ */
+@Composable
+private fun ArticleMeta(
+    source: String,
+    age: String,
+    style: androidx.compose.ui.text.TextStyle,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = source,
+            style = style,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Text(
+            text = " · $age",
+            style = style,
+            color = color,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
  * The hairline between articles.
  *
  * Replaces the rounded container each article used to sit in. A column of
@@ -376,16 +404,11 @@ private fun ArticleDivider() {
 }
 
 /**
- * The article's age, formatted.
+ * The article's age, in the compact form the feed uses: "5h", "3d", "2w".
  *
- * Two things to get right, both of which have been wrong here before. The
- * helper takes seconds, not milliseconds — passing millis dated articles to the
- * year 58651. And the field is primarySortTime rather than pubDate, because the
- * list is ordered by primarySortTime and showing the other meant the date on a
- * card could disagree with the position it appeared in.
+ * The field is primarySortTime rather than pubDate, because the list is ordered
+ * by primarySortTime and showing the other meant the date on a card could
+ * disagree with the position it appeared in.
  */
 private fun FeedItem.relativeAge(context: android.content.Context): String =
-    RelativeTimeHelper.getDateFormattedRelative(
-        context,
-        article.primarySortTime.toEpochMilliseconds() / 1000
-    )
+    formatArticleAge(context, article.primarySortTime.toEpochMilliseconds())

@@ -14,6 +14,14 @@
     <string name="date_format_day_month" translatable="false">%1$d %2$s</string>
     <string name="date_format_day_month_year" translatable="false">%1$d %2$s %3$d</string>
     <string name="date_ago_now">now</string>
+    <!-- Compact article ages, as seen under a headline: "BBC · 5h". -->
+    <string name="age_now">now</string>
+    <string name="age_minutes">%1$dm</string>
+    <string name="age_hours">%1$dh</string>
+    <string name="age_days">%1$dd</string>
+    <string name="age_weeks">%1$dw</string>
+    <string name="age_months">%1$dmo</string>
+    <string name="age_years">%1$dy</string>
     <string name="date_at">at</string>
     <string name="today">today</string>
     <string name="tomorrow">tomorrow</string>
