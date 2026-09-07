@@ -46,7 +46,7 @@
     <string name="pref_glance_place_hint">Search for a town or city</string>
     <string name="pref_glance_place_none">Not set</string>
     <string name="glance_sunset">Sunset</string>
-    <string name="glance_sunrise">Sunrise today</string>
+    <string name="glance_sunrise">Sunrise</string>
     <string name="glance_read_today">Read today</string>
     <string name="weather_clear">Clear</string>
     <string name="weather_partly_cloudy">Partly cloudy</string>

@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.glance.GlanceState
 import com.saulhdev.feeder.manager.glance.weatherLook
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 /** Every chip is this tall, whatever it contains. */
@@ -51,6 +52,8 @@ private val CHIP_HEIGHT = 76.dp
 
 /** The supplied artwork is rendered at this size; see docs/brand/08_icons. */
 private val ICON_SIZE = 32.dp
+
+private val HOUR_MINUTE: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * The status strip above the category filters.
@@ -84,7 +87,7 @@ fun GlanceRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (weather != null) {
-            val look = weatherLook(weather.weatherCode)
+            val look = weatherLook(weather.weatherCode, weather.isDay)
             // Condition on top and the place underneath, not the other way
             // round: a chip is a third of the screen wide, and place names run
             // long ("Armação de Pêra" is 90dp against a 71dp column). Putting
@@ -96,10 +99,18 @@ fun GlanceRow(
                 caption = weather.place.substringBefore(","),
                 iconRes = look.iconRes,
             )
+            // After dark, today's sunset is behind us and repeating it is
+            // stale — the next thing that happens is sunrise, so the chip
+            // becomes that, artwork and label together.
+            val sunUp = weather.isDay
+            val next = if (sunUp) weather.nextSunset else weather.nextSunrise
             GlanceChip(
-                label = stringResource(R.string.glance_sunset),
-                value = weather.sunsetLocal ?: "—",
-                iconRes = R.drawable.ic_glance_sunset,
+                label = stringResource(
+                    if (sunUp) R.string.glance_sunset else R.string.glance_sunrise
+                ),
+                value = next?.format(HOUR_MINUTE) ?: "—",
+                iconRes = if (sunUp) R.drawable.ic_glance_sunset
+                else R.drawable.ic_glance_sunrise,
             )
         } else {
             // The row is on but has nothing to show without a place, so the chip

@@ -24,22 +24,59 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 /**
  * A place, and the current conditions there.
  *
- * @param sunsetLocal sunset today as "HH:mm" in the place's own local time, or
- *   null if the response did not carry one.
+ * Sunrises and sunsets are kept as the ISO local date-times the service
+ * returned, for today and tomorrow, rather than as a single formatted "HH:mm".
+ * Two reasons: after dark, today's sunset is in the past and showing it is
+ * stale — the useful number is the next sunrise — and whether it is currently
+ * day has to be derived at read time, because the response is cached for half
+ * an hour and a cached is_day flag would be wrong for up to that long either
+ * side of dusk.
  */
 data class GlanceWeather(
     val place: String,
     val temperatureC: Double,
     val weatherCode: Int,
-    val sunriseLocal: String?,
-    val sunsetLocal: String?,
+    val utcOffsetSeconds: Int,
+    val sunrises: List<String>,
+    val sunsets: List<String>,
     val fetchedAt: Long,
-)
+) {
+    /** Now, in the place's own local time — not the device's. */
+    private val localNow: LocalDateTime
+        get() = Instant.ofEpochMilli(System.currentTimeMillis())
+            .atOffset(ZoneOffset.ofTotalSeconds(utcOffsetSeconds))
+            .toLocalDateTime()
+
+    private fun nextAfterNow(times: List<String>): LocalDateTime? {
+        val now = localNow
+        return times.mapNotNull { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+            .firstOrNull { it.isAfter(now) }
+    }
+
+    val nextSunrise: LocalDateTime? get() = nextAfterNow(sunrises)
+    val nextSunset: LocalDateTime? get() = nextAfterNow(sunsets)
+
+    /**
+     * Daylight if the next sunset falls before the next sunrise. Comparing the
+     * two upcoming events settles it without needing to know the date, and is
+     * right at 03:00 as well as at 21:00.
+     */
+    val isDay: Boolean
+        get() {
+            val sunset = nextSunset ?: return true
+            val sunrise = nextSunrise ?: return true
+            return sunset.isBefore(sunrise)
+        }
+}
 
 data class GlancePlace(
     val name: String,
@@ -109,18 +146,24 @@ class WeatherRepository {
                     "?latitude=$lat&longitude=$lon" +
                     "&current=temperature_2m,weather_code" +
                     "&daily=sunrise,sunset" +
-                    "&timezone=auto&forecast_days=1"
+                    // Two days, so that after dark there is still a sunrise
+                    // ahead of "now" to show.
+                    "&timezone=auto&forecast_days=2"
             val body = get(url) ?: return@withContext null
             val root = JSONObject(body)
             val current = root.getJSONObject("current")
             val daily = root.optJSONObject("daily")
+            fun times(key: String): List<String> {
+                val arr = daily?.optJSONArray(key) ?: return emptyList()
+                return (0 until arr.length()).mapNotNull { arr.optString(it).takeIf(String::isNotBlank) }
+            }
             GlanceWeather(
                 place = place.name,
                 temperatureC = current.optDouble("temperature_2m"),
                 weatherCode = current.optInt("weather_code", -1),
-                // "2026-09-07T06:41" -> "06:41"
-                sunriseLocal = daily?.optJSONArray("sunrise")?.optString(0)?.substringAfter('T'),
-                sunsetLocal = daily?.optJSONArray("sunset")?.optString(0)?.substringAfter('T'),
+                utcOffsetSeconds = root.optInt("utc_offset_seconds", 0),
+                sunrises = times("sunrise"),
+                sunsets = times("sunset"),
                 fetchedAt = System.currentTimeMillis(),
             )
         }.getOrElse {
@@ -160,16 +203,24 @@ data class WeatherLook(
  * The codes are grouped rather than enumerated one by one: the distinction
  * between "slight" and "moderate" drizzle is not worth a chip's width.
  */
-fun weatherLook(code: Int): WeatherLook = when (code) {
-    0          -> WeatherLook(R.drawable.ic_glance_weather_clear, R.string.weather_clear)
-    1, 2       -> WeatherLook(R.drawable.ic_glance_weather_partly_cloudy, R.string.weather_partly_cloudy)
+fun weatherLook(code: Int, isDay: Boolean = true): WeatherLook = when (code) {
+    // Only the three conditions whose day artwork contains a sun have a night
+    // counterpart. Overcast, fog, snow and storm are drawn without one, so a
+    // separate night version would be the same picture.
+    0          -> if (isDay) WeatherLook(R.drawable.ic_glance_weather_clear, R.string.weather_clear)
+                  else WeatherLook(R.drawable.ic_glance_weather_clear_night, R.string.weather_clear)
+    1, 2       -> if (isDay) WeatherLook(R.drawable.ic_glance_weather_partly_cloudy, R.string.weather_partly_cloudy)
+                  else WeatherLook(R.drawable.ic_glance_weather_partly_cloudy_night, R.string.weather_partly_cloudy)
     3          -> WeatherLook(R.drawable.ic_glance_weather_cloudy, R.string.weather_cloudy)
     45, 48     -> WeatherLook(R.drawable.ic_glance_weather_fog, R.string.weather_fog)
-    in 51..57  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_drizzle)
-    in 61..67  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_rain)
+    in 51..57  -> WeatherLook(rainIcon(isDay), R.string.weather_drizzle)
+    in 61..67  -> WeatherLook(rainIcon(isDay), R.string.weather_rain)
     in 71..77  -> WeatherLook(R.drawable.ic_glance_weather_snow, R.string.weather_snow)
-    in 80..82  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_showers)
+    in 80..82  -> WeatherLook(rainIcon(isDay), R.string.weather_showers)
     in 85..86  -> WeatherLook(R.drawable.ic_glance_weather_snow, R.string.weather_snow_showers)
     in 95..99  -> WeatherLook(R.drawable.ic_glance_weather_storm, R.string.weather_thunderstorm)
     else       -> WeatherLook(R.drawable.ic_glance_weather_unknown, R.string.weather_unknown)
 }
+
+private fun rainIcon(isDay: Boolean) =
+    if (isDay) R.drawable.ic_glance_weather_rain else R.drawable.ic_glance_weather_rain_night
