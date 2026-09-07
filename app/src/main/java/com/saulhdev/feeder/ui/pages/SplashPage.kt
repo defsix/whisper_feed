@@ -26,11 +26,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.theme.WhisperCobalt
@@ -105,22 +104,21 @@ fun WhisperSplash(
                     modifier = Modifier.size(160.dp),
                 )
                 Spacer(Modifier.height(12.dp))
+                // The supplied wordmark carries "Your feeds, your focus."
+                // beneath the name, so the motto is part of the artwork rather
+                // than a second line of text under it — which is what this
+                // screen wrongly had. Sized so that tagline is readable rather
+                // than merely present.
                 Image(
                     painter = painterResource(R.drawable.ic_wordmark_light),
                     contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier.fillMaxWidth(0.78f),
                 )
-                Spacer(Modifier.height(48.dp))
+                Spacer(Modifier.height(56.dp))
                 CircularProgressIndicator(
                     color = Color.White.copy(alpha = 0.9f),
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(34.dp),
-                )
-                Spacer(Modifier.height(40.dp))
-                Text(
-                    text = stringResource(R.string.splash_footer),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.72f),
-                    textAlign = TextAlign.Center,
                 )
             }
         }
