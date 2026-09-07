@@ -88,8 +88,8 @@ a hundred sources, one at a time is the wrong unit.
   used, merge two, delete one and choose what happens to its feeds. Categories
   are currently a free-text field on each source, so a typo creates a category
   and nothing can rename it.
-- **Sort and search the source list** — by title, by category, by last
-  successful sync, by whether it is failing.
+- ~~**Sort and search the source list**~~ — done: by name, category, least
+  recently updated, and recently added.
 - **Surface broken feeds.** A source that has failed to fetch for days looks
   identical to one that is simply quiet. `lastSync` is already stored; nothing
   reads it back to the user.

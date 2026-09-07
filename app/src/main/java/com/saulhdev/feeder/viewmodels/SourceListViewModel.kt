@@ -212,6 +212,22 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
      * indistinguishable from one that is simply quiet.
      */
     LastSync(R.string.sort_by_last_sync, compareBy { it.lastSync.toEpochMilliseconds() }),
+
+    /**
+     * Most recently added first.
+     *
+     * There is no "added" column and none is needed: `Feeds.id` is
+     * autoGenerate, so id order is insertion order, and descending id is
+     * newest-first — which is what someone sorting this way is looking for,
+     * the thing they just subscribed to.
+     *
+     * Two honest caveats. An OPML import arrives in file order, so a hundred
+     * sources imported at once are "added" in whatever order the file listed
+     * them rather than all at the same moment. And undoing a removal
+     * re-inserts under a fresh id, so a restored source moves to the top —
+     * the old id is gone and nothing else refers to it.
+     */
+    Added(R.string.sort_by_added, compareByDescending(Feed::id)),
 }
 
 /**
