@@ -39,6 +39,12 @@ interface FeedSourceDao {
     @Update
     suspend fun update(feed: Feed): Int
 
+    @Update
+    suspend fun updateAll(feeds: List<Feed>): Int
+
+    @Query("DELETE FROM Feeds WHERE id IN (:ids)")
+    suspend fun deleteFeedsByIds(ids: List<Long>)
+
     @Delete
     suspend fun delete(feed: Feed): Int
 

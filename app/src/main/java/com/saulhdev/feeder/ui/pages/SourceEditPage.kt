@@ -72,6 +72,12 @@ import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
 import com.saulhdev.feeder.utils.extensions.interceptKey
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import com.saulhdev.feeder.ui.icons.phosphor.Plus
+import com.saulhdev.feeder.viewmodels.SourceListViewModel
 
 
 @Composable
@@ -82,6 +88,11 @@ fun SourceEditPage(
 ) {
     val title = stringResource(id = R.string.edit_rss)
     val viewState by viewModel.viewState.collectAsState()
+    // Every category already in use, so one can be picked rather than retyped.
+    val sourcesViewModel: SourceListViewModel = koinNeoViewModel()
+    val sourcesState by sourcesViewModel.state.collectAsState()
+    val allTags = sourcesState.allTags
+    var newTag by remember { mutableStateOf("") }
     // Initialise once per feed and do not overwrite user edits when viewState re-emits.
     val editState = remember(feedId) {
         mutableStateOf(viewState)
@@ -165,7 +176,10 @@ fun SourceEditPage(
         ) {
             SourceEditView(
                 editState = editState,
-                onEdited = { hasEdited = true }
+                onEdited = { hasEdited = true },
+                allTags = allTags,
+                newTag = newTag,
+                onNewTagChange = { newTag = it },
             )
         }
     }
@@ -199,6 +213,9 @@ fun SourceEditPage(
 fun SourceEditView(
     editState: MutableState<SourceEditViewState>,
     onEdited: () -> Unit = {},
+    allTags: List<String> = emptyList(),
+    newTag: String = "",
+    onNewTagChange: (String) -> Unit = {},
 ) {
     val (focusTitle, focusTag) = createRefs()
     val focusManager = LocalFocusManager.current
@@ -276,39 +293,73 @@ fun SourceEditView(
             )
         }
         item {
-            OutlinedTextField(
-                value = editState.value.tag,
-                onValueChange = {
-                    editState.value = editState.value.copy(tag = it)
-                    onEdited()
-                },
-                label = {
-                    Text(stringResource(id = R.string.source_tags))
-                },
-                shape = MaterialTheme.shapes.large,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    autoCorrectEnabled = true,
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = {
-                        focusTag.requestFocus()
+            // Categories are picked, not typed. The field here was free text,
+            // so a category was created by spelling it right and lost by
+            // spelling it wrong — and it read as one value even though the
+            // column has always held a comma-separated list, which is what
+            // several bugs came from. Typing is still how a *new* one is made.
+            val selected = editState.value.tag
+                .split(",").map(String::trim).filter(String::isNotEmpty).toSet()
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(id = R.string.source_tags),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (allTags + selected).distinct().sorted().forEach { tag ->
+                        FilterChip(
+                            selected = tag in selected,
+                            onClick = {
+                                val next = if (tag in selected) selected - tag
+                                else selected + tag
+                                editState.value =
+                                    editState.value.copy(tag = next.joinToString(","))
+                                onEdited()
+                            },
+                            label = { Text(tag) },
+                        )
                     }
-                ),
-                modifier = Modifier
-                    .focusRequester(focusTitle)
-                    .fillMaxWidth()
-                    .heightIn(min = 64.dp)
-                    .interceptKey(Key.Enter) {
-                        focusTag.requestFocus()
-                    }
-                    .interceptKey(Key.Escape) {
-                        focusManager.clearFocus()
-                    }
-            )
+                }
+                OutlinedTextField(
+                    value = newTag,
+                    onValueChange = onNewTagChange,
+                    label = { Text(stringResource(id = R.string.sources_add_tag)) },
+                    shape = MaterialTheme.shapes.large,
+                    singleLine = true,
+                    trailingIcon = {
+                        if (newTag.isNotBlank()) {
+                            IconButton(onClick = {
+                                val next = selected + newTag.trim()
+                                editState.value =
+                                    editState.value.copy(tag = next.joinToString(","))
+                                onNewTagChange("")
+                                onEdited()
+                            }) { Icon(Phosphor.Plus, null) }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (newTag.isNotBlank()) {
+                                val next = selected + newTag.trim()
+                                editState.value =
+                                    editState.value.copy(tag = next.joinToString(","))
+                                onNewTagChange("")
+                                onEdited()
+                            }
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         item {

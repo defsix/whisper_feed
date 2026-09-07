@@ -1,5 +1,7 @@
 package com.saulhdev.feeder.viewmodels
 
+import androidx.annotation.StringRes
+import com.saulhdev.feeder.R
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
@@ -8,7 +10,10 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,27 +25,121 @@ class SourceListViewModel(
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
 
+    /** What the user typed into the search field, if anything. */
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    private val _sort = MutableStateFlow(SourceSort.Title)
+    val sort: StateFlow<SourceSort> = _sort.asStateFlow()
+
+    /**
+     * Ids picked out for a bulk action.
+     *
+     * Held here rather than in the screen so that a rotation, or the list being
+     * rebuilt by a sync finishing mid-selection, does not silently drop what
+     * the user had chosen.
+     */
+    private val _selection = MutableStateFlow<Set<Long>>(emptySet())
+    val selection: StateFlow<Set<Long>> = _selection.asStateFlow()
+
     val state = combine(
         feedsRepo.getAllSourcesFlow(),
         feedsRepo.getAllTagsFlow(),
         // TODO move the getter eventually to SourcesRepository
-        articleRepo.getBookmarkedFeedItems()
-    ) { allSources, allTags, bookmarked ->
-        val (enabledSources, disabledSources) = allSources.partition { it.isEnabled }
+        articleRepo.getBookmarkedFeedItems(),
+        _query,
+        _sort,
+    ) { allSources, allTags, bookmarked, query, sort ->
+        val matching = allSources.filter { it.matches(query) }.sortedWith(sort.comparator)
+        val (enabledSources, disabledSources) = matching.partition { it.isEnabled }
         SourceListState(
             allSources = allSources,
             enabledSources = enabledSources,
             disabledSources = disabledSources,
-            tagsSourcesMap = allTags.plus("").associateWith { tag ->
-                allSources.filter { it.tag.contains(tag) }
-            },
+            // Every tag mapped to the sources carrying it, plus "" for the
+            // untagged ones — OPML export reads this map and a source in no
+            // bucket is a source that does not get exported.
+            //
+            // Matched against the split tag list rather than with
+            // `tag.contains`, which made "New" match a source tagged "News",
+            // and made the "" bucket match *every* source: an export therefore
+            // wrote each feed twice, once under its own category and once
+            // under none.
+            tagsSourcesMap = allTags.associateWith { tag ->
+                allSources.filter { tag in it.tags }
+            } + ("" to allSources.filter { it.tags.isEmpty() }),
             bookmarked = bookmarked,
+            allTags = allTags,
         )
     }.stateIn(
         ioScope,
         SharingStarted.Eagerly,
         SourceListState()
     )
+
+    fun setQuery(value: String) {
+        _query.value = value
+    }
+
+    fun setSort(value: SourceSort) {
+        _sort.value = value
+    }
+
+    /* Selection */
+
+    fun toggleSelected(id: Long) {
+        _selection.value = if (id in _selection.value) _selection.value - id
+        else _selection.value + id
+    }
+
+    fun selectAll(ids: Collection<Long>) {
+        _selection.value = _selection.value + ids
+    }
+
+    fun clearSelection() {
+        _selection.value = emptySet()
+    }
+
+    /* Bulk actions. Each one clears the selection: leaving twelve sources
+       highlighted after acting on them invites acting on them twice. */
+
+    fun setSelectedEnabled(enabled: Boolean) {
+        val ids = _selection.value
+        clearSelection()
+        viewModelScope.launch { feedsRepo.setEnabled(ids, enabled) }
+    }
+
+    fun editSelectedTags(
+        add: Set<String> = emptySet(),
+        remove: Set<String> = emptySet(),
+        replaceWith: Set<String>? = null,
+    ) {
+        val ids = _selection.value
+        clearSelection()
+        viewModelScope.launch { feedsRepo.editTags(ids, add, remove, replaceWith) }
+    }
+
+    fun deleteSelected() {
+        val ids = _selection.value
+        clearSelection()
+        viewModelScope.launch { feedsRepo.deleteSources(ids) }
+    }
+
+    /* Category management */
+
+    fun renameTag(from: String, to: String) {
+        viewModelScope.launch { feedsRepo.renameTag(from, to) }
+    }
+
+    fun deleteTag(tag: String) {
+        viewModelScope.launch { feedsRepo.deleteTag(tag) }
+    }
+
+    val recentlyDeletedMany = feedsRepo.recentlyDeletedMany
+
+    fun undoDeleteSources() = feedsRepo.undoDeleteSources()
+
+    fun forgetDeletedSources() = feedsRepo.forgetDeletedSources()
 
     fun insertFeed(feed: Feed) {
         viewModelScope.launch {
@@ -96,4 +195,36 @@ data class SourceListState(
     val disabledSources: List<Feed> = emptyList(),
     val tagsSourcesMap: Map<String, List<Feed>> = emptyMap(),
     val bookmarked: List<FeedItem> = emptyList(),
+    val allTags: List<String> = emptyList(),
 )
+
+/** How the source list is ordered. */
+enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Feed>) {
+    Title(R.string.sort_by_title, compareBy(String.CASE_INSENSITIVE_ORDER, Feed::title)),
+    Category(
+        R.string.sort_by_category,
+        compareBy(String.CASE_INSENSITIVE_ORDER) { it.tags.firstOrNull().orEmpty() },
+    ),
+
+    /**
+     * Least recently synced first — which is to say, the ones that look broken
+     * at the top. A source that has failed for days is otherwise
+     * indistinguishable from one that is simply quiet.
+     */
+    LastSync(R.string.sort_by_last_sync, compareBy { it.lastSync.toEpochMilliseconds() }),
+}
+
+/**
+ * Whether a source matches what was typed in the search field.
+ *
+ * Title, address and categories all count: people look for a source by the
+ * name they gave it, by the site it comes from, or by what they filed it
+ * under, and which of the three they reach for is not predictable.
+ */
+internal fun Feed.matches(query: String): Boolean {
+    if (query.isBlank()) return true
+    val q = query.trim()
+    return title.contains(q, ignoreCase = true) ||
+            url.toString().contains(q, ignoreCase = true) ||
+            tags.any { it.contains(q, ignoreCase = true) }
+}

@@ -82,6 +82,30 @@ import kotlinx.datetime.toLocalDateTime
 import okhttp3.internal.toLongOrDefault
 import org.koin.java.KoinJavaComponent.inject
 import kotlin.time.Clock
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.ui.icons.phosphor.Check
+import com.saulhdev.feeder.ui.icons.phosphor.Sort
+import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
+import com.saulhdev.feeder.viewmodels.SourceSort
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -104,6 +128,22 @@ fun SourceListPage(
     // back on. The repository holds the removed row until this is answered.
     val snackbarHostState = remember { SnackbarHostState() }
     val recentlyDeleted by viewModel.recentlyDeleted.collectAsState()
+    val recentlyDeletedMany by viewModel.recentlyDeletedMany.collectAsState()
+    val selection by viewModel.selection.collectAsState()
+    val query by viewModel.query.collectAsState()
+    val sort by viewModel.sort.collectAsState()
+    var tagAction by remember { mutableStateOf<TagAction?>(null) }
+
+    // "Not updating" needs a fixed instant to compare against. Computed once
+    // per composition of the screen rather than inside each row, where each
+    // row would capture its own slightly different "now".
+    val staleSince = remember {
+        Clock.System.now().toEpochMilliseconds() - STALE_AFTER_MS
+    }
+
+    // Leaving the screen with a selection still live would mean coming back to
+    // a bulk action armed against a list that may have changed underneath it.
+    DisposableEffect(Unit) { onDispose { viewModel.clearSelection() } }
     val undoLabel = stringResource(R.string.action_undo)
     LaunchedEffect(recentlyDeleted) {
         val feed = recentlyDeleted ?: return@LaunchedEffect
@@ -115,6 +155,20 @@ fun SourceListPage(
         )
         if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete()
         else viewModel.forgetDeleted()
+    }
+    LaunchedEffect(recentlyDeletedMany) {
+        if (recentlyDeletedMany.isEmpty()) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(
+                R.string.sources_deleted,
+                recentlyDeletedMany.size,
+            ),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteSources()
+        else viewModel.forgetDeletedSources()
     }
 
     val opmlExporter = rememberLauncherForActivityResult(
@@ -167,6 +221,22 @@ fun SourceListPage(
         }
     }
 
+    tagAction?.let { action ->
+        TagPickerDialog(
+            action = action,
+            allTags = state.allTags,
+            onDismiss = { tagAction = null },
+            onConfirm = { tags ->
+                when (action) {
+                    TagAction.Add -> viewModel.editSelectedTags(add = tags)
+                    TagAction.Remove -> viewModel.editSelectedTags(remove = tags)
+                    TagAction.Replace -> viewModel.editSelectedTags(replaceWith = tags)
+                }
+                tagAction = null
+            },
+        )
+    }
+
     NavigableListDetailPaneScaffold(
         navigator = paneNavigator,
         listPane = {
@@ -192,6 +262,37 @@ fun SourceListPage(
                     },
                     actions = {
                         OverflowMenu {
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(
+                                        Phosphor.Hash,
+                                        contentDescription = stringResource(R.string.manage_categories),
+                                    )
+                                },
+                                onClick = {
+                                    hideMenu()
+                                    navController.navigate(NavRoute.Categories)
+                                },
+                                text = { Text(stringResource(R.string.manage_categories)) },
+                            )
+                            HorizontalDivider()
+                            SourceSort.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (option == sort) Phosphor.Check
+                                            else Phosphor.Sort,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        hideMenu()
+                                        viewModel.setSort(option)
+                                    },
+                                    text = { Text(stringResource(option.labelId)) },
+                                )
+                            }
+                            HorizontalDivider()
                             DropdownMenuItem(
                                 leadingIcon = {
                                     Icon(
@@ -285,12 +386,47 @@ fun SourceListPage(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         item {
+                            if (selection.isEmpty()) {
+                                OutlinedTextField(
+                                    value = query,
+                                    onValueChange = viewModel::setQuery,
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large,
+                                    label = { Text(stringResource(R.string.sources_search)) },
+                                    trailingIcon = {
+                                        if (query.isNotEmpty()) {
+                                            IconButton(onClick = { viewModel.setQuery("") }) {
+                                                Icon(Phosphor.SubtractSquare, null)
+                                            }
+                                        }
+                                    },
+                                )
+                            } else {
+                                SelectionBar(
+                                    count = selection.size,
+                                    onSelectAll = {
+                                        viewModel.selectAll(state.allSources.map(Feed::id))
+                                    },
+                                    onClear = viewModel::clearSelection,
+                                    onEnable = { viewModel.setSelectedEnabled(true) },
+                                    onDisable = { viewModel.setSelectedEnabled(false) },
+                                    onTag = { tagAction = it },
+                                    onDelete = viewModel::deleteSelected,
+                                )
+                            }
+                        }
+                        item {
                             PreferenceGroupHeading(heading = stringResource(id = R.string.enabled))
                         }
                         items(state.enabledSources, key = { it.id }) { item ->
                             SourceItem(
                                 modifier = Modifier.animateItem(),
                                 source = item,
+                                selectionMode = selection.isNotEmpty(),
+                                selected = item.id in selection,
+                                onLongClick = { viewModel.toggleSelected(it.id) },
+                                staleSince = staleSince,
                                 onClick = {
                                     scope.launch {
                                         paneNavigator.navigateTo(
@@ -314,6 +450,10 @@ fun SourceListPage(
                             SourceItem(
                                 modifier = Modifier.animateItem(),
                                 source = item,
+                                selectionMode = selection.isNotEmpty(),
+                                selected = item.id in selection,
+                                onLongClick = { viewModel.toggleSelected(it.id) },
+                                staleSince = staleSince,
                                 onClick = {
                                     scope.launch {
                                         paneNavigator.navigateTo(
@@ -352,5 +492,144 @@ fun SourceListPage(
                 }
             }
         }
+    )
+}
+
+/** How long a source can go without a successful sync before it is flagged. */
+private const val STALE_AFTER_MS = 3L * 24 * 60 * 60 * 1000
+
+/** Which of the three tag operations a dialog is open for. */
+enum class TagAction(val labelId: Int) {
+    Add(R.string.sources_add_tag),
+    Remove(R.string.sources_remove_tag),
+    Replace(R.string.sources_replace_tags),
+}
+
+/**
+ * What replaces the search field once sources are picked out.
+ *
+ * It stands in the list rather than in the app bar so that the count and the
+ * actions scroll with the thing they act on: a bar pinned to the top, with the
+ * selection somewhere below the fold, is how people act on a selection they
+ * have forgotten the contents of.
+ */
+@Composable
+private fun SelectionBar(
+    count: Int,
+    onSelectAll: () -> Unit,
+    onClear: () -> Unit,
+    onEnable: () -> Unit,
+    onDisable: () -> Unit,
+    onTag: (TagAction) -> Unit,
+    onDelete: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.sources_selected, count),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onSelectAll) {
+                    Text(stringResource(R.string.sources_select_all))
+                }
+                IconButton(onClick = onClear) {
+                    Icon(Phosphor.SubtractSquare, stringResource(android.R.string.cancel))
+                }
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = 4.dp),
+            ) {
+                TagAction.entries.forEach { action ->
+                    AssistChip(
+                        onClick = { onTag(action) },
+                        label = { Text(stringResource(action.labelId)) },
+                    )
+                }
+                AssistChip(
+                    onClick = onEnable,
+                    label = { Text(stringResource(R.string.sources_enable)) },
+                )
+                AssistChip(
+                    onClick = onDisable,
+                    label = { Text(stringResource(R.string.sources_disable)) },
+                )
+                AssistChip(
+                    onClick = onDelete,
+                    label = { Text(stringResource(R.string.remove_title)) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        labelColor = MaterialTheme.colorScheme.error,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Picking categories for a bulk edit.
+ *
+ * Existing categories are offered as chips and a new one can be typed, which is
+ * the whole point: a category should be selected from what exists, so that
+ * "Tech" and "tech" do not both end up in the list because two sources were
+ * tagged on different days.
+ */
+@Composable
+private fun TagPickerDialog(
+    action: TagAction,
+    allTags: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
+) {
+    var picked by remember { mutableStateOf(emptySet<String>()) }
+    var typed by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(action.labelId)) },
+        text = {
+            Column {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    allTags.forEach { tag ->
+                        FilterChip(
+                            selected = tag in picked,
+                            onClick = {
+                                picked = if (tag in picked) picked - tag else picked + tag
+                            },
+                            label = { Text(tag) },
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    label = { Text(stringResource(R.string.source_tags)) },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            val result = picked + typed.split(",").map(String::trim).filter(String::isNotEmpty)
+            TextButton(
+                // Replace with nothing is a legitimate action — it clears every
+                // category off the selection — so only Add and Remove need a
+                // non-empty result.
+                enabled = result.isNotEmpty() || action == TagAction.Replace,
+                onClick = { onConfirm(result) },
+            ) { Text(stringResource(android.R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+        },
     )
 }

@@ -1,0 +1,83 @@
+package com.saulhdev.feeder
+
+import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.viewmodels.SourceSort
+import com.saulhdev.feeder.viewmodels.matches
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.net.URL
+import kotlin.time.Instant
+
+private fun feed(
+    id: Long = 1,
+    title: String = "",
+    url: String = "https://example.com/feed",
+    tag: String = "",
+    lastSync: Long = 0,
+) = Feed(
+    id = id,
+    title = title,
+    url = URL(url),
+    tag = tag,
+    lastSync = Instant.fromEpochMilliseconds(lastSync),
+)
+
+class SourceListTest {
+
+    @Test
+    fun `an empty query matches everything`() {
+        assertTrue(feed(title = "The Guardian").matches(""))
+        assertTrue(feed(title = "The Guardian").matches("   "))
+    }
+
+    @Test
+    fun `search finds a source by name, address or category`() {
+        val f = feed(title = "The Guardian", url = "https://theguardian.com/europe/rss", tag = "News,World")
+        assertTrue("by name", f.matches("guardian"))
+        assertTrue("by address", f.matches("europe"))
+        assertTrue("by category", f.matches("world"))
+        assertFalse(f.matches("cricket"))
+    }
+
+    @Test
+    fun `search ignores case and surrounding space`() {
+        val f = feed(title = "Ars Technica")
+        assertTrue(f.matches("ARS"))
+        assertTrue(f.matches("  ars  "))
+    }
+
+    @Test
+    fun `sorting by name is case-insensitive`() {
+        val feeds = listOf(feed(title = "zdnet"), feed(title = "Ars"), feed(title = "BBC"))
+        val sorted = feeds.sortedWith(SourceSort.Title.comparator).map(Feed::title)
+        assertEquals(listOf("Ars", "BBC", "zdnet"), sorted)
+    }
+
+    @Test
+    fun `sorting by category uses the first of several, not the raw string`() {
+        val feeds = listOf(
+            feed(title = "b", tag = "World,Alpha"),
+            feed(title = "a", tag = "Tech"),
+        )
+        val sorted = feeds.sortedWith(SourceSort.Category.comparator).map(Feed::title)
+        assertEquals(listOf("a", "b"), sorted)
+    }
+
+    @Test
+    fun `sorting by last sync puts the stalest first, which is where broken feeds go`() {
+        val feeds = listOf(
+            feed(title = "fresh", lastSync = 5_000),
+            feed(title = "stale", lastSync = 1_000),
+            feed(title = "middling", lastSync = 3_000),
+        )
+        val sorted = feeds.sortedWith(SourceSort.LastSync.comparator).map(Feed::title)
+        assertEquals(listOf("stale", "middling", "fresh"), sorted)
+    }
+
+    @Test
+    fun `every sort option carries a label`() {
+        SourceSort.entries.forEach { assertTrue(it.name, it.labelId != 0) }
+    }
+}

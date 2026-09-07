@@ -16,7 +16,7 @@ in the code.
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale, bundled Inter and a two-stage splash, none of which the milestone asked for |
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
-| 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
+| 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
 | 5 | Personalisation | **Not started** |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
@@ -93,7 +93,13 @@ a hundred sources, one at a time is the wrong unit.
 - **Surface broken feeds.** A source that has failed to fetch for days looks
   identical to one that is simply quiet. `lastSync` is already stored; nothing
   reads it back to the user.
-- **Reorder** sources and categories.
+- **Reorder — deferred, with a reason.** A persisted manual order fights the
+  sort selector built alongside it: with Name, Category and Least-recently-
+  updated on offer, what a hand-made order *means* while sorted by name has no
+  good answer, and the usual fix — making manual a fourth sort option — leaves
+  a drag handle that silently does nothing in the other three. It also wants a
+  column and a migration. Worth deciding as a design question before it is
+  built, rather than bolting it on.
 - **Tags should be picked, not typed.** The source editor's Tags field is free
   text, so a category is created by spelling it right and lost by spelling it
   wrong — and the field reads as one value even though the column has always

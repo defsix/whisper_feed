@@ -196,4 +196,109 @@ class SourcesRepository(db: NeoFeedDb) {
     fun forgetDeletedSource() {
         _recentlyDeleted.value = null
     }
+
+    /* Bulk editing */
+
+    /**
+     * Applies one change to many sources at once.
+     *
+     * A single `updateAll` rather than a loop of `update`, because each write
+     * invalidates every query that touches Feeds — and the article list is one
+     * of them. Retagging forty sources one row at a time would rebuild the feed
+     * forty times.
+     */
+    suspend fun updateSources(feeds: List<Feed>) = withContext(jcc) {
+        if (feeds.isNotEmpty()) feedsDao.updateAll(feeds)
+    }
+
+    suspend fun setEnabled(ids: Collection<Long>, enabled: Boolean) = withContext(jcc) {
+        val feeds = feedsDao.loadAllFeeds()
+            .filter { it.id in ids && it.isEnabled != enabled }
+            .map { it.copy(isEnabled = enabled) }
+        if (feeds.isNotEmpty()) feedsDao.updateAll(feeds)
+    }
+
+    /**
+     * Adds, removes or replaces categories across a selection.
+     *
+     * The whole reason this is here rather than in the view model: `tag` is a
+     * comma-separated string, and every place that has treated it as a single
+     * value has been a bug. Splitting and rejoining happens once, in one place.
+     */
+    suspend fun editTags(
+        ids: Collection<Long>,
+        add: Set<String> = emptySet(),
+        remove: Set<String> = emptySet(),
+        replaceWith: Set<String>? = null,
+    ) = withContext(jcc) {
+        val updated = feedsDao.loadAllFeeds()
+            .filter { it.id in ids }
+            .mapNotNull { feed ->
+                val tags = when {
+                    replaceWith != null -> replaceWith
+                    else -> feed.tags.toSet() + add - remove
+                }
+                val joined = tags.filter(String::isNotBlank).joinToString(",")
+                // Only the rows that actually change: every write to Feeds
+                // invalidates the article query, which joins it.
+                if (joined == feed.tag) null else feed.copy(tag = joined)
+            }
+        if (updated.isNotEmpty()) feedsDao.updateAll(updated)
+    }
+
+    /**
+     * Renames one category everywhere it is used.
+     *
+     * Merging is the same operation with a target that already exists — the
+     * distinct() is what turns a rename-onto-an-existing-name into a merge
+     * rather than into a feed tagged "News,News".
+     */
+    suspend fun renameTag(from: String, to: String) = withContext(jcc) {
+        if (from.isBlank() || to.isBlank() || from == to) return@withContext
+        val updated = feedsDao.loadAllFeeds()
+            .filter { from in it.tags }
+            .map { feed ->
+                val tags = feed.tags.map { if (it == from) to else it }.distinct()
+                feed.copy(tag = tags.joinToString(","))
+            }
+        if (updated.isNotEmpty()) feedsDao.updateAll(updated)
+    }
+
+    /** Removes a category from every source, leaving the sources themselves. */
+    suspend fun deleteTag(tag: String) = withContext(jcc) {
+        val updated = feedsDao.loadAllFeeds()
+            .filter { tag in it.tags }
+            .map { feed -> feed.copy(tag = (feed.tags - tag).joinToString(",")) }
+        if (updated.isNotEmpty()) feedsDao.updateAll(updated)
+    }
+
+    /**
+     * Removes several sources, keeping them all for one undo.
+     *
+     * The single-source path holds one row; this holds the whole selection, so
+     * undoing a mistaken "delete 12 sources" brings back twelve rather than the
+     * last one.
+     */
+    private val _recentlyDeletedMany = MutableStateFlow<List<Feed>>(emptyList())
+    val recentlyDeletedMany: StateFlow<List<Feed>> = _recentlyDeletedMany.asStateFlow()
+
+    suspend fun deleteSources(ids: Collection<Long>) = withContext(jcc) {
+        val feeds = feedsDao.loadAllFeeds().filter { it.id in ids }
+        if (feeds.isEmpty()) return@withContext
+        _recentlyDeletedMany.value = feeds
+        feedsDao.deleteFeedsByIds(feeds.map(Feed::id))
+    }
+
+    fun undoDeleteSources() {
+        scope.launch {
+            val feeds = _recentlyDeletedMany.value
+            _recentlyDeletedMany.value = emptyList()
+            feeds.forEach { feedsDao.insert(it.copy(id = ID_UNSET)) }
+            if (feeds.isNotEmpty()) requestFeedSync(ID_ALL)
+        }
+    }
+
+    fun forgetDeletedSources() {
+        _recentlyDeletedMany.value = emptyList()
+    }
 }
