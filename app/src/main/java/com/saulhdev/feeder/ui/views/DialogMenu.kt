@@ -46,8 +46,16 @@ class DialogMenu(private val d: View) {
     }
 
     @SuppressLint("InflateParams")
+    /**
+     * @param anchorTop where the top of the menu should sit, in screen pixels.
+     *   The anchor view is the overlay's whole content container, whose top is
+     *   behind the status bar — so without this the menu was drawn over the
+     *   clock and the battery. The caller knows the status bar inset and the
+     *   height of its own header; this class does not.
+     */
     fun show(
         list: List<MenuItem>,
+        anchorTop: Int? = null,
         setListViewParams: ((Pair<View, MenuListView>) -> Unit)? = null,
         onClick: (MenuItem) -> Unit
     ) {
@@ -79,7 +87,7 @@ class DialogMenu(private val d: View) {
 
             val d2 = d(this.d)
             val measuredWidth = (d2.right - inflate.measuredWidth) + intToDp(8)
-            val b2 = d2.top - intToDp(8)
+            val b2 = anchorTop ?: (d2.top - intToDp(8))
             val rect = Rect(
                 measuredWidth,
                 b2,

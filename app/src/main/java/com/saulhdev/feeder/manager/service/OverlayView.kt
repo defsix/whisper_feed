@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -126,37 +125,34 @@ class OverlayView(val context: Context) :
     private var pendingCloseOnResume = false
 
     /**
-     * When this overlay last started an activity itself.
+     * Set while an activity this overlay started is in front of the launcher.
      *
-     * Starting an activity makes the system broadcast
-     * ACTION_CLOSE_SYSTEM_DIALOGS, and this class listens for that in order to
-     * get out of the way when something else takes over the screen. Our own
-     * launch therefore closed the panel out from under the article the user
-     * had just tapped — the workspace showed for a frame or two before the
-     * browser appeared, and backing out of the browser returned to a launcher
-     * sitting on the home screen rather than on the feed the article came
-     * from.
+     * Tapping an article showed the home screen wallpaper and then the
+     * browser, and backing out of the browser landed on the home screen rather
+     * than on the feed. The cause is in the overlay protocol, not in this app's
+     * own handling: the launcher calls ILauncherOverlay.onPause() when it
+     * pauses, which OverlayControllerBinder turns into closeOverlay(0), which
+     * arrives here as closePanelIfNeeded(0) — and flag 0 means *no animation*,
+     * so the panel snaps shut and reveals the workspace while the browser is
+     * still starting. The launcher then calls onResume() on the way back,
+     * which closes it a second time.
      *
-     * A time window rather than a boolean because there is nothing to clear it
-     * on: the broadcast is the only signal that the launch happened, and it is
-     * the thing being suppressed. uptimeMillis so that it cannot be moved by
-     * the clock changing.
+     * Both closes are consequences of us starting the activity, so while this
+     * is set both are ignored. It cannot be a short time window: the user is
+     * in the browser for as long as they like, and the resume arrives at the
+     * end of that.
      */
-    @Volatile
-    private var lastSelfLaunchAt = 0L
-
-    private fun startedItOurselves(): Boolean =
-        SystemClock.uptimeMillis() - lastSelfLaunchAt < SELF_LAUNCH_GRACE_MS
+    private var keepingPanelForOurLaunch = false
 
     /**
-     * Starts an activity and keeps the panel where it is.
+     * Starts an activity and leaves the panel open behind it.
      *
      * Every launch from the overlay goes through here, not only opening an
      * article: a share sheet or the settings screen appearing over the feed
      * has the same reason to leave the feed underneath it.
      */
     private inline fun launchKeepingPanel(block: () -> Unit) {
-        lastSelfLaunchAt = SystemClock.uptimeMillis()
+        keepingPanelForOurLaunch = true
         block()
     }
 
@@ -166,8 +162,8 @@ class OverlayView(val context: Context) :
         override fun onReceive(c: Context?, intent: Intent?) {
             if (intent?.action != Intent.ACTION_CLOSE_SYSTEM_DIALOGS) return
             // Something else taking the screen is worth closing for. Us taking
-            // it is not — see lastSelfLaunchAt.
-            if (startedItOurselves()) return
+            // it is not — see keepingPanelForOurLaunch.
+            if (keepingPanelForOurLaunch) return
             closePanelIfNeeded(1)
         }
     }
@@ -259,6 +255,16 @@ class OverlayView(val context: Context) :
         if (AbstractFloatingView.isAnyOpen()) {
             AbstractFloatingView.closeAllOpenViews(context)
         }
+        openPopupMenu?.dismiss()
+        openPopupMenu = null
+        if (keepingPanelForOurLaunch) {
+            // The launcher asks twice: once without the animation flag as it
+            // pauses, once with it as it resumes. The resume one is the end of
+            // the trip, so it is what clears this — leaving the panel open and
+            // the feed exactly where the article was tapped from.
+            if (flags and 1 != 0) keepingPanelForOurLaunch = false
+            return
+        }
         super.closePanelIfNeeded(flags)
     }
 
@@ -342,10 +348,27 @@ class OverlayView(val context: Context) :
         })
     }
 
+    /**
+     * The header's overflow menu, held so it can be dismissed.
+     *
+     * It is a PopupWindow rather than an AbstractFloatingView, so
+     * closeAllOpenViews — which every close path calls — went straight past
+     * it. Left open, it outlived the panel and turned up over the workspace.
+     */
+    private var openPopupMenu: DialogMenu? = null
+
     private fun openMenu(view: View) {
+        openPopupMenu?.dismiss()
         val popup = DialogMenu(view)
-        popup.show(createMenuList()) {
+        openPopupMenu = popup
+        // The anchor is the whole content container, whose top is behind the
+        // status bar. Placed under the header instead, which is where a menu
+        // hanging off the overflow button belongs.
+        val below = topInsetPx.value +
+            (MENU_TOP_MARGIN_DP * context.resources.displayMetrics.density).toInt()
+        popup.show(createMenuList(), anchorTop = below) {
             popup.dismiss()
+            openPopupMenu = null
             when (it.id) {
                 "config"  -> {
                     mainScope.launch {
@@ -495,7 +518,7 @@ class OverlayView(val context: Context) :
         if (prefs.debugging.getValue()) {
             Log.d("OverlayView", "New message by OverlayBridge: $action")
         }
-        if (action == "openContentView" && !startedItOurselves()) {
+        if (action == "openContentView" && !keepingPanelForOurLaunch) {
             pendingCloseOnResume = true
         }
     }
@@ -534,10 +557,9 @@ class OverlayView(val context: Context) :
 }
 
 /**
- * How long after starting an activity ourselves a close request is treated as
- * a consequence of that launch rather than a reason to get out of the way.
+ * How far below the status bar the header's overflow menu opens.
  *
- * Long enough to cover a cold browser start, short enough that a genuine
- * close — the user pressing Home, a call arriving — is not swallowed.
+ * The overlay's top app bar is 64dp; a menu that hangs off its overflow button
+ * starts just under it.
  */
-private const val SELF_LAUNCH_GRACE_MS = 2_000L
+private const val MENU_TOP_MARGIN_DP = 56
