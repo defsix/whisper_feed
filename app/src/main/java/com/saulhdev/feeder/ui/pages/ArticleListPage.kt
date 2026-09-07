@@ -90,6 +90,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.manager.sync.SyncRestClient
+import com.saulhdev.feeder.ui.components.HeaderToggleAction
 import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.PullToRefreshStaggeredGrid
 import com.saulhdev.feeder.ui.components.PullToRefreshLazyColumn
@@ -218,40 +219,31 @@ fun ArticleListPage(
                                 },
                                 scrollBehavior = scrollBehavior,
                                 actions = {
-                                    IconButton(
-                                        modifier = Modifier
-                                            .size(size = 40.dp)
-                                            .clip(CircleShape),
+                                    // The same three actions the overlay's
+                                    // header carries, drawn by the same
+                                    // component so the two rows sit on one
+                                    // rhythm. The bookmarks toggle used to be
+                                    // a Surface with its own padding between
+                                    // two IconButtons, which is what made the
+                                    // spacing look off.
+                                    HeaderToggleAction(
+                                        icon = if (state.isFilterModified) Phosphor.Filtered
+                                        else Phosphor.Filter,
+                                        description = stringResource(id = R.string.sorting_order),
+                                        active = state.isFilterModified,
                                         onClick = {
                                             scope.launch {
                                                 scaffoldState.bottomSheetState.expand()
                                             }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = if (state.isFilterModified) Phosphor.Filtered else Phosphor.Filter,
-                                            contentDescription = stringResource(id = R.string.sorting_order),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                        },
+                                    )
 
-                                    Surface(
-                                        color = if (showBookmarks) MaterialTheme.colorScheme.primaryContainer
-                                        else Color.Transparent,
-                                        shape = MaterialTheme.shapes.large,
-                                        onClick = {
-                                            showBookmarks = !showBookmarks
-                                        }
-                                    ) {
-                                        Icon(
-                                            modifier = Modifier
-                                                .padding(8.dp)
-                                                .size(22.dp),
-                                            painter = painterResource(R.drawable.ic_whisper_save),
-                                            contentDescription = stringResource(id = R.string.title_bookmarks),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                    HeaderToggleAction(
+                                        painter = painterResource(R.drawable.ic_whisper_save),
+                                        description = stringResource(id = R.string.title_bookmarks),
+                                        active = showBookmarks,
+                                        onClick = { showBookmarks = !showBookmarks },
+                                    )
 
                                     OverflowMenu {
                                         DropdownMenuItem(

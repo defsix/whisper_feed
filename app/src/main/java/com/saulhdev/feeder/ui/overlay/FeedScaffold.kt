@@ -78,6 +78,9 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.manager.glance.GlanceState
 import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
+import com.saulhdev.feeder.ui.components.HeaderToggleAction
+import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import kotlinx.coroutines.launch
@@ -191,29 +194,28 @@ fun FeedScaffold(
                     // they have to show when they are on — the View header only
                     // ever tinted the bookmark toggle, and the filter gave no
                     // indication at all that it was narrowing the feed.
-                    ToggleAction(
+                    HeaderToggleAction(
                         icon = Phosphor.FunnelSimple,
                         description = stringResource(R.string.pref_cat_filters),
                         active = isFilterActive,
                         onClick = onFilterClick,
                     )
-                    ToggleAction(
+                    HeaderToggleAction(
                         painter = painterResource(R.drawable.ic_whisper_save),
                         description = stringResource(R.string.title_bookmarks),
                         active = isShowingBookmarks,
                         onClick = onBookmarksClick,
                     )
-                    // One action, not a menu. Reload is what pull-to-refresh
-                    // is for and Restart was a development leftover, which
-                    // left a menu whose only real entry was Settings — and a
-                    // dropdown in this window had to be positioned by hand
-                    // against a container that starts behind the status bar.
-                    IconButton(onClick = onSettings) {
-                        Icon(
-                            painterResource(R.drawable.ic_gear),
-                            stringResource(R.string.title_settings),
-                        )
-                    }
+                    // One action, not a menu: reload duplicates pull-to-refresh
+                    // and restart was a development leftover, which left
+                    // Settings as the only real entry. It keeps the three dots
+                    // rather than taking a gear, so the two headers read the
+                    // same way.
+                    HeaderAction(
+                        icon = Phosphor.DotsThreeVertical,
+                        description = stringResource(R.string.title_settings),
+                        onClick = onSettings,
+                    )
                 },
                 // The overlay draws its own background, so the bar stays
                 // transparent and the feed shows through behind it.
@@ -330,48 +332,3 @@ fun FeedScaffold(
     }
 }
 
-/**
- * A header action that is a toggle, not a command: filled while it is on so the
- * state of the feed is legible from the header alone.
- */
-@Composable
-private fun ToggleAction(
-    icon: ImageVector,
-    description: String,
-    active: Boolean,
-    onClick: () -> Unit,
-) = ToggleAction(description, active, onClick) { Icon(icon, description) }
-
-/**
- * The same toggle for a drawable rather than an ImageVector — the save mark is
- * traced artwork, so it ships as a vector resource rather than Kotlin.
- */
-@Composable
-private fun ToggleAction(
-    painter: Painter,
-    description: String,
-    active: Boolean,
-    onClick: () -> Unit,
-) = ToggleAction(description, active, onClick) {
-    Icon(painter, description, modifier = Modifier.size(22.dp))
-}
-
-@Composable
-private fun ToggleAction(
-    description: String,
-    active: Boolean,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    if (active) {
-        FilledIconButton(
-            onClick = onClick,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ),
-        ) { content() }
-    } else {
-        IconButton(onClick = onClick) { content() }
-    }
-}

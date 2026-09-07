@@ -56,6 +56,11 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        // A deep link — from the launcher overlay, or a notification — carries
+        // data; a tap on the app icon does not. Read here rather than in
+        // composition, where a later onNewIntent could change the answer
+        // mid-session.
+        val launchedDirectly = intent?.data == null
         setContent {
             navController = rememberNavController()
             // Collected rather than read once, so changing the theme or the
@@ -106,7 +111,15 @@ class MainActivity : ComponentActivity() {
                     // — which is why the splash is also capped by a timeout,
                     // for the case where the feed is genuinely empty.
                     val feedState by viewModel.articleListState.collectAsState()
-                    WhisperSplash(ready = feedState.articles.isNotEmpty()) {
+                    WhisperSplash(
+                        ready = feedState.articles.isNotEmpty(),
+                        // Only when the app is opened as an app. Arriving from
+                        // the launcher feed means tapping Settings and being
+                        // shown a brand screen on the way to a preferences
+                        // list — the splash belongs to starting Whisper, not
+                        // to every screen it can be deep-linked into.
+                        enabled = launchedDirectly,
+                    ) {
                         NavigationManager(
                             modifier = Modifier.imePadding(),
                             navController = navController,

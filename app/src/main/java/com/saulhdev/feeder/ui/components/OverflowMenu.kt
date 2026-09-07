@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.ui.components
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.icons.Phosphor
@@ -45,6 +47,7 @@ fun OverflowMenu(
             Icon(
                 imageVector = Phosphor.DotsThreeVertical,
                 contentDescription = stringResource(id = R.string.title_settings),
+                modifier = Modifier.size(HeaderIconSize),
             )
         }
         DropdownMenu(

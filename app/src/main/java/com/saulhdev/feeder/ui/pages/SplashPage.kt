@@ -79,7 +79,25 @@ private val MARK_HEIGHT = 150.dp
 fun WhisperSplash(
     ready: Boolean,
     content: @Composable () -> Unit,
+) = WhisperSplash(ready = ready, enabled = true, content = content)
+
+/**
+ * @param enabled false when the app was deep-linked into rather than launched,
+ *   in which case the content is shown straight away. A brand screen on the way
+ *   to a settings list the user asked for from another surface is an
+ *   interruption, not an introduction.
+ */
+@Composable
+fun WhisperSplash(
+    ready: Boolean,
+    enabled: Boolean,
+    content: @Composable () -> Unit,
 ) {
+    if (!enabled) {
+        content()
+        return
+    }
+
     var minimumElapsed by remember { mutableStateOf(false) }
     var timedOut by remember { mutableStateOf(false) }
 
