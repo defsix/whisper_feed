@@ -82,19 +82,32 @@ class FeedParser {
      */
     suspend fun findSiteIcon(siteUrl: URL): String? {
         getFeedIconAtUrl(siteUrl)?.let { return it }
-        val fallback = try {
-            URL("${siteUrl.protocol}://${siteUrl.authority}/favicon.ico")
-        } catch (_: Throwable) {
-            return null
+
+        // The conventional filenames, decodable one first. /apple-touch-icon
+        // .png is a PNG by definition and is present on most sites built this
+        // decade; /favicon.ico is the older convention and often really is an
+        // ICO, which Android cannot render.
+        val origin = "${siteUrl.protocol}://${siteUrl.authority}"
+        for (path in listOf("/apple-touch-icon.png", "/favicon.ico")) {
+            val candidate = try {
+                URL(origin + path)
+            } catch (_: Throwable) {
+                continue
+            }
+            val ok = try {
+                var success = false
+                curlAndOnResponse(candidate) { success = it.isSuccessful }
+                success
+            } catch (_: Throwable) {
+                false
+            }
+            if (ok) return candidate.toString()
         }
-        return try {
-            var ok = false
-            curlAndOnResponse(fallback) { ok = it.isSuccessful }
-            if (ok) fallback.toString() else null
-        } catch (_: Throwable) {
-            null
-        }
+        return null
     }
+
+    private fun String.isIco(): Boolean =
+        substringBefore('?').endsWith(".ico", ignoreCase = true)
 
     private fun getFeedIconInHtml(
         html: String,
@@ -102,7 +115,7 @@ class FeedParser {
     ): String? {
         val doc = Jsoup.parse(html.byteInputStream(), "UTF-8", "")
 
-        return (
+        val candidates = (
                 doc.getElementsByAttributeValue("rel", "apple-touch-icon") +
                         doc.getElementsByAttributeValue("rel", "icon") +
                         doc.getElementsByAttributeValue("rel", "shortcut icon")
@@ -117,7 +130,15 @@ class FeedParser {
 
                     else -> sloppyLinkToStrictURL(it.attr("href")).toString()
                 }
-            }.firstOrNull()
+            }
+
+        // Android's decoder handles PNG, JPEG, WebP and friends — not ICO. A
+        // site declaring both a PNG and a favicon.ico must yield the PNG, or
+        // the card falls back to a monogram for a source that does have a
+        // usable mark. .ico is kept as a last resort rather than dropped: some
+        // servers put a PNG behind that filename, and the decoder sniffs the
+        // bytes rather than trusting the extension.
+        return candidates.firstOrNull { !it.isIco() } ?: candidates.firstOrNull()
     }
 
     /**

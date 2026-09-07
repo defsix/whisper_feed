@@ -19,6 +19,7 @@ package com.saulhdev.feeder.ui.overlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -73,20 +74,38 @@ fun SourceMark(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(monogramColor(sourceName, onImage)),
+            // The hashed colour belongs to the monogram, not to the mark. It
+            // used to be painted unconditionally, so a favicon with any
+            // transparency in it — which is most of them — sat on an arbitrary
+            // colour picked from the source's name, and read as that site's
+            // branding. A neutral container behind a real icon instead.
+            .background(
+                if (hasIcon) {
+                    if (onImage) Color.White.copy(alpha = 0.9f)
+                    else MaterialTheme.colorScheme.surfaceContainerHighest
+                } else {
+                    monogramColor(sourceName, onImage)
+                }
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (hasIcon) {
             AsyncImage(
                 model = iconUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                // Fit, not Crop: plenty of sites publish a wide wordmark as
+                // their icon, and cropping one to a circle keeps the middle
+                // few letters and throws the rest away. Inset so a square icon
+                // does not touch the circle's edge.
+                contentScale = ContentScale.Fit,
                 onError = { failed = true },
-                modifier = Modifier.size(size),
+                modifier = Modifier
+                    .size(size)
+                    .padding(1.dp),
             )
         } else {
             Text(
-                text = sourceName.firstOrNull()?.uppercase().orEmpty(),
+                text = monogram(sourceName),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = (size.value * 0.55f).sp,
@@ -94,6 +113,22 @@ fun SourceMark(
             )
         }
     }
+}
+
+/**
+ * The letter to stand in for a source.
+ *
+ * The first letter of the first word that is not an article: "The Independent"
+ * is a T on the naive reading, which says nothing and collides with every
+ * other publication that starts the same way.
+ */
+private fun monogram(name: String): String {
+    val skip = setOf("the", "a", "an")
+    val word = name.split(' ', '-', '–')
+        .map { it.trim() }
+        .firstOrNull { it.isNotEmpty() && it.lowercase() !in skip }
+        ?: name
+    return word.firstOrNull()?.uppercase().orEmpty()
 }
 
 /**
