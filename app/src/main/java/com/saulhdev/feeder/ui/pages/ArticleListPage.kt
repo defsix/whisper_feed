@@ -46,6 +46,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -87,7 +91,6 @@ import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.PullToRefreshLazyColumn
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
-import com.saulhdev.feeder.ui.icons.phosphor.Bookmarks
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Filter
 import com.saulhdev.feeder.ui.icons.phosphor.Filtered
@@ -136,6 +139,23 @@ fun ArticleListPage(
         .collectAsState(initial = prefs.articleOpenMode.getValue())
     val bookmarked by viewModel.bookmarksState.collectAsState()
 
+    // The same offer the overlay feed makes: hiding a source is one tap from a
+    // menu, so the way back is shown where the article disappeared from.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val hiddenSource by viewModel.recentlyHidden.collectAsState()
+    val undoLabel = stringResource(R.string.action_undo)
+    LaunchedEffect(hiddenSource) {
+        val item = hiddenSource ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(R.string.source_hidden, item.feedTitle),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoHideSource()
+        else viewModel.forgetHiddenSource()
+    }
+
     var showBookmarks by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
@@ -170,6 +190,7 @@ fun ArticleListPage(
                     Scaffold(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                         containerColor = Color.Transparent,
+                        snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
                             TopAppBar(
                                 colors = TopAppBarDefaults.topAppBarColors(
@@ -215,8 +236,10 @@ fun ArticleListPage(
                                         }
                                     ) {
                                         Icon(
-                                            modifier = Modifier.padding(8.dp),
-                                            imageVector = Phosphor.Bookmarks,
+                                            modifier = Modifier
+                                                .padding(8.dp)
+                                                .size(22.dp),
+                                            painter = painterResource(R.drawable.ic_whisper_save),
                                             contentDescription = stringResource(id = R.string.title_bookmarks),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -375,6 +398,15 @@ fun ArticleListPage(
                                             onShare = {
                                                 context.safeShareIntent(item.link, item.contentTitle)
                                             },
+                                            onMoreLikeThis = {
+                                                viewModel.recordAffinity(item.sourceId, 1)
+                                            },
+                                            onLessLikeThis = {
+                                                viewModel.recordAffinity(item.sourceId, -1)
+                                            },
+                                            onHideSource = {
+                                                viewModel.hideSource(item)
+                                            },
                                         )
                                     }
                                 }
@@ -414,7 +446,15 @@ fun ArticleListPage(
                                                 onShare = {
                                                     context.safeShareIntent(item.link, item.contentTitle)
                                                 },
-
+                                                onMoreLikeThis = {
+                                                    viewModel.recordAffinity(item.sourceId, 1)
+                                                },
+                                                onLessLikeThis = {
+                                                    viewModel.recordAffinity(item.sourceId, -1)
+                                                },
+                                                onHideSource = {
+                                                    viewModel.hideSource(item)
+                                                },
                                             )
                                         }
                                     }

@@ -35,6 +35,7 @@ import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.utils.blobFile
 import com.saulhdev.feeder.utils.blobOutputStream
 import com.saulhdev.feeder.utils.getSyncDays
+import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURLNoThrows
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
@@ -254,10 +255,26 @@ private suspend fun syncFeed(
 
     Log.d(TAG, "Prepared ${articles.size} articles for ${feedSql.title}")
 
+    // The source's mark, for the line under each headline. Three places to
+    // look, cheapest first: the feed's own <icon>, then whatever is already
+    // stored, then — only when both are empty — the site itself. That last
+    // step is a network round trip, so it runs once per source rather than on
+    // every sync: a feed that declares no icon and whose site offers none
+    // keeps looking, but a feed that has one never asks again.
+    val storedIcon = syncedFeed.feedImage.toString()
+    val declaredIcon = feed.icon?.takeIf { it.isNotBlank() }
+    val resolvedIcon = when {
+        declaredIcon != null -> declaredIcon
+        storedIcon.isNotBlank() -> storedIcon
+        else -> feed.home_page_url
+            ?.let { runCatching { sloppyLinkToStrictURL(it) }.getOrNull() }
+            ?.let { feedParser.findSiteIcon(it) }
+    }
+
     feedsRepo.updateSource(
         syncedFeed.copy(
             title = syncedFeed.title,
-            feedImage = feed.icon?.let { sloppyLinkToStrictURLNoThrows(it) }
+            feedImage = resolvedIcon?.let { sloppyLinkToStrictURLNoThrows(it) }
                 ?: syncedFeed.feedImage
         ))
 

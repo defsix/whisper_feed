@@ -106,6 +106,9 @@ class OverlayView(val context: Context) :
     private val glanceHolder: GlanceStateHolder by inject()
     private val glanceState = mutableStateOf(GlanceState())
     private val showBookmarks = mutableStateOf(false)
+
+    /** The source hidden most recently, so the feed can offer the way back. */
+    private val hiddenSourceState = mutableStateOf<FeedItem?>(null)
     private val isFilterActive = mutableStateOf(false)
 
     /**
@@ -172,6 +175,9 @@ class OverlayView(val context: Context) :
         }
         syncScope.launch {
             viewModel.bookmarksState.collect { bookmarksState.value = it.bookmarkedArticles }
+        }
+        syncScope.launch {
+            viewModel.recentlyHidden.collect { hiddenSourceState.value = it }
         }
         syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
@@ -377,6 +383,12 @@ class OverlayView(val context: Context) :
                     onArticleClick = { openArticle(it) },
                     onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
                     onShare = { context.safeShareIntent(it.link, it.contentTitle) },
+                    onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
+                    onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
+                    onHideSource = { viewModel.hideSource(it) },
+                    hiddenSource = hiddenSourceState.value,
+                    onUndoHideSource = { viewModel.undoHideSource() },
+                    onDismissHideSource = { viewModel.forgetHiddenSource() },
                     onFilterClick = {
                         if (AbstractFloatingView.isAnyOpen()) {
                             AbstractFloatingView.closeAllOpenViews(context)

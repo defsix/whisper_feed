@@ -70,11 +70,14 @@ class SourceListViewModel(
             // original row and cascade to its articles.
             if (feedsRepo.findSourceByUrl(url) != null) return@launch
             feedsRepo.insertSource(
+                // feedImage is the source's *mark*, not its address. Writing
+                // the feed URL here made every new subscription claim an icon
+                // it does not have, which the card would then try to load.
+                // Sync fills it in properly on the first fetch.
                 Feed(
                     title = result.title,
                     description = result.description,
                     url = url,
-                    feedImage = url,
                 )
             )
         }

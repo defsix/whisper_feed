@@ -38,6 +38,10 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,10 +50,12 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -62,12 +68,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.manager.glance.GlanceState
 import com.saulhdev.feeder.ui.icons.Phosphor
-import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
@@ -105,6 +111,12 @@ fun FeedScaffold(
     onArticleClick: (FeedItem) -> Unit,
     onBookmark: (FeedItem, Boolean) -> Unit,
     onShare: (FeedItem) -> Unit,
+    onMoreLikeThis: (FeedItem) -> Unit,
+    onLessLikeThis: (FeedItem) -> Unit,
+    onHideSource: (FeedItem) -> Unit,
+    hiddenSource: FeedItem?,
+    onUndoHideSource: () -> Unit,
+    onDismissHideSource: () -> Unit,
     onFilterClick: () -> Unit,
     onBookmarksClick: () -> Unit,
     onOverflowClick: () -> Unit,
@@ -119,6 +131,23 @@ fun FeedScaffold(
     // back once a few articles had gone by.
     val showScrollToTop by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 5 }
+    }
+
+    // Hiding a source is one tap with no confirmation, so the way back is
+    // offered here rather than left to the sources screen.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val undoLabel = stringResource(R.string.action_undo)
+    LaunchedEffect(hiddenSource) {
+        val item = hiddenSource ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(R.string.source_hidden, item.feedTitle),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) onUndoHideSource()
+        else onDismissHideSource()
     }
 
     Box(
@@ -160,7 +189,7 @@ fun FeedScaffold(
                         onClick = onFilterClick,
                     )
                     ToggleAction(
-                        icon = Phosphor.BookBookmark,
+                        painter = painterResource(R.drawable.ic_whisper_save),
                         description = stringResource(R.string.title_bookmarks),
                         active = isShowingBookmarks,
                         onClick = onBookmarksClick,
@@ -212,11 +241,21 @@ fun FeedScaffold(
                             onClick = { onArticleClick(item) },
                             onBookmark = { onBookmark(item, it) },
                             onShare = { onShare(item) },
+                            onMoreLikeThis = { onMoreLikeThis(item) },
+                            onLessLikeThis = { onLessLikeThis(item) },
+                            onHideSource = { onHideSource(item) },
                         )
                     }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomInset + 16.dp),
+        )
 
         AnimatedVisibility(
             visible = showScrollToTop,
@@ -246,6 +285,28 @@ private fun ToggleAction(
     description: String,
     active: Boolean,
     onClick: () -> Unit,
+) = ToggleAction(description, active, onClick) { Icon(icon, description) }
+
+/**
+ * The same toggle for a drawable rather than an ImageVector — the save mark is
+ * traced artwork, so it ships as a vector resource rather than Kotlin.
+ */
+@Composable
+private fun ToggleAction(
+    painter: Painter,
+    description: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) = ToggleAction(description, active, onClick) {
+    Icon(painter, description, modifier = Modifier.size(22.dp))
+}
+
+@Composable
+private fun ToggleAction(
+    description: String,
+    active: Boolean,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
 ) {
     if (active) {
         FilledIconButton(
@@ -254,10 +315,8 @@ private fun ToggleAction(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ),
-        ) {
-            Icon(icon, description)
-        }
+        ) { content() }
     } else {
-        IconButton(onClick = onClick) { Icon(icon, description) }
+        IconButton(onClick = onClick) { content() }
     }
 }

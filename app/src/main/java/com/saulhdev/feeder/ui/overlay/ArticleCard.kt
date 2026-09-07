@@ -50,9 +50,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.icons.Phosphor
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraightFill
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.utils.formatArticleAge
 
@@ -71,12 +70,24 @@ fun FeedArticleItem(
     onBookmark: (Boolean) -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
+    onMoreLikeThis: () -> Unit = {},
+    onLessLikeThis: () -> Unit = {},
+    onHideSource: () -> Unit = {},
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
+    val menu: @Composable (Color?) -> Unit = { tint ->
+        ArticleOverflowMenu(
+            onMoreLikeThis = onMoreLikeThis,
+            onLessLikeThis = onLessLikeThis,
+            onHideSource = onHideSource,
+            onShare = onShare,
+            tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
     when (feedCardShape(index, hasImage)) {
-        FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, modifier)
-        FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, modifier)
-        FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, modifier)
+        FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, modifier)
+        FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, modifier)
+        FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, modifier)
     }
 }
 
@@ -92,6 +103,7 @@ fun ArticleHeroCard(
     onClick: () -> Unit,
     onBookmark: (Boolean) -> Unit,
     onShare: () -> Unit,
+    menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -155,16 +167,14 @@ fun ArticleHeroCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.weight(1f),
+                        iconUrl = item.feedIconUrl,
+                        onImage = true,
                     )
-                    IconButton(onClick = { onBookmark(!item.bookmarked) }) {
-                        Icon(
-                            imageVector = if (item.bookmarked) Phosphor.HeartStraightFill
-                            else Phosphor.HeartStraight,
-                            contentDescription = stringResource(R.string.bookmark),
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
+                    SaveButton(
+                        saved = item.bookmarked,
+                        onSavedChange = onBookmark,
+                        onImage = true,
+                    )
                     IconButton(onClick = onShare) {
                         Icon(
                             imageVector = Phosphor.ShareNetwork,
@@ -173,6 +183,7 @@ fun ArticleHeroCard(
                             modifier = Modifier.size(22.dp),
                         )
                     }
+                    menu(Color.White)
                 }
             }
         }
@@ -189,6 +200,7 @@ fun ArticleCard(
     onClick: () -> Unit,
     onBookmark: (Boolean) -> Unit,
     onShare: () -> Unit,
+    menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -244,18 +256,10 @@ fun ArticleCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
+                    iconUrl = item.feedIconUrl,
                 )
 
-                IconButton(onClick = { onBookmark(!item.bookmarked) }) {
-                    Icon(
-                        imageVector = if (item.bookmarked) Phosphor.HeartStraightFill
-                        else Phosphor.HeartStraight,
-                        contentDescription = stringResource(R.string.bookmark),
-                        tint = if (item.bookmarked) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                SaveButton(saved = item.bookmarked, onSavedChange = onBookmark)
                 IconButton(onClick = onShare) {
                     Icon(
                         imageVector = Phosphor.ShareNetwork,
@@ -264,6 +268,7 @@ fun ArticleCard(
                         modifier = Modifier.size(22.dp),
                     )
                 }
+                menu(null)
             }
         }
         ArticleDivider()
@@ -279,6 +284,7 @@ fun ArticleCompactRow(
     item: FeedItem,
     onClick: () -> Unit,
     onBookmark: (Boolean) -> Unit,
+    menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -317,6 +323,7 @@ fun ArticleCompactRow(
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    iconUrl = item.feedIconUrl,
                 )
             }
 
@@ -333,17 +340,17 @@ fun ArticleCompactRow(
                 )
             } else {
                 Spacer(Modifier.width(4.dp))
-                IconButton(onClick = { onBookmark(!item.bookmarked) }) {
-                    Icon(
-                        imageVector = if (item.bookmarked) Phosphor.HeartStraightFill
-                        else Phosphor.HeartStraight,
-                        contentDescription = stringResource(R.string.bookmark),
-                        tint = if (item.bookmarked) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+                SaveButton(
+                    saved = item.bookmarked,
+                    onSavedChange = onBookmark,
+                    size = 20.dp,
+                )
             }
+            // Compact is most of the feed, so leaving the actions off it left
+            // "hide source" and the rest reachable on barely a quarter of the
+            // articles. Top-aligned rather than centred, so it does not drift
+            // down beside a three-line headline.
+            Box(modifier = Modifier.align(Alignment.Top)) { menu(null) }
         }
         ArticleDivider()
     }
@@ -365,8 +372,12 @@ private fun ArticleMeta(
     style: androidx.compose.ui.text.TextStyle,
     color: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
+    iconUrl: String? = null,
+    onImage: Boolean = false,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        SourceMark(iconUrl = iconUrl, sourceName = source, onImage = onImage)
+        Spacer(Modifier.width(6.dp))
         Text(
             text = source,
             style = style,

@@ -376,6 +376,40 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = emptySet(),
     )
 
+    /**
+     * Sources the user has asked never to see again, by feed id.
+     *
+     * Separate from [sourcesFilter] on purpose, even though both end up hiding
+     * a source's articles. That one is the filter sheet's scratchpad — set
+     * while browsing, reset by the Reset button, and expected to be temporary.
+     * This is an answer to "hide this source", which should survive a filter
+     * reset and be undone deliberately, from the sources screen.
+     */
+    var hiddenSources = StringSetPref(
+        titleId = R.string.title_sources,
+        icon = Phosphor.Info,
+        key = HIDDEN_SOURCES,
+        dataStore = dataStore,
+        defaultValue = emptySet(),
+    )
+
+    /**
+     * "More like this" and "Less like this", recorded as they are given.
+     *
+     * Stored as `feedId:score` strings, because DataStore has no map type and a
+     * string set is what every other multi-value preference here already uses.
+     * Nothing reads this back yet — Milestone 5 will. It is written from the
+     * start anyway so that the menu entries do something real from the day they
+     * appear, rather than being two buttons that lie until the ranking arrives.
+     */
+    var sourceAffinity = StringSetPref(
+        titleId = R.string.title_sources,
+        icon = Phosphor.Info,
+        key = SOURCE_AFFINITY,
+        dataStore = dataStore,
+        defaultValue = emptySet(),
+    )
+
     var tagsFilter = StringSetPref(
         titleId = R.string.source_tags,
         icon = Phosphor.Info,
@@ -456,6 +490,8 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
 
         // Filter & Sort
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
+        val HIDDEN_SOURCES = stringSetPreferencesKey("pref_hidden_sources")
+        val SOURCE_AFFINITY = stringSetPreferencesKey("pref_source_affinity")
         val FILTER_TAGS = stringSetPreferencesKey("filter_tags")
         val FILTER_SORT = stringPreferencesKey("filter_sorting")
         val FILTER_SORT_ASC = booleanPreferencesKey("filter_sorting_ascending")

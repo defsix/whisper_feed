@@ -14,7 +14,7 @@ in the code.
 |---|---|---|
 | 0 | Launcher feasibility | **Done** — builds, installs, minus-one works, mechanism documented in `UPSTREAM_NOTES.md` |
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale, bundled Inter and a two-stage splash, none of which the milestone asked for |
-| 2 | Cards layout | **Most of it** — cards, images, metadata, pull-to-refresh, save, read state. Missing: per-card overflow menu, source favicon, hide, More/Less controls |
+| 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Not started** — Magazine, List, Adaptive Mosaic |
 | 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
 | 5 | Personalisation | **Not started** |
@@ -340,6 +340,10 @@ Small, and cheaper now than later.
   removed, along with eight unused DAO methods, one of which had an
   `@Relation` without `@Transaction`: the same shape as the OPML crash fixed
   earlier, waiting to be called.
+- ~~**Phosphor was unlicensed**~~ — the icon set was hand-transcribed into
+  ImageVector sources with no licence recorded anywhere. `docs/licenses/
+  Phosphor-MIT.txt` now carries it; new icons are parsed from the upstream
+  SVG rather than retyped.
 - **Assets still open**: onboarding background and article placeholders, listed
   in `docs/brand/ASSET_SPEC.md`. The horizontal lockup is no longer needed —
   the app bar composes the symbol and the wordmark itself, which keeps the two

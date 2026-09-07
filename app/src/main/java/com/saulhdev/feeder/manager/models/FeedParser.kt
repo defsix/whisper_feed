@@ -68,6 +68,34 @@ class FeedParser {
         }
     }
 
+    /**
+     * A site's own mark, for the line under a headline.
+     *
+     * Cheapest first, and the cheap one is also the best: the page's own
+     * `<link rel="icon">` is what the site says its mark is, at whatever size
+     * it chose to publish. `/favicon.ico` is the fallback for sites that
+     * declare nothing and rely on the convention.
+     *
+     * Deliberately not used: a third-party favicon service. Google's
+     * `s2/favicons` is one request away and would tell Google every source the
+     * reader is subscribed to. The site's own server already knows we read it.
+     */
+    suspend fun findSiteIcon(siteUrl: URL): String? {
+        getFeedIconAtUrl(siteUrl)?.let { return it }
+        val fallback = try {
+            URL("${siteUrl.protocol}://${siteUrl.authority}/favicon.ico")
+        } catch (_: Throwable) {
+            return null
+        }
+        return try {
+            var ok = false
+            curlAndOnResponse(fallback) { ok = it.isSuccessful }
+            if (ok) fallback.toString() else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     private fun getFeedIconInHtml(
         html: String,
         baseUrl: URL? = null,

@@ -31,12 +31,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -111,8 +114,9 @@ class ArticleListViewModel(
         categoryArticles,
         sortFilterState,
         prefs.removeDuplicates.get(),
-    ) { articles, sfm, removeDuplicate ->
-        processArticles(articles, sfm, removeDuplicate)
+        prefs.hiddenSources.get(),
+    ) { articles, sfm, removeDuplicate, hidden ->
+        processArticles(articles, sfm, removeDuplicate, hidden)
     }.flowOn(Dispatchers.Default)
 
     val articleListState: StateFlow<ArticleListState> = combine(
@@ -173,11 +177,64 @@ class ArticleListViewModel(
         }
     }
 
+    /**
+     * "More like this" / "Less like this", as a running score per source.
+     *
+     * Nothing ranks on this yet; see FeedPreferences.sourceAffinity for why it
+     * is recorded from the day the menu appears rather than when the ranking
+     * that reads it arrives.
+     */
+    fun recordAffinity(sourceId: String, delta: Int) {
+        ioScope.launch {
+            val scores = prefs.sourceAffinity.get().first().mapNotNull { entry ->
+                val at = entry.lastIndexOf(':')
+                if (at <= 0) null
+                else entry.substring(0, at) to (entry.substring(at + 1).toIntOrNull() ?: 0)
+            }.toMap()
+            val updated = scores + (sourceId to ((scores[sourceId] ?: 0) + delta))
+            prefs.sourceAffinity.setValue(updated.map { "${it.key}:${it.value}" }.toSet())
+        }
+    }
+
+    /**
+     * The source hidden most recently, for as long as it can still be undone.
+     *
+     * Hiding is one tap from a menu reached mid-scroll, with no confirmation
+     * step by design — so the way back has to be offered straight away, and
+     * the feed the article vanished from is where to offer it.
+     */
+    private val _recentlyHidden = MutableStateFlow<FeedItem?>(null)
+    val recentlyHidden: StateFlow<FeedItem?> = _recentlyHidden.asStateFlow()
+
+    fun hideSource(item: FeedItem) {
+        ioScope.launch {
+            prefs.hiddenSources.setValue(prefs.hiddenSources.get().first() + item.sourceId)
+            _recentlyHidden.value = item
+        }
+    }
+
+    fun undoHideSource() {
+        val item = _recentlyHidden.value ?: return
+        _recentlyHidden.value = null
+        unhideSource(item.sourceId)
+    }
+
+    fun forgetHiddenSource() {
+        _recentlyHidden.value = null
+    }
+
+    fun unhideSource(sourceId: String) {
+        ioScope.launch {
+            prefs.hiddenSources.setValue(prefs.hiddenSources.get().first() - sourceId)
+        }
+    }
+
     // HELPERS
     private fun processArticles(
         articles: List<FeedItem>,
         sfm: SortFilterModel,
-        removeDuplicate: Boolean
+        removeDuplicate: Boolean,
+        hiddenSources: Set<String> = emptySet(),
     ): List<FeedItem> {
         // One pass rather than four. Each `let` here used to allocate a whole
         // new list, so a feed of a few thousand articles built three throwaway
@@ -187,6 +244,9 @@ class ArticleListViewModel(
             .filter { item ->
                 when {
                     seenLinks != null && !seenLinks.add(item.link) -> false
+                    // "Hide source" is permanent and survives a filter reset;
+                    // sourcesFilter below is the filter sheet's scratchpad.
+                    item.sourceId in hiddenSources -> false
                     item.sourceId in sfm.sourcesFilter -> false
                     // Any of the source's categories being muted hides it. This
                     // compared the whole comma-separated tag string against the

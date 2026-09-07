@@ -44,6 +44,16 @@ data class FeedItem(
     val feedTitle: String
         get() = feed.title
 
+    /**
+     * The source's mark, or null when it has none.
+     *
+     * feedImage defaults to an empty URL rather than null, and one call site
+     * used to write the *feed's own address* into it, so a blank check is not
+     * enough — a value that is not an image has to be treated as absent too.
+     */
+    val feedIconUrl: String?
+        get() = feed.feedImage.toString().takeIf { it.isNotBlank() && it != feed.url.toString() }
+
     val displayTitle: String
         get() = "${feed.title} [RSS]"
 
