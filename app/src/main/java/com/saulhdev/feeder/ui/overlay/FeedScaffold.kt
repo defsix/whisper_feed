@@ -39,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,6 +78,7 @@ import androidx.compose.ui.res.painterResource
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.manager.glance.GlanceState
+import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
@@ -124,7 +126,9 @@ fun FeedScaffold(
     layout: String,
     onFilterClick: () -> Unit,
     onBookmarksClick: () -> Unit,
-    onOverflowClick: () -> Unit,
+    onReload: () -> Unit,
+    onSettings: () -> Unit,
+    onRestart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -204,8 +208,56 @@ fun FeedScaffold(
                         active = isShowingBookmarks,
                         onClick = onBookmarksClick,
                     )
-                    IconButton(onClick = onOverflowClick) {
-                        Icon(Phosphor.DotsThreeVertical, stringResource(R.string.title_settings))
+                    // The same component the in-app screens use. This was a
+                    // View-based PopupWindow anchored to the overlay's whole
+                    // content container — whose top is behind the status bar,
+                    // so it drew over the clock — and being a PopupWindow
+                    // rather than an AbstractFloatingView, nothing on the
+                    // close paths dismissed it, so it could outlive the panel
+                    // and reappear over the workspace. A menu inside the
+                    // panel's own composition has neither problem: it is
+                    // positioned against the button it hangs off, and it goes
+                    // when the composition does.
+                    OverflowMenu {
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.ic_arrow_clockwise),
+                                    contentDescription = null,
+                                )
+                            },
+                            text = { Text(stringResource(R.string.action_reload)) },
+                            onClick = {
+                                hideMenu()
+                                onReload()
+                            },
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.ic_gear),
+                                    contentDescription = null,
+                                )
+                            },
+                            text = { Text(stringResource(R.string.title_settings)) },
+                            onClick = {
+                                hideMenu()
+                                onSettings()
+                            },
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.ic_power),
+                                    contentDescription = null,
+                                )
+                            },
+                            text = { Text(stringResource(R.string.action_restart)) },
+                            onClick = {
+                                hideMenu()
+                                onRestart()
+                            },
+                        )
                     }
                 },
                 // The overlay draws its own background, so the bar stays
@@ -222,7 +274,10 @@ fun FeedScaffold(
 
             GlanceRow(
                 state = glanceState,
-                onSetLocation = onOverflowClick,
+                // Straight to settings. It used to open the overflow menu, so
+                // "set a location" meant opening a menu and then finding
+                // settings in it.
+                onSetLocation = onSettings,
             )
 
             CategoryChipRow(

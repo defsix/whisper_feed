@@ -19,7 +19,6 @@ import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
-import com.saulhdev.feeder.data.entity.MenuItem
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.navigation.Routes
 import androidx.compose.runtime.collectAsState
@@ -43,7 +42,6 @@ import com.saulhdev.feeder.ui.theme.typographyFor
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.theme.WhisperShapes
 import com.saulhdev.feeder.ui.views.AbstractFloatingView
-import com.saulhdev.feeder.ui.views.DialogMenu
 import com.saulhdev.feeder.ui.views.FilterBottomSheet
 import com.saulhdev.feeder.utils.extensions.safeStartActivity
 import com.saulhdev.feeder.utils.extensions.setCustomTheme
@@ -255,8 +253,6 @@ class OverlayView(val context: Context) :
         if (AbstractFloatingView.isAnyOpen()) {
             AbstractFloatingView.closeAllOpenViews(context)
         }
-        openPopupMenu?.dismiss()
-        openPopupMenu = null
         if (keepingPanelForOurLaunch) {
             // The launcher asks twice: once without the animation flag as it
             // pauses, once with it as it resumes. The resume one is the end of
@@ -348,50 +344,6 @@ class OverlayView(val context: Context) :
         })
     }
 
-    /**
-     * The header's overflow menu, held so it can be dismissed.
-     *
-     * It is a PopupWindow rather than an AbstractFloatingView, so
-     * closeAllOpenViews — which every close path calls — went straight past
-     * it. Left open, it outlived the panel and turned up over the workspace.
-     */
-    private var openPopupMenu: DialogMenu? = null
-
-    private fun openMenu(view: View) {
-        openPopupMenu?.dismiss()
-        val popup = DialogMenu(view)
-        openPopupMenu = popup
-        // The anchor is the whole content container, whose top is behind the
-        // status bar. Placed under the header instead, which is where a menu
-        // hanging off the overflow button belongs.
-        val below = topInsetPx.value +
-            (MENU_TOP_MARGIN_DP * context.resources.displayMetrics.density).toInt()
-        popup.show(createMenuList(), anchorTop = below) {
-            popup.dismiss()
-            openPopupMenu = null
-            when (it.id) {
-                "config"  -> {
-                    mainScope.launch {
-                        launchKeepingPanel {
-                            view.context.safeStartActivity(
-                                MainActivity.navigateIntent(
-                                    view.context,
-                                    "${Routes.MAIN}/1",
-                                )
-                            )
-                        }
-                    }
-                }
-
-                "reload"  -> refreshNotifications()
-
-                "restart" -> {
-                    val application: NeoApp by inject(NeoApp::class.java)
-                    application.restart(false)
-                }
-            }
-        }
-    }
 
     /**
      * Adds the Compose feed, once, after the overlay's window exists.
@@ -472,7 +424,18 @@ class OverlayView(val context: Context) :
                     // one; both lists are now collected once and simply chosen
                     // between here.
                     onBookmarksClick = { showBookmarks.value = !showBookmarks.value },
-                    onOverflowClick = { openMenu(this@setFeedContent) },
+                    onReload = { refreshNotifications() },
+                    onSettings = {
+                        launchKeepingPanel {
+                            context.safeStartActivity(
+                                MainActivity.navigateIntent(context, "${Routes.MAIN}/1")
+                            )
+                        }
+                    },
+                    onRestart = {
+                        val application: NeoApp by inject(NeoApp::class.java)
+                        application.restart(false)
+                    },
                 )
             }
         }
@@ -547,19 +510,4 @@ class OverlayView(val context: Context) :
         }
     }
 
-    private fun createMenuList(): List<MenuItem> {
-        return listOf(
-            MenuItem(R.drawable.ic_arrow_clockwise, R.string.action_reload, 0, "reload"),
-            MenuItem(R.drawable.ic_gear, R.string.title_settings, 2, "config"),
-            MenuItem(R.drawable.ic_power, R.string.action_restart, 2, "restart")
-        )
-    }
 }
-
-/**
- * How far below the status bar the header's overflow menu opens.
- *
- * The overlay's top app bar is 64dp; a menu that hangs off its overflow button
- * starts just under it.
- */
-private const val MENU_TOP_MARGIN_DP = 56

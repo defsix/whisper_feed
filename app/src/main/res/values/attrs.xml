@@ -3,18 +3,6 @@
     <attr name="bottomSheetTheme" format="reference" />
     <attr name="bottomSheetNavBarColor" format="color" />
     <attr name="bottomSheetScrimColor" format="color" />
-    <declare-styleable name="MenuListView">
-        <attr name="dividerColor" format="color" />
-        <attr name="dividerHeight" format="dimension" />
-        <attr name="dividerSize" format="dimension" />
-        <attr name="optionBackground" format="reference" />
-        <attr name="optionIconLabelSpace" format="dimension" />
-        <attr name="optionIconTint" format="color" />
-        <attr name="optionLabelTextColor" format="color" />
-        <attr name="optionLabelTextSize" format="dimension" />
-        <attr name="optionPaddingEnd" format="dimension" />
-        <attr name="optionPaddingStart" format="dimension" />
-    </declare-styleable>
     <declare-styleable name="ExpandableCardView">
         <attr name="sectionIcon" format="reference" />
         <attr name="sectionTitle" format="string" />

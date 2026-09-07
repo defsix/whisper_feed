@@ -32,11 +32,10 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
-- **The overflow menu opens over the status bar.** Reported on device: it is
-  anchored to the overlay's whole content container, whose top sits behind the
-  clock and the battery. Fixed by positioning it under the header instead —
-  worth revisiting properly by replacing the last View-based popup with a
-  Compose menu, as the per-card menus already are.
+- ~~**The overflow menu opens over the status bar.**~~ Fixed properly rather
+  than repositioned: the last View-based popup is now a Compose menu, the same
+  component the in-app screens use, so it is positioned against the button it
+  hangs off and goes when the composition does.
 - ~~**Opening an article from the overlay flashes the home screen, and coming
   back lands there too.**~~ Tapping an article closes the minus-one panel, shows
   the desktop for a frame, and only then opens the browser; pressing back from
