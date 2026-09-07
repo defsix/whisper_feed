@@ -179,11 +179,11 @@ fun ArticleListPage(
                                 title = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Image(
-                                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                                            painter = painterResource(R.drawable.ic_brand_mark),
                                             contentDescription = null,
-                                            modifier = Modifier.size(32.dp),
+                                            modifier = Modifier.height(32.dp),
                                         )
-                                        Spacer(Modifier.width(6.dp))
+                                        Spacer(Modifier.width(12.dp))
                                         Text(text = stringResource(id = R.string.app_name))
                                     }
                                 },

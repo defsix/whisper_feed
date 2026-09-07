@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -103,16 +104,20 @@ fun WhisperSplash(
                     contentDescription = null,
                     modifier = Modifier.size(160.dp),
                 )
-                Spacer(Modifier.height(12.dp))
-                // The supplied wordmark carries "Your feeds, your focus."
-                // beneath the name, so the motto is part of the artwork rather
-                // than a second line of text under it — which is what this
-                // screen wrongly had. Sized so that tagline is readable rather
-                // than merely present.
+                Spacer(Modifier.height(20.dp))
+                // The wordmark artwork is the name only — it does not carry
+                // the tagline, which is why removing the text line beneath it
+                // lost the tagline entirely rather than deduplicating it.
                 Image(
                     painter = painterResource(R.drawable.ic_wordmark_light),
                     contentDescription = stringResource(R.string.app_name),
-                    modifier = Modifier.fillMaxWidth(0.78f),
+                    modifier = Modifier.fillMaxWidth(0.62f),
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.app_tagline),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.92f),
                 )
                 Spacer(Modifier.height(56.dp))
                 CircularProgressIndicator(

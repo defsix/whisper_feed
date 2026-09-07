@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -129,12 +130,17 @@ fun FeedScaffold(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // ic_launcher_foreground is an adaptive-icon layer:
+                        // the mark fills only half its canvas, so a 34dp box
+                        // drew a 17dp mark — the same height as the word beside
+                        // it. ic_brand_mark is the same artwork cropped to its
+                        // own bounds, so the size here is the size drawn.
                         Image(
-                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            painter = painterResource(R.drawable.ic_brand_mark),
                             contentDescription = null,
-                            modifier = Modifier.size(34.dp),
+                            modifier = Modifier.height(36.dp),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(14.dp))
                         Text(
                             text = stringResource(R.string.app_name),
                             style = MaterialTheme.typography.headlineSmall,
