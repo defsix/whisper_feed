@@ -38,7 +38,6 @@ data class GlanceState(
     val enabled: Boolean = false,
     val placeName: String = "",
     val weather: GlanceWeather? = null,
-    val unread: Int = 0,
     val readToday: Int = 0,
 )
 
@@ -75,15 +74,13 @@ class GlanceStateHolder(
     val state: StateFlow<GlanceState> = combine(
         prefs.glanceEnabled.get(),
         prefs.glancePlaceName.get(),
-        articleRepo.countUnread().distinctUntilChanged(),
         dayStart.flatMapLatest { articleRepo.countReadSince(it) }.distinctUntilChanged(),
         weather,
-    ) { enabled, placeName, unread, readToday, currentWeather ->
+    ) { enabled, placeName, readToday, currentWeather ->
         GlanceState(
             enabled = enabled,
             placeName = placeName,
             weather = currentWeather,
-            unread = unread,
             readToday = readToday,
         )
     }.stateIn(scope, SharingStarted.Eagerly, GlanceState())

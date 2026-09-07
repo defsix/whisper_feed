@@ -18,6 +18,7 @@
 package com.saulhdev.feeder.manager.glance
 
 import android.util.Log
+import com.saulhdev.feeder.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -147,22 +148,28 @@ class WeatherRepository {
     }
 }
 
+/** A WMO weather code, described for the UI. */
+data class WeatherLook(
+    @androidx.annotation.DrawableRes val iconRes: Int,
+    @androidx.annotation.StringRes val labelRes: Int,
+)
+
 /**
- * Open-Meteo's WMO weather code, as a short label and an emoji.
+ * Open-Meteo's WMO weather code, as a Material Symbol and a label.
  *
  * The codes are grouped rather than enumerated one by one: the distinction
  * between "slight" and "moderate" drizzle is not worth a chip's width.
  */
-fun weatherCodeLabel(code: Int): Pair<String, String> = when (code) {
-    0 -> "☀️" to "Clear"
-    1, 2 -> "🌤️" to "Partly cloudy"
-    3 -> "☁️" to "Cloudy"
-    45, 48 -> "🌫️" to "Fog"
-    in 51..57 -> "🌦️" to "Drizzle"
-    in 61..67 -> "🌧️" to "Rain"
-    in 71..77 -> "🌨️" to "Snow"
-    in 80..82 -> "🌧️" to "Showers"
-    in 85..86 -> "🌨️" to "Snow showers"
-    in 95..99 -> "⛈️" to "Thunderstorm"
-    else -> "🌡️" to ""
+fun weatherLook(code: Int): WeatherLook = when (code) {
+    0          -> WeatherLook(R.drawable.ic_ms_sunny, R.string.weather_clear)
+    1, 2       -> WeatherLook(R.drawable.ic_ms_partly_cloudy_day, R.string.weather_partly_cloudy)
+    3          -> WeatherLook(R.drawable.ic_ms_cloud, R.string.weather_cloudy)
+    45, 48     -> WeatherLook(R.drawable.ic_ms_foggy, R.string.weather_fog)
+    in 51..57  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_drizzle)
+    in 61..67  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_rain)
+    in 71..77  -> WeatherLook(R.drawable.ic_ms_weather_snowy, R.string.weather_snow)
+    in 80..82  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_showers)
+    in 85..86  -> WeatherLook(R.drawable.ic_ms_weather_snowy, R.string.weather_snow_showers)
+    in 95..99  -> WeatherLook(R.drawable.ic_ms_thunderstorm, R.string.weather_thunderstorm)
+    else       -> WeatherLook(R.drawable.ic_ms_thermostat, R.string.weather_unknown)
 }

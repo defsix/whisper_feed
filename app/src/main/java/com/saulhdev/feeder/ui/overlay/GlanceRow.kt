@@ -17,32 +17,41 @@
  */
 package com.saulhdev.feeder.ui.overlay
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.glance.GlanceState
-import com.saulhdev.feeder.manager.glance.weatherCodeLabel
+import com.saulhdev.feeder.manager.glance.weatherLook
 import kotlin.math.roundToInt
+
+/** Every chip is this tall, whatever it contains. */
+private val CHIP_HEIGHT = 76.dp
 
 /**
  * The status strip above the category filters.
@@ -52,9 +61,12 @@ import kotlin.math.roundToInt
  * these are read-only status. Mixing them would make the row's behaviour
  * unguessable — half of it filters, half of it does nothing when tapped.
  *
- * Chips are only drawn when they have something to say, so the row is never
- * padded out with placeholders: no location means no weather or sunset chip,
- * and nothing read yet today means no count.
+ * Laid out as three equal columns rather than a scrolling row. A scrolling row
+ * sized each chip to its own content, so a long place name made the weather
+ * chip half again as wide as the others and its extra line of text made it
+ * taller too — the row read as three unrelated boxes. Fixed thirds and one
+ * height means the strip reads as a single unit, and the cost is that long
+ * place names truncate, which is the right trade for a glanceable row.
  */
 @Composable
 fun GlanceRow(
@@ -65,86 +77,87 @@ fun GlanceRow(
     if (!state.enabled) return
 
     val weather = state.weather
-    val hasAnything = weather != null || state.unread > 0 || state.readToday > 0
-    if (!hasAnything && state.placeName.isNotBlank()) return
 
-    LazyRow(
-        modifier = modifier,
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
     ) {
         if (weather != null) {
-            val (emoji, condition) = weatherCodeLabel(weather.weatherCode)
-            item {
-                GlanceChip(
-                    label = weather.place.substringBefore(","),
-                    value = "${weather.temperatureC.roundToInt()}°",
-                    trailing = emoji,
-                    caption = condition,
-                )
-            }
-            weather.sunsetLocal?.let { sunset ->
-                item {
-                    GlanceChip(
-                        label = stringResource(R.string.glance_sunset),
-                        value = sunset,
-                        trailing = "🌇",
-                    )
-                }
-            }
-        } else if (state.placeName.isBlank()) {
-            // The row is on but unusable without a place, so it says so and the
-            // chip is the way to fix it rather than a dead end.
-            item {
-                GlanceChip(
-                    label = stringResource(R.string.pref_glance_place),
-                    value = stringResource(R.string.glance_set_location),
-                    trailing = "📍",
-                    onClick = onSetLocation,
-                )
-            }
+            val look = weatherLook(weather.weatherCode)
+            // Condition on top and the place underneath, not the other way
+            // round: a chip is a third of the screen wide, and place names run
+            // long ("Armação de Pêra" is 90dp against a 71dp column). Putting
+            // the place on the line that matters least means the truncation
+            // lands where it costs least.
+            GlanceChip(
+                label = stringResource(look.labelRes),
+                value = "${weather.temperatureC.roundToInt()}°",
+                caption = weather.place.substringBefore(","),
+                iconRes = look.iconRes,
+            )
+            GlanceChip(
+                label = stringResource(R.string.glance_sunset),
+                value = weather.sunsetLocal ?: "—",
+                iconRes = R.drawable.ic_ms_wb_twilight,
+            )
+        } else {
+            // The row is on but has nothing to show without a place, so the chip
+            // is the way to fix that rather than a dead end. It spans the two
+            // slots the weather and sunset chips would occupy.
+            GlanceChip(
+                label = stringResource(R.string.pref_glance_place),
+                value = stringResource(R.string.glance_set_location),
+                iconRes = R.drawable.ic_ms_location_on,
+                onClick = onSetLocation,
+                weight = 2f,
+            )
         }
 
-        if (state.unread > 0) {
-            item {
-                GlanceChip(
-                    label = stringResource(R.string.glance_unread),
-                    value = state.unread.toString(),
-                    trailing = "📰",
-                )
-            }
-        }
-        if (state.readToday > 0) {
-            item {
-                GlanceChip(
-                    label = stringResource(R.string.glance_read_today),
-                    value = state.readToday.toString(),
-                    trailing = "✅",
-                )
-            }
-        }
+        GlanceChip(
+            label = stringResource(R.string.glance_read_today),
+            value = state.readToday.toString(),
+            iconRes = R.drawable.ic_ms_check_circle,
+        )
     }
 }
 
+/**
+ * One chip. Label above, value below, icon in a tinted circle on the right.
+ *
+ * [caption] is optional and the chip is the same height without it, so a chip
+ * that has a third line does not push its neighbours around.
+ */
 @Composable
-private fun GlanceChip(
+private fun RowScope.GlanceChip(
     label: String,
     value: String,
-    trailing: String,
+    @DrawableRes iconRes: Int,
     caption: String? = null,
     onClick: (() -> Unit)? = null,
+    weight: Float = 1f,
 ) {
     val colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(20.dp)
+    val chipModifier = Modifier
+        .weight(weight)
+        .height(CHIP_HEIGHT)
+
     val content: @Composable () -> Unit = {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.widthIn(max = 160.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
@@ -152,12 +165,12 @@ private fun GlanceChip(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (!caption.isNullOrBlank()) {
                     Text(
@@ -169,14 +182,28 @@ private fun GlanceChip(
                     )
                 }
             }
-            Spacer(Modifier.padding(horizontal = 5.dp))
-            Text(text = trailing, style = MaterialTheme.typography.titleLarge, color = Color.Unspecified)
+
+            Spacer(Modifier.size(4.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
 
     if (onClick != null) {
-        Card(onClick = onClick, shape = shape, colors = colors) { content() }
+        Card(onClick = onClick, modifier = chipModifier, shape = shape, colors = colors) { content() }
     } else {
-        Card(shape = shape, colors = colors) { content() }
+        Card(modifier = chipModifier, shape = shape, colors = colors) { content() }
     }
 }
