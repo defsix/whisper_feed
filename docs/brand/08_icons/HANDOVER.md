@@ -1,5 +1,8 @@
 # Glance chip icons — handover
 
+> **Closed.** All eleven were supplied and are in use. Kept for the spec and
+> for the optional extras in §3. See README.md for what shipped.
+
 Everything needed to produce the icon set for Whisper's glance row.
 
 The glance row is the strip of three status chips directly above the category

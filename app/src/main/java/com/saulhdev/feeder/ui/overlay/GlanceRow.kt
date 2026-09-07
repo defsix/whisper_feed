@@ -18,9 +18,8 @@
 package com.saulhdev.feeder.ui.overlay
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -29,17 +28,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +48,9 @@ import kotlin.math.roundToInt
 
 /** Every chip is this tall, whatever it contains. */
 private val CHIP_HEIGHT = 76.dp
+
+/** The supplied artwork is rendered at this size; see docs/brand/08_icons. */
+private val ICON_SIZE = 32.dp
 
 /**
  * The status strip above the category filters.
@@ -100,7 +99,7 @@ fun GlanceRow(
             GlanceChip(
                 label = stringResource(R.string.glance_sunset),
                 value = weather.sunsetLocal ?: "—",
-                iconRes = R.drawable.ic_ms_wb_twilight,
+                iconRes = R.drawable.ic_glance_sunset,
             )
         } else {
             // The row is on but has nothing to show without a place, so the chip
@@ -109,7 +108,7 @@ fun GlanceRow(
             GlanceChip(
                 label = stringResource(R.string.pref_glance_place),
                 value = stringResource(R.string.glance_set_location),
-                iconRes = R.drawable.ic_ms_location_on,
+                iconRes = R.drawable.ic_glance_location,
                 onClick = onSetLocation,
                 weight = 2f,
             )
@@ -118,7 +117,7 @@ fun GlanceRow(
         GlanceChip(
             label = stringResource(R.string.glance_read_today),
             value = state.readToday.toString(),
-            iconRes = R.drawable.ic_ms_check_circle,
+            iconRes = R.drawable.ic_glance_articles_read,
         )
     }
 }
@@ -151,7 +150,7 @@ private fun RowScope.GlanceChip(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
@@ -185,19 +184,14 @@ private fun RowScope.GlanceChip(
 
             Spacer(Modifier.size(4.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            // Drawn, not tinted: these are full-colour illustrations, so the
+            // tinted circular badge that suited a monochrome symbol is gone and
+            // the artwork sits directly on the chip.
+            Image(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(ICON_SIZE),
+            )
         }
     }
 

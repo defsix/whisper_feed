@@ -161,15 +161,15 @@ data class WeatherLook(
  * between "slight" and "moderate" drizzle is not worth a chip's width.
  */
 fun weatherLook(code: Int): WeatherLook = when (code) {
-    0          -> WeatherLook(R.drawable.ic_ms_sunny, R.string.weather_clear)
-    1, 2       -> WeatherLook(R.drawable.ic_ms_partly_cloudy_day, R.string.weather_partly_cloudy)
-    3          -> WeatherLook(R.drawable.ic_ms_cloud, R.string.weather_cloudy)
-    45, 48     -> WeatherLook(R.drawable.ic_ms_foggy, R.string.weather_fog)
-    in 51..57  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_drizzle)
-    in 61..67  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_rain)
-    in 71..77  -> WeatherLook(R.drawable.ic_ms_weather_snowy, R.string.weather_snow)
-    in 80..82  -> WeatherLook(R.drawable.ic_ms_rainy, R.string.weather_showers)
-    in 85..86  -> WeatherLook(R.drawable.ic_ms_weather_snowy, R.string.weather_snow_showers)
-    in 95..99  -> WeatherLook(R.drawable.ic_ms_thunderstorm, R.string.weather_thunderstorm)
-    else       -> WeatherLook(R.drawable.ic_ms_thermostat, R.string.weather_unknown)
+    0          -> WeatherLook(R.drawable.ic_glance_weather_clear, R.string.weather_clear)
+    1, 2       -> WeatherLook(R.drawable.ic_glance_weather_partly_cloudy, R.string.weather_partly_cloudy)
+    3          -> WeatherLook(R.drawable.ic_glance_weather_cloudy, R.string.weather_cloudy)
+    45, 48     -> WeatherLook(R.drawable.ic_glance_weather_fog, R.string.weather_fog)
+    in 51..57  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_drizzle)
+    in 61..67  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_rain)
+    in 71..77  -> WeatherLook(R.drawable.ic_glance_weather_snow, R.string.weather_snow)
+    in 80..82  -> WeatherLook(R.drawable.ic_glance_weather_rain, R.string.weather_showers)
+    in 85..86  -> WeatherLook(R.drawable.ic_glance_weather_snow, R.string.weather_snow_showers)
+    in 95..99  -> WeatherLook(R.drawable.ic_glance_weather_storm, R.string.weather_thunderstorm)
+    else       -> WeatherLook(R.drawable.ic_glance_weather_unknown, R.string.weather_unknown)
 }

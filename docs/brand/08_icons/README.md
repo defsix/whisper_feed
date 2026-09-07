@@ -1,44 +1,59 @@
 # Glance chip icons
 
-Supplied artwork for the status chips above the feed.
+The icon set for the status chips above the feed. **Complete and in use.**
 
-## Not yet in use — these need alpha
+`docs/brand/08_icons/*.png` are the masters, 1254×1254 RGBA. The build exports
+them to `app/src/main/res/drawable-*/ic_glance_*.png` at five densities.
 
-All three files are **8-bit RGB with no alpha channel** and a solid white
-background, measured rather than assumed:
+| File | Shows when |
+|---|---|
+| `weather_clear.png` | clear sky |
+| `weather_partly_cloudy.png` | partly cloudy, mainly clear |
+| `weather_cloudy.png` | overcast |
+| `weather_fog.png` | fog, rime fog |
+| `weather_rain.png` | drizzle, rain, showers |
+| `weather_snow.png` | snow, snow showers |
+| `weather_storm.png` | thunderstorm |
+| `weather_unknown.png` | any unrecognised condition code |
+| `sunset.png` | always — sunset chip |
+| `articles_read.png` | always — read-today chip |
+| `location.png` | before a location has been chosen |
+| `sunset_waves_alt.png` | **not in use** — alternate sunset, see below |
 
-| File | Canvas | Content bounds | Alpha |
-|---|---|---|---|
-| `sunset.png` | 1254×1254 | 518×476, inset ~29% | none — RGB |
-| `weather_partly_cloudy.png` | 1254×1254 | 648×502, inset ~24% | none — RGB |
-| `articles_read.png` | 1254×1254 | 553×439, inset ~28% | none — RGB |
+All twelve were checked before use: RGBA with real alpha, transparent
+backgrounds, 68–85% clear, and no white fringe on the antialiased edges (mean
+edge colour is the artwork's own, not near-white). This is what the first batch
+was missing.
 
-A chip icon sits on the chip's own surface colour, which changes with the theme.
-Without transparency each of these would draw as a white square — obvious in
-light mode, glaring in dark mode.
+## How they are exported
 
-Keying the white out here is not safe to do mechanically: the artwork's own
-pale fills are close to the background (`articles_read.png` in particular is
-mostly very light blue-grey on white), so a threshold either eats the artwork or
-leaves a white fringe on every antialiased edge. That needs to come from the
-source, not from a guess.
+Rendered at **32 dp** on the chip, so 32/48/64/96/128 px across mdpi to
+xxxhdpi.
 
-**What would make them usable:** the same three as PNG with a real alpha
-channel, trimmed to the artwork, or as SVG.
+Every icon is cropped to **one shared box** — the union of all eleven content
+bounds, squared off, which works out at 81% of the master canvas. Cropping each
+icon to its own bounds instead would rescale them against each other: the
+thermometer is 430 px wide against the cloud's 970 px, and per-icon cropping
+would blow it up to the same width. The shared box removes only the margin that
+is empty in every file, so the relative sizing stays as drawn.
 
-## Coverage
+## Why sunset, not sunset-waves
 
-These cover two of the eight weather states the feed can report. Still needed
-for a complete set:
+Two sunsets were supplied. `sunset.png` — yellow sun over blue horizon bars —
+is the one that ships: the yellow reads unmistakably as a sunset at 32 dp and
+sets the chip apart from the all-blue weather icons beside it.
+`sunset_waves_alt.png` is closer to the brand mark but is blue-on-blue at that
+size and can read as water rather than a sunset. Kept in case that call should
+go the other way.
 
-`clear` · `cloudy` · `fog` · `drizzle` · `rain` · `snow` · `showers` · `storm`
+## Rendering
 
-Plus `location_on`, for the chip shown before a location has been chosen.
+Drawn as artwork, not tinted. The tinted circular badge that held the earlier
+monochrome symbols is gone — it existed to give a single-colour glyph presence
+and a theme colour, and both would fight a full-colour illustration.
 
-## What ships in the meantime
+## Still open, if wanted
 
-`res/drawable/ic_ms_*.xml` — Material Symbols Rounded, from
-google/material-design-icons, Apache 2.0 (see
-`docs/licenses/MaterialSymbols-Apache-2.0.txt`). Monochrome, so they take the
-theme's colour and work in both light and dark. They are placeholders for these
-files, not a decision against them.
+Day/night pairs for clear and partly cloudy. The weather service returns a
+day/night flag, so moon variants are cheap to wire up; a clear night currently
+shows a sun.
