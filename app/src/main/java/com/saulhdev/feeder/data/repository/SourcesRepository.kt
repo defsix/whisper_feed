@@ -21,6 +21,7 @@ package com.saulhdev.feeder.data.repository
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.saulhdev.feeder.data.db.ID_ALL
+import com.saulhdev.feeder.data.db.ID_UNSET
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
@@ -32,6 +33,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
@@ -41,7 +44,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import com.saulhdev.feeder.utils.isSameFeedUrl
 import org.koin.java.KoinJavaComponent.inject
+import java.net.URL
 
 class SourcesRepository(db: NeoFeedDb) {
     private val cc = Dispatchers.IO
@@ -52,6 +57,21 @@ class SourcesRepository(db: NeoFeedDb) {
 
     suspend fun insertSource(feed: Feed) = withContext(jcc) {
         feedsDao.insert(feed)
+    }
+
+    /**
+     * The existing subscription this address would collide with, if any.
+     *
+     * Matched on [normalizeFeedUrl] rather than on the string, so the same feed
+     * typed with or without `www.`, with or without a trailing slash, or over
+     * the other scheme is recognised. `Feeds.url` is uniquely indexed and the
+     * insert strategy is REPLACE, so an unnoticed duplicate does not sit beside
+     * the original — it replaces the row and takes that feed's articles down
+     * with it.
+     */
+    suspend fun findSourceByUrl(url: URL): Feed? = withContext(jcc) {
+        feedsDao.getFeedByURL(url)
+            ?: feedsDao.loadAllFeeds().firstOrNull { isSameFeedUrl(it.url, url) }
     }
 
     suspend fun updateSource(feed: Feed, resync: Boolean = false) {
@@ -134,9 +154,46 @@ class SourcesRepository(db: NeoFeedDb) {
         }
     }
 
+    /**
+     * The source removed most recently, for as long as it can still be undone.
+     *
+     * Removal is confirmed by a dialog and then the screen closes, so by the
+     * time a user realises they picked the wrong feed there is nothing left on
+     * screen to undo it from. Holding the row here lets the list they land back
+     * on offer it. Cleared once [undoDeleteSource] runs or [forgetDeletedSource]
+     * is called by the snackbar going away.
+     */
+    private val _recentlyDeleted = MutableStateFlow<Feed?>(null)
+    val recentlyDeleted: StateFlow<Feed?> = _recentlyDeleted.asStateFlow()
+
     fun deleteFeed(feedId: Long) {
         scope.launch {
+            _recentlyDeleted.value = feedsDao.loadFeedById(feedId)
             feedsDao.deleteFeedById(feedId)
         }
+    }
+
+    /**
+     * Puts a removed source back, and resyncs it.
+     *
+     * Its articles are not restored: deleting a feed cascades to them, and
+     * keeping a tombstone of every article of every removed feed to make this
+     * exact is not worth the storage. The feed refetches instead, so what comes
+     * back is the current contents rather than the old ones — read state and
+     * bookmarks within it are genuinely lost.
+     */
+    fun undoDeleteSource() {
+        scope.launch {
+            val feed = _recentlyDeleted.value ?: return@launch
+            _recentlyDeleted.value = null
+            // Insert under a fresh id: the old one may have been handed out
+            // again, and nothing outside the row refers to it any more.
+            val id = feedsDao.insert(feed.copy(id = ID_UNSET))
+            requestFeedSync(id)
+        }
+    }
+
+    fun forgetDeletedSource() {
+        _recentlyDeleted.value = null
     }
 }

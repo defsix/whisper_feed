@@ -54,21 +54,37 @@ class SourceListViewModel(
         }
     }
 
-    fun saveFeed(results: List<SearchResult>) {
-        results.forEach { result ->
-            if (result.isError) {
-                return@forEach
-            } else {
-                val feed = Feed(
+    /**
+     * Subscribes to one search result.
+     *
+     * Deliberately one, not a list: this used to take every result the search
+     * produced and add all of them when the screen closed.
+     */
+    fun addFeed(result: SearchResult) {
+        if (result.isError) return
+        viewModelScope.launch {
+            val url = sloppyLinkToStrictURL(result.url)
+            // Re-checked here rather than trusted from the UI: results can be
+            // minutes old, and Feeds.url is uniquely indexed with an insert
+            // strategy of REPLACE — an unnoticed duplicate would delete the
+            // original row and cascade to its articles.
+            if (feedsRepo.findSourceByUrl(url) != null) return@launch
+            feedsRepo.insertSource(
+                Feed(
                     title = result.title,
                     description = result.description,
-                    url = sloppyLinkToStrictURL(result.url),
-                    feedImage = sloppyLinkToStrictURL(result.url)
+                    url = url,
+                    feedImage = url,
                 )
-                insertFeed(feed)
-            }
+            )
         }
     }
+
+    val recentlyDeleted = feedsRepo.recentlyDeleted
+
+    fun undoDelete() = feedsRepo.undoDeleteSource()
+
+    fun forgetDeleted() = feedsRepo.forgetDeletedSource()
 }
 
 data class SourceListState(

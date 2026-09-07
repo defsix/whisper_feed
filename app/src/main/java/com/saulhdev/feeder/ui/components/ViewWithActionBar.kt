@@ -59,6 +59,7 @@ fun ViewWithActionBar(
     subTitle: String = "",
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     showBackButton: Boolean = true,
     /**
@@ -152,6 +153,7 @@ fun ViewWithActionBar(
             }
         },
         bottomBar = bottomBar,
+        snackbarHost = snackbarHost,
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = FabPosition.Center,
         content = content,

@@ -39,6 +39,11 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -93,6 +98,24 @@ fun SourceListPage(
     val state by viewModel.state.collectAsState()
     val paneNavigator = rememberListDetailPaneScaffoldNavigator<Any>()
     val sourceId = remember { mutableLongStateOf(-1L) }
+
+    // Removing a source is confirmed on the editor screen, which then closes —
+    // so the offer to undo has to be made here, on the screen the user lands
+    // back on. The repository holds the removed row until this is answered.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val recentlyDeleted by viewModel.recentlyDeleted.collectAsState()
+    val undoLabel = stringResource(R.string.action_undo)
+    LaunchedEffect(recentlyDeleted) {
+        val feed = recentlyDeleted ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(R.string.source_removed, feed.title),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete()
+        else viewModel.forgetDeleted()
+    }
 
     val opmlExporter = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/opml")
@@ -152,6 +175,7 @@ fun SourceListPage(
                     title = stringResource(id = R.string.title_sources),
                     largeTitle = true,
                     showBackButton = false,
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
                     floatingActionButton = {
                         ExtendedFloatingActionButton(
                             onClick = {

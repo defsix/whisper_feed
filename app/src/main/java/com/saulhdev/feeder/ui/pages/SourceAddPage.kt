@@ -18,18 +18,20 @@
 
 package com.saulhdev.feeder.ui.pages
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,6 +67,8 @@ import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.utils.extensions.safeSemantics
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.navigation.LocalNavController
+import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.Check
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURLNoThrows
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SearchResult
@@ -87,17 +91,13 @@ fun SourceAddPage(
         mutableStateOf(listOf<SearchResult>())
     }
 
-    BackHandler {
-        sourcesViewModel.saveFeed(results)
-        navController.popBackStack()
-    }
-
+    // Subscribing happens when a result is tapped. It used to happen when the
+    // screen was *left*: every feed the search turned up was added, whether or
+    // not the user wanted any of them, and tapping one did nothing at all. On a
+    // site publishing a feed per category that silently added a dozen.
     ViewWithActionBar(
         title = title,
-        onBackAction = {
-            sourcesViewModel.saveFeed(results)
-            navController.popBackStack()
-        }
+        onBackAction = { navController.popBackStack() }
     ) { paddingValues ->
         var currentlySearching by rememberSaveable {
             mutableStateOf(false)
@@ -140,9 +140,13 @@ fun SourceAddPage(
                 results = StableHolder(results),
                 errors = if (currentlySearching) StableHolder(emptyList()) else StableHolder(errors),
                 currentlySearching = currentlySearching,
-                onClick = {
-                    //saveFeed(results, repository)
-                    //TODO: enable click event when the rss is added
+                onClick = { result ->
+                    if (!result.alreadyAdded) {
+                        sourcesViewModel.addFeed(result)
+                        results = results.map {
+                            if (it.url == result.url) it.copy(alreadyAdded = true) else it
+                        }
+                    }
                 }
             )
         }
@@ -287,7 +291,8 @@ fun SearchResult(
         SearchResultView(
             title = result.title,
             url = result.url,
-            description = result.description
+            description = result.description,
+            alreadyAdded = result.alreadyAdded,
         ) {
             onClick(result)
         }
@@ -316,10 +321,12 @@ fun SearchResultView(
     title: String,
     url: String,
     description: String,
+    alreadyAdded: Boolean = false,
     onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
+        enabled = !alreadyAdded,
         modifier = Modifier
             .fillMaxWidth()
             .safeSemantics {
@@ -330,20 +337,43 @@ fun SearchResultView(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(12.dp)
         ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (alreadyAdded) {
+                    Icon(
+                        imageVector = Phosphor.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        stringResource(R.string.already_subscribed),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
             Text(
                 url,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                description,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            if (description.isNotBlank()) {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

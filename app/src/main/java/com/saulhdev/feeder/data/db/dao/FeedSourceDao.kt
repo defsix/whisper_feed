@@ -66,6 +66,10 @@ interface FeedSourceDao {
     @Query("SELECT * FROM Feeds")
     fun getAllFeeds(): Flow<List<Feed>>
 
+    /** Every source, disabled ones included — loadFeeds() returns only enabled. */
+    @Query("SELECT * FROM Feeds")
+    suspend fun loadAllFeeds(): List<Feed>
+
     @Query("SELECT DISTINCT tag FROM Feeds ORDER BY tag COLLATE NOCASE")
     fun getAllTagsFlow(): Flow<List<String>>
 

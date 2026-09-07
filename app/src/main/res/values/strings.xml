@@ -2,6 +2,9 @@
 <resources>
     <string name="app_name" translatable="false">Whisper</string>
     <string name="app_tagline">Your feeds, your focus.</string>
+    <string name="already_subscribed">Added</string>
+    <string name="source_removed">Removed %1$s</string>
+    <string name="action_undo">Undo</string>
     <string name="all_categories">All</string>
     <string name="home">Home</string>
     <string name="app_id" translatable="false">Package</string>
