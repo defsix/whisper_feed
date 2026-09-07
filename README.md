@@ -17,8 +17,9 @@ Home screen → swipe right → Whisper
 
 ## Status
 
-Early development. See `UPSTREAM_NOTES.md` for the launcher-integration
-findings that the project is built on.
+Early development. `ROADMAP.md` has the milestone-by-milestone position and
+what comes next; `UPSTREAM_NOTES.md` has the launcher-integration findings the
+project is built on.
 
 - **Milestone 0 — launcher feasibility: complete.** Upstream builds, the
   overlay provider mechanism is documented, and minus-one replacement is
