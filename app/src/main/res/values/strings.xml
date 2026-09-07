@@ -10,6 +10,11 @@
     <string name="more_like_this">More like this</string>
     <string name="less_like_this">Less like this</string>
     <string name="hide_source">Hide source</string>
+    <string name="pref_feed_layout">Feed layout</string>
+    <string name="layout_cards">Cards</string>
+    <string name="layout_magazine">Magazine</string>
+    <string name="layout_list">List</string>
+    <string name="layout_mosaic">Mosaic</string>
     <string name="source_hidden">Hiding %1$s</string>
     <string name="all_categories">All</string>
     <string name="home">Home</string>

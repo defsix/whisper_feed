@@ -53,6 +53,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
+import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.formatArticleAge
 
 /**
@@ -73,6 +74,7 @@ fun FeedArticleItem(
     onMoreLikeThis: () -> Unit = {},
     onLessLikeThis: () -> Unit = {},
     onHideSource: () -> Unit = {},
+    layout: String = LAYOUT_CARDS,
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     val menu: @Composable (Color?) -> Unit = { tint ->
@@ -84,10 +86,12 @@ fun FeedArticleItem(
             tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-    when (feedCardShape(index, hasImage)) {
+    when (feedCardShape(index, hasImage, layout)) {
         FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, modifier)
         FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, modifier)
         FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, modifier)
+        FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, modifier)
+        FeedCardShape.Tile    -> ArticleMosaicTile(item, onClick, onBookmark, menu, modifier)
     }
 }
 
@@ -353,6 +357,128 @@ fun ArticleCompactRow(
             Box(modifier = Modifier.align(Alignment.Top)) { menu(null) }
         }
         ArticleDivider()
+    }
+}
+
+
+/**
+ * The List layout's row: headline, source, nothing else.
+ *
+ * No thumbnail at any width — that is the point of the layout rather than a
+ * limitation of it. Images are what make a feed slow to get through, and this
+ * is the shape for getting through a backlog.
+ */
+@Composable
+fun ArticleTextRow(
+    item: FeedItem,
+    onClick: () -> Unit,
+    onBookmark: (Boolean) -> Unit,
+    menu: @Composable (Color?) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.contentTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                ArticleMeta(
+                    source = item.feedTitle,
+                    age = item.relativeAge(context),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    iconUrl = item.feedIconUrl,
+                )
+            }
+            SaveButton(
+                saved = item.bookmarked,
+                onSavedChange = onBookmark,
+                size = 20.dp,
+            )
+            menu(null)
+        }
+        ArticleDivider()
+    }
+}
+
+/**
+ * The Mosaic layout's tile: image, headline, source, in one column.
+ *
+ * Half-width, so the headline gets three lines rather than two and the image
+ * keeps its own aspect ratio instead of being cropped to a fixed one — the
+ * varying heights that result are what make the staggered grid look like a
+ * mosaic rather than a table. There is no share button and no summary: at this
+ * width neither survives, and the overflow menu carries share anyway.
+ */
+@Composable
+fun ArticleMosaicTile(
+    item: FeedItem,
+    onClick: () -> Unit,
+    onBookmark: (Boolean) -> Unit,
+    menu: @Composable (Color?) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(6.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(onClick = onClick)
+    ) {
+        val image = item.article.imageUrl
+        if (!image.isNullOrBlank()) {
+            AsyncImage(
+                model = image,
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Column(modifier = Modifier.padding(10.dp)) {
+            Text(
+                text = item.contentTitle,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ArticleMeta(
+                    source = item.feedTitle,
+                    age = item.relativeAge(context),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                    iconUrl = item.feedIconUrl,
+                )
+                SaveButton(
+                    saved = item.bookmarked,
+                    onSavedChange = onBookmark,
+                    size = 18.dp,
+                )
+                menu(null)
+            }
+        }
     }
 }
 

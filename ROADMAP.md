@@ -15,16 +15,15 @@ in the code.
 | 0 | Launcher feasibility | **Done** — builds, installs, minus-one works, mechanism documented in `UPSTREAM_NOTES.md` |
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale, bundled Inter and a two-stage splash, none of which the milestone asked for |
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
-| 3 | Remaining layouts | **Not started** — Magazine, List, Adaptive Mosaic |
+| 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
 | 5 | Personalisation | **Not started** |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
 
-One thing to be honest about: the card **rhythm** (hero / card / compact) is not
-the same as Milestone 3. The rhythm varies weight *within* one layout; Milestone
-3 is four layouts the user chooses between. M3 is genuinely untouched.
+The card **rhythm** (hero / card / compact) is what Cards does *within* one
+layout; the four layouts are what the user chooses between. Both exist now.
 
 ---
 

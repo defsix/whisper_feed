@@ -62,6 +62,20 @@ fun getFonts(context: Context): Map<String, String> {
     )
 }
 
+const val LAYOUT_CARDS = "cards"
+const val LAYOUT_MAGAZINE = "magazine"
+const val LAYOUT_LIST = "list"
+const val LAYOUT_MOSAIC = "mosaic"
+
+fun getFeedLayouts(context: Context): Map<String, String> {
+    return mapOf(
+        LAYOUT_CARDS to context.resources.getString(R.string.layout_cards),
+        LAYOUT_MAGAZINE to context.resources.getString(R.string.layout_magazine),
+        LAYOUT_LIST to context.resources.getString(R.string.layout_list),
+        LAYOUT_MOSAIC to context.resources.getString(R.string.layout_mosaic),
+    )
+}
+
 fun getSortingOptions(context: Context): Map<String, String> {
     return mapOf(
         SORT_CHRONOLOGICAL to context.resources.getString(R.string.sorting_chronological),

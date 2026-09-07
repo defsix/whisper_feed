@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalDensity
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.overlay.FeedScaffold
 import com.saulhdev.feeder.utils.extensions.launchView
+import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import androidx.compose.material3.MaterialTheme
 import com.saulhdev.feeder.manager.glance.GlanceState
@@ -364,6 +365,8 @@ class OverlayView(val context: Context) :
                     .collectAsState(initial = emptyList())
                 val selected by prefs.categoryFilter.get()
                     .collectAsState(initial = emptySet())
+                val layout by prefs.feedLayout.get()
+                    .collectAsState(initial = LAYOUT_CARDS)
 
                 FeedScaffold(
                     articles = if (showBookmarks.value) bookmarksState.value
@@ -389,6 +392,7 @@ class OverlayView(val context: Context) :
                     hiddenSource = hiddenSourceState.value,
                     onUndoHideSource = { viewModel.undoHideSource() },
                     onDismissHideSource = { viewModel.forgetHiddenSource() },
+                    layout = layout,
                     onFilterClick = {
                         if (AbstractFloatingView.isAnyOpen()) {
                             AbstractFloatingView.closeAllOpenViews(context)

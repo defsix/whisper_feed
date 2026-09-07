@@ -17,7 +17,12 @@
  */
 package com.saulhdev.feeder.ui.overlay
 
-/** The three shapes an article can take in the feed. */
+import com.saulhdev.feeder.utils.LAYOUT_CARDS
+import com.saulhdev.feeder.utils.LAYOUT_LIST
+import com.saulhdev.feeder.utils.LAYOUT_MAGAZINE
+import com.saulhdev.feeder.utils.LAYOUT_MOSAIC
+
+/** The shapes an article can take in the feed. */
 enum class FeedCardShape {
     /** Full-bleed image with the headline laid over it. Anchors the feed. */
     Hero,
@@ -27,31 +32,69 @@ enum class FeedCardShape {
 
     /** Headline left, thumbnail right. Dense, quick to scan. */
     Compact,
+
+    /** Headline and source only. No image at any width. */
+    Text,
+
+    /** A grid tile: image on top, headline beneath, sized by its content. */
+    Tile,
 }
 
 /**
- * Picks a shape for the article at [index].
+ * Picks a shape for the article at [index], for the chosen [layout].
  *
- * A feed of identical cards reads as one undifferentiated column and gives the
- * eye nothing to catch on, which is the thing a scrolling news surface most has
- * to avoid. Discover solves it by varying the weight of consecutive items, so
- * this does the same: a hero to open, another every eighth item to reset the
- * rhythm, a full card at a regular offset in between, and compact rows for the
- * rest.
+ * The four layouts differ in what they are *for*, not in decoration:
  *
- * The pattern is positional rather than content-derived on purpose. Deriving it
- * from the article — image size, title length, source — would make the layout
- * jump around as a sync reorders the list, and an article would change shape
- * depending on what happened to load near it.
+ *  - **Cards** varies the weight of consecutive items. A feed of identical
+ *    cards reads as one undifferentiated column and gives the eye nothing to
+ *    catch on, which is the thing a scrolling news surface most has to avoid.
+ *    A hero opens, another lands every eighth item to reset the rhythm, a full
+ *    card sits at a regular offset between, compact rows fill the rest.
+ *  - **Magazine** commits to the image on every item. Fewer articles per
+ *    screen, each one worth stopping at — for reading rather than triage.
+ *  - **List** drops images entirely. Most articles per screen, for getting
+ *    through a backlog.
+ *  - **Mosaic** is the same tile repeated in a staggered grid, where the
+ *    variation comes from the tiles' own heights rather than from a pattern
+ *    imposed on them.
  *
- * An article with no usable image can only ever be [FeedCardShape.Compact]: the
- * other two shapes are built around an image and collapse into an oddly padded
- * blank without one.
+ * The Cards pattern is positional rather than content-derived on purpose.
+ * Deriving it from the article — image size, title length, source — would make
+ * the layout jump around as a sync reorders the list, and an article would
+ * change shape depending on what happened to load near it.
+ *
+ * In every layout except List, an article with no usable image falls back to a
+ * shape that does not need one: the image-led shapes collapse into an oddly
+ * padded blank without one.
  */
-fun feedCardShape(index: Int, hasImage: Boolean): FeedCardShape = when {
-    !hasImage       -> FeedCardShape.Compact
-    index == 0      -> FeedCardShape.Hero
-    index % 8 == 0  -> FeedCardShape.Hero
-    index % 4 == 2  -> FeedCardShape.Card
-    else            -> FeedCardShape.Compact
+fun feedCardShape(
+    index: Int,
+    hasImage: Boolean,
+    layout: String = LAYOUT_CARDS,
+): FeedCardShape = when (layout) {
+    LAYOUT_LIST -> FeedCardShape.Text
+
+    // Tile even without an image: the tile already omits it, and a full-width
+    // text row dropped into a half-width grid cell reads as a broken tile
+    // rather than a deliberate one.
+    LAYOUT_MOSAIC -> FeedCardShape.Tile
+
+    LAYOUT_MAGAZINE -> if (hasImage) FeedCardShape.Card else FeedCardShape.Compact
+
+    else -> when {
+        !hasImage      -> FeedCardShape.Compact
+        index == 0     -> FeedCardShape.Hero
+        index % 8 == 0 -> FeedCardShape.Hero
+        index % 4 == 2 -> FeedCardShape.Card
+        else           -> FeedCardShape.Compact
+    }
 }
+
+/**
+ * Whether a layout wants a staggered grid rather than a single column.
+ *
+ * Kept here beside the shape rules so the container and the shape it holds
+ * cannot disagree — a Tile in a LazyColumn is a full-width card with a
+ * grid tile's proportions, which looks like a mistake rather than a choice.
+ */
+fun feedLayoutIsGrid(layout: String): Boolean = layout == LAYOUT_MOSAIC

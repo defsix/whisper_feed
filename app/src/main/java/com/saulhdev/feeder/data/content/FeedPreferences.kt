@@ -31,6 +31,9 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.entity.SORT_CHRONOLOGICAL
 import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
+import com.saulhdev.feeder.utils.getFeedLayouts
+import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Browser
@@ -151,6 +154,15 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         dataStore = dataStore,
         defaultValue = "inter",
         entries = getFonts(context)
+    )
+
+    var feedLayout = StringSelectionPref(
+        titleId = R.string.pref_feed_layout,
+        icon = Phosphor.ListDashes,
+        key = FEED_LAYOUT,
+        dataStore = dataStore,
+        defaultValue = LAYOUT_CARDS,
+        entries = getFeedLayouts(context),
     )
 
     /* Glance row */
@@ -468,6 +480,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val GLANCE_PLACE_COORDS = stringPreferencesKey("pref_glance_place_coords")
         val OVERLAY_OPACITY = floatPreferencesKey("pref_overlay_opacity")
         val ARTICLE_OPEN_MODE = stringPreferencesKey("pref_article_open_mode")
+        val FEED_LAYOUT = stringPreferencesKey("pref_feed_layout")
         val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")
         val EXPORT_DIAGNOSTICS = stringPreferencesKey("pref_export_diagnostics")
 

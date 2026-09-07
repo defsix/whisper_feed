@@ -30,6 +30,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -117,20 +121,26 @@ fun FeedScaffold(
     hiddenSource: FeedItem?,
     onUndoHideSource: () -> Unit,
     onDismissHideSource: () -> Unit,
+    layout: String,
     onFilterClick: () -> Unit,
     onBookmarksClick: () -> Unit,
     onOverflowClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    val gridState = rememberLazyStaggeredGridState()
     val scope = rememberCoroutineScope()
     val appBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
 
     // Matches the old scroll listener's threshold, which only offered the jump
     // back once a few articles had gone by.
-    val showScrollToTop by remember {
-        derivedStateOf { listState.firstVisibleItemIndex > 5 }
+    val isGrid = feedLayoutIsGrid(layout)
+    val showScrollToTop by remember(isGrid) {
+        derivedStateOf {
+            if (isGrid) gridState.firstVisibleItemIndex > 5
+            else listState.firstVisibleItemIndex > 5
+        }
     }
 
     // Hiding a source is one tap with no confirmation, so the way back is
@@ -226,25 +236,55 @@ fun FeedScaffold(
                 onRefresh = onRefresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(
-                        top = 4.dp,
-                        bottom = bottomInset + 16.dp,
-                    ),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
-                        FeedArticleItem(
-                            item = item,
-                            index = index,
-                            onClick = { onArticleClick(item) },
-                            onBookmark = { onBookmark(item, it) },
-                            onShare = { onShare(item) },
-                            onMoreLikeThis = { onMoreLikeThis(item) },
-                            onLessLikeThis = { onLessLikeThis(item) },
-                            onHideSource = { onHideSource(item) },
-                        )
+                val padding = PaddingValues(
+                    top = 4.dp,
+                    bottom = bottomInset + 16.dp,
+                )
+                // Mosaic is a staggered grid rather than a column, so the
+                // container changes with the layout and not only the shapes
+                // inside it. Everything else is a single column.
+                if (feedLayoutIsGrid(layout)) {
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Fixed(2),
+                        state = gridState,
+                        contentPadding = padding,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                    ) {
+                        itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
+                            FeedArticleItem(
+                                item = item,
+                                index = index,
+                                onClick = { onArticleClick(item) },
+                                onBookmark = { onBookmark(item, it) },
+                                onShare = { onShare(item) },
+                                onMoreLikeThis = { onMoreLikeThis(item) },
+                                onLessLikeThis = { onLessLikeThis(item) },
+                                onHideSource = { onHideSource(item) },
+                                layout = layout,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = padding,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
+                            FeedArticleItem(
+                                item = item,
+                                index = index,
+                                onClick = { onArticleClick(item) },
+                                onBookmark = { onBookmark(item, it) },
+                                onShare = { onShare(item) },
+                                onMoreLikeThis = { onMoreLikeThis(item) },
+                                onLessLikeThis = { onLessLikeThis(item) },
+                                onHideSource = { onHideSource(item) },
+                                layout = layout,
+                            )
+                        }
                     }
                 }
             }
@@ -266,7 +306,12 @@ fun FeedScaffold(
                 .padding(end = 24.dp, bottom = bottomInset + 24.dp),
         ) {
             FloatingActionButton(
-                onClick = { scope.launch { listState.animateScrollToItem(0) } },
+                onClick = {
+                    scope.launch {
+                        if (isGrid) gridState.animateScrollToItem(0)
+                        else listState.animateScrollToItem(0)
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(Phosphor.CaretUp, stringResource(R.string.back_to_top))

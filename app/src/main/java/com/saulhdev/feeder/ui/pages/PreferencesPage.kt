@@ -73,6 +73,7 @@ fun PreferencesPage(
         prefs.glancePlaceName,
     )
     val themePrefs = listOf(
+        prefs.feedLayout,
         prefs.overlayTheme,
         prefs.pureBlack,
         prefs.appFont,

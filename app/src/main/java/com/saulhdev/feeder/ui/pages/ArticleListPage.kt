@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BottomSheetScaffold
@@ -84,10 +86,12 @@ import androidx.compose.ui.Alignment
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.components.OverflowMenu
+import com.saulhdev.feeder.ui.components.PullToRefreshStaggeredGrid
 import com.saulhdev.feeder.ui.components.PullToRefreshLazyColumn
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
@@ -104,6 +108,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
+import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
+import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
@@ -138,6 +144,8 @@ fun ArticleListPage(
     val openMode by prefs.articleOpenMode.get()
         .collectAsState(initial = prefs.articleOpenMode.getValue())
     val bookmarked by viewModel.bookmarksState.collectAsState()
+    val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
+    val gridState = rememberLazyStaggeredGridState()
 
     // The same offer the overlay feed makes: hiding a source is one tap from a
     // menu, so the way back is shown where the article disappeared from.
@@ -411,54 +419,65 @@ fun ArticleListPage(
                                     }
                                 }
 
-                                else          -> PullToRefreshLazyColumn(
-                                    isRefreshing = state.isSyncing,
-                                    onRefresh = { syncClient.syncAllFeeds() },
-                                    listState = listState,
-                                    content = {
-                                        itemsIndexed(
-                                            state.articles,
-                                            key = { _, item -> item.id },
-                                        ) { index, item ->
-                                            // The same shapes and the same
-                                            // rhythm the launcher feed draws, so
-                                            // the two surfaces are not mistaken
-                                            // for different apps.
-                                            FeedArticleItem(
-                                                item = item,
-                                                index = index,
-                                                onClick = {
-                                                    viewModel.markRead(item.id)
-                                                    if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
-                                                        context.launchView(item.link)
-                                                    } else {
-                                                        scope.launch {
-                                                            paneNavigator.navigateTo(
-                                                                ListDetailPaneScaffoldRole.Detail,
-                                                                item.id
-                                                            )
-                                                        }
+                                // The same shapes and the same rhythm the launcher feed
+                                // draws, so the two surfaces are not mistaken for
+                                // different apps — and the same container, which for
+                                // Mosaic is a staggered grid rather than a column.
+                                else          -> {
+                                    val article: @Composable (Int, FeedItem) -> Unit = { index, item ->
+                                        FeedArticleItem(
+                                            item = item,
+                                            index = index,
+                                            layout = layout,
+                                            onClick = {
+                                                viewModel.markRead(item.id)
+                                                if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                    context.launchView(item.link)
+                                                } else {
+                                                    scope.launch {
+                                                        paneNavigator.navigateTo(
+                                                            ListDetailPaneScaffoldRole.Detail,
+                                                            item.id
+                                                        )
                                                     }
-                                                },
-                                                onBookmark = {
-                                                    viewModel.bookmarkArticle(item.id, it)
-                                                },
-                                                onShare = {
-                                                    context.safeShareIntent(item.link, item.contentTitle)
-                                                },
-                                                onMoreLikeThis = {
-                                                    viewModel.recordAffinity(item.sourceId, 1)
-                                                },
-                                                onLessLikeThis = {
-                                                    viewModel.recordAffinity(item.sourceId, -1)
-                                                },
-                                                onHideSource = {
-                                                    viewModel.hideSource(item)
-                                                },
-                                            )
-                                        }
+                                                }
+                                            },
+                                            onBookmark = { viewModel.bookmarkArticle(item.id, it) },
+                                            onShare = {
+                                                context.safeShareIntent(item.link, item.contentTitle)
+                                            },
+                                            onMoreLikeThis = { viewModel.recordAffinity(item.sourceId, 1) },
+                                            onLessLikeThis = { viewModel.recordAffinity(item.sourceId, -1) },
+                                            onHideSource = { viewModel.hideSource(item) },
+                                        )
                                     }
-                                )
+
+                                    if (feedLayoutIsGrid(layout)) {
+                                        PullToRefreshStaggeredGrid(
+                                            isRefreshing = state.isSyncing,
+                                            onRefresh = { syncClient.syncAllFeeds() },
+                                            gridState = gridState,
+                                            content = {
+                                                itemsIndexed(
+                                                    state.articles,
+                                                    key = { _, item -> item.id },
+                                                ) { index, item -> article(index, item) }
+                                            },
+                                        )
+                                    } else {
+                                        PullToRefreshLazyColumn(
+                                            isRefreshing = state.isSyncing,
+                                            onRefresh = { syncClient.syncAllFeeds() },
+                                            listState = listState,
+                                            content = {
+                                                itemsIndexed(
+                                                    state.articles,
+                                                    key = { _, item -> item.id },
+                                                ) { index, item -> article(index, item) }
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
