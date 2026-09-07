@@ -13,14 +13,14 @@ in the code.
 | # | Milestone | Status |
 |---|---|---|
 | 0 | Launcher feasibility | **Done** — builds, installs, minus-one works, mechanism documented in `UPSTREAM_NOTES.md` |
-| 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale and bundled Inter, which the milestone did not ask for |
+| 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale, bundled Inter and a two-stage splash, none of which the milestone asked for |
 | 2 | Cards layout | **Most of it** — cards, images, metadata, pull-to-refresh, save, read state. Missing: per-card overflow menu, source favicon, hide, More/Less controls |
 | 3 | Remaining layouts | **Not started** — Magazine, List, Adaptive Mosaic |
 | 4 | Source management | **Half** — add, edit, remove, categories (multi-tag filtering now correct), OPML in/out. Missing: autodiscovery, duplicate detection, undo remove, category management, bulk editing, reorder |
 | 5 | Personalisation | **Not started** |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
-| 8 | Reader / offline / polish | **Part** — reader and offline caching work, sync and filter performance done. Missing: accessibility pass, battery profiling, motion polish |
+| 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
 
 One thing to be honest about: the card **rhythm** (hero / card / compact) is not
 the same as Milestone 3. The rhythm varies weight *within* one layout; Milestone
@@ -266,12 +266,16 @@ Small, and cheaper now than later.
   from the code and measured where it could be measured — text widths against
   the real font, icon alpha, migration SQL. The on-device checks have all been
   yours. Emulator-based screenshot tests would change that.
-- **Test coverage is 13 unit tests**, on article age and tag splitting. The sync and filter
-  performance work, the theme resolution and the day/night rule are all
-  untested and all have the shape that benefits most from tests.
-- **Dead code**: `NavigationSuite.kt` and `Pager.kt` went unreferenced when the
-  bottom navigation was removed. `ArticleItem` and `BookmarkItem` predate the
-  shared card.
-- **Assets still open**: onboarding background, article placeholders, a
-  tagline-free horizontal lockup for the app bar. Listed in
-  `docs/brand/ASSET_SPEC.md`.
+- **Test coverage is 14 unit tests**, on article age and tag splitting. The sync
+  and filter performance work, the theme resolution and the day/night rule are
+  all untested and all have the shape that benefits most from tests.
+- ~~**Dead code**~~ — cleared. Nine unreferenced files and eight drawables
+  removed, along with eight unused DAO methods, one of which had an
+  `@Relation` without `@Transaction`: the same shape as the OPML crash fixed
+  earlier, waiting to be called.
+- **Assets still open**: onboarding background and article placeholders, listed
+  in `docs/brand/ASSET_SPEC.md`. The horizontal lockup is no longer needed —
+  the app bar composes the symbol and the wordmark itself, which keeps the two
+  independently sizeable. Still missing if the cobalt splash is ever wanted
+  back: a light colourway of the symbol, since the vivid gradient loses two of
+  its three blades against `#2563EB`.
