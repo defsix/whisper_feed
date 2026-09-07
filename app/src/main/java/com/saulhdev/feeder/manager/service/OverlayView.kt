@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -124,13 +125,50 @@ class OverlayView(val context: Context) :
 
     private var pendingCloseOnResume = false
 
+    /**
+     * When this overlay last started an activity itself.
+     *
+     * Starting an activity makes the system broadcast
+     * ACTION_CLOSE_SYSTEM_DIALOGS, and this class listens for that in order to
+     * get out of the way when something else takes over the screen. Our own
+     * launch therefore closed the panel out from under the article the user
+     * had just tapped — the workspace showed for a frame or two before the
+     * browser appeared, and backing out of the browser returned to a launcher
+     * sitting on the home screen rather than on the feed the article came
+     * from.
+     *
+     * A time window rather than a boolean because there is nothing to clear it
+     * on: the broadcast is the only signal that the launch happened, and it is
+     * the thing being suppressed. uptimeMillis so that it cannot be moved by
+     * the clock changing.
+     */
+    @Volatile
+    private var lastSelfLaunchAt = 0L
+
+    private fun startedItOurselves(): Boolean =
+        SystemClock.uptimeMillis() - lastSelfLaunchAt < SELF_LAUNCH_GRACE_MS
+
+    /**
+     * Starts an activity and keeps the panel where it is.
+     *
+     * Every launch from the overlay goes through here, not only opening an
+     * article: a share sheet or the settings screen appearing over the feed
+     * has the same reason to leave the feed underneath it.
+     */
+    private inline fun launchKeepingPanel(block: () -> Unit) {
+        lastSelfLaunchAt = SystemClock.uptimeMillis()
+        block()
+    }
+
     private lateinit var rootView: View
 
     private val closeSystemDialogsReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_CLOSE_SYSTEM_DIALOGS) {
-                closePanelIfNeeded(1)
-            }
+            if (intent?.action != Intent.ACTION_CLOSE_SYSTEM_DIALOGS) return
+            // Something else taking the screen is worth closing for. Us taking
+            // it is not — see lastSelfLaunchAt.
+            if (startedItOurselves()) return
+            closePanelIfNeeded(1)
         }
     }
 
@@ -311,12 +349,14 @@ class OverlayView(val context: Context) :
             when (it.id) {
                 "config"  -> {
                     mainScope.launch {
-                        view.context.safeStartActivity(
-                            MainActivity.navigateIntent(
-                                view.context,
-                                "${Routes.MAIN}/1",
+                        launchKeepingPanel {
+                            view.context.safeStartActivity(
+                                MainActivity.navigateIntent(
+                                    view.context,
+                                    "${Routes.MAIN}/1",
+                                )
                             )
-                        )
+                        }
                     }
                 }
 
@@ -385,7 +425,11 @@ class OverlayView(val context: Context) :
                     onRefresh = { refreshNotifications() },
                     onArticleClick = { openArticle(it) },
                     onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
-                    onShare = { context.safeShareIntent(it.link, it.contentTitle) },
+                    onShare = {
+                        launchKeepingPanel {
+                            context.safeShareIntent(it.link, it.contentTitle)
+                        }
+                    },
                     onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
                     onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
                     onHideSource = { viewModel.hideSource(it) },
@@ -415,12 +459,14 @@ class OverlayView(val context: Context) :
         // Counts on the glance row have to reflect reading done here too, not
         // only in the app — this is the surface most articles are opened from.
         syncScope.launch { viewModel.markRead(item.id) }
-        if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
-            context.launchView(item.link)
-        } else {
-            context.safeStartActivity(
-                MainActivity.navigateIntent(context, "${Routes.ARTICLE_VIEW}/${item.id}")
-            )
+        launchKeepingPanel {
+            if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+                context.launchView(item.link)
+            } else {
+                context.safeStartActivity(
+                    MainActivity.navigateIntent(context, "${Routes.ARTICLE_VIEW}/${item.id}")
+                )
+            }
         }
     }
 
@@ -449,7 +495,7 @@ class OverlayView(val context: Context) :
         if (prefs.debugging.getValue()) {
             Log.d("OverlayView", "New message by OverlayBridge: $action")
         }
-        if (action == "openContentView") {
+        if (action == "openContentView" && !startedItOurselves()) {
             pendingCloseOnResume = true
         }
     }
@@ -486,3 +532,12 @@ class OverlayView(val context: Context) :
         )
     }
 }
+
+/**
+ * How long after starting an activity ourselves a close request is treated as
+ * a consequence of that launch rather than a reason to get out of the way.
+ *
+ * Long enough to cover a cold browser start, short enough that a genuine
+ * close — the user pressing Home, a call arriving — is not swallowed.
+ */
+private const val SELF_LAUNCH_GRACE_MS = 2_000L
