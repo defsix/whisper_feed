@@ -51,6 +51,19 @@
         <item name="cornerSize">16dp</item>
     </style>
 
+    <!--
+      The window shown between tapping the icon and the first frame. Without
+      one, Android draws the theme's windowBackground, which is a light grey
+      that flashes before a dark app resolves. The launcher icon layers are
+      reused, so this is the same mark at the same size as the icon the user
+      just tapped.
+    -->
+    <style name="SplashTheme" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/whisper_cobalt</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+
     <style name="AppTheme" parent="BaseTheme">
         <item name="android:statusBarColor">@android:color/black</item>
         <item name="android:navigationBarColor">@android:color/black</item>

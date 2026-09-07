@@ -28,6 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import com.saulhdev.feeder.R
 
 /**
@@ -71,34 +79,70 @@ fun CategoryChipRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
     ) {
         item(key = ALL_CHIP_KEY) {
-            FilterChip(
+            CategoryChip(
+                label = stringResource(R.string.all_categories),
                 selected = selected.isEmpty(),
                 // Already unfiltered, so re-tapping "All" should not churn the feed.
                 onClick = { if (selected.isNotEmpty()) onSelectedChange(emptySet()) },
-                label = { Text(stringResource(R.string.all_categories)) },
-                shape = MaterialTheme.shapes.large,
-                colors = legibleChipColors(),
-                border = null,
             )
         }
 
         items(named, key = { it }) { category ->
             val isSelected = category in selected
-            FilterChip(
+            CategoryChip(
+                label = category,
                 selected = isSelected,
                 onClick = {
                     onSelectedChange(
                         if (isSelected) selected - category else selected + category
                     )
                 },
-                label = { Text(category) },
-                shape = MaterialTheme.shapes.large,
-                colors = legibleChipColors(),
-                border = null,
             )
         }
     }
 }
+
+/**
+ * A chip with an underline beneath it when it is on.
+ *
+ * Fill alone was doing all the work of showing selection, and a filled chip
+ * next to a filled chip is a difference in shade — easy to miss at a glance,
+ * and the first thing to go when the container colour has to be light enough
+ * to stay legible over a wallpaper. The bar is a second, redundant signal that
+ * does not depend on colour contrast at all.
+ *
+ * Height is reserved whether or not the chip is selected, so selecting one does
+ * not shift the row.
+ */
+@Composable
+private fun CategoryChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FilterChip(
+            selected = selected,
+            onClick = onClick,
+            label = { Text(label) },
+            shape = MaterialTheme.shapes.large,
+            colors = legibleChipColors(),
+            border = null,
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(3.dp)
+                .width(if (selected) INDICATOR_WIDTH else 0.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(2.dp),
+                )
+        )
+    }
+}
+
+private val INDICATOR_WIDTH = 18.dp
 
 /** See the note on [CategoryChipRow] for why the unselected state is filled. */
 @Composable

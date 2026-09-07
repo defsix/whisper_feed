@@ -72,6 +72,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.Alignment
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
@@ -168,7 +173,17 @@ fun ArticleListPage(
                                     containerColor = MaterialTheme.colorScheme.background,
                                     scrolledContainerColor = MaterialTheme.colorScheme.background,
                                 ),
-                                title = { Text(text = stringResource(id = R.string.app_name)) },
+                                title = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Image(
+                                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp),
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(text = stringResource(id = R.string.app_name))
+                                    }
+                                },
                                 scrollBehavior = scrollBehavior,
                                 actions = {
                                     IconButton(

@@ -117,6 +117,7 @@ dependencies {
     //Core
     implementation(libs.appcompat)
     implementation(libs.core.ktx)
+    implementation(libs.core.splashscreen)
     implementation(libs.multidex)
     implementation(libs.swiperefreshlayout)
     implementation(libs.work.runtime.ktx)

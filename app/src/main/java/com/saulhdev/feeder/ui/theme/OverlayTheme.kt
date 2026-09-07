@@ -48,10 +48,16 @@ import androidx.compose.ui.graphics.toArgb
  * exactly the same colours through the array they already consume, so none of
  * the existing View code has to change.
  */
+/**
+ * Whisper Cobalt. The brand seed, and the one colour that stays fixed whatever
+ * theme is chosen — the splash paints with it before a scheme exists.
+ */
+val WhisperCobalt = Color(0xFF2563EB)
+
 object OverlayTheme {
 
     /** Whisper Cobalt — the brand seed every non-dynamic scheme is built from. */
-    val WhisperSeed = Color(0xFF2563EB)
+    val WhisperSeed = WhisperCobalt
 
 
     /**

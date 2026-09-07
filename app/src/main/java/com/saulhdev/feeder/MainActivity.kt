@@ -36,6 +36,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.saulhdev.feeder.ui.pages.WhisperSplash
+import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.utils.extensions.isDarkTheme
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -46,8 +49,11 @@ import kotlin.coroutines.resume
 class MainActivity : ComponentActivity() {
     private lateinit var navController: NavHostController
     private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
+    private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Before super.onCreate, or the window splash never installs.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
@@ -82,10 +88,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    NavigationManager(
-                        modifier = Modifier.imePadding(),
-                        navController = navController,
-                    )
+                    // "Ready" is the first feed emission that actually has
+                    // articles. The state flow starts eagerly with an empty
+                    // list, so an emptiness check is the only signal available
+                    // — which is why the splash is also capped by a timeout,
+                    // for the case where the feed is genuinely empty.
+                    val feedState by viewModel.articleListState.collectAsState()
+                    WhisperSplash(ready = feedState.articles.isNotEmpty()) {
+                        NavigationManager(
+                            modifier = Modifier.imePadding(),
+                            navController = navController,
+                        )
+                    }
                 }
             }
         }
