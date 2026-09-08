@@ -84,6 +84,17 @@ import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import kotlinx.coroutines.launch
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import com.saulhdev.feeder.ui.pages.SortFilterSheet
 
 /**
  * The whole minus-one surface: header, category strip and article list.
@@ -124,7 +135,8 @@ fun FeedScaffold(
     onUndoHideSource: () -> Unit,
     onDismissHideSource: () -> Unit,
     layout: String,
-    onFilterClick: () -> Unit,
+    isFilterSheetOpen: Boolean,
+    onFilterSheetOpenChange: (Boolean) -> Unit,
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -198,7 +210,7 @@ fun FeedScaffold(
                         icon = Phosphor.FunnelSimple,
                         description = stringResource(R.string.pref_cat_filters),
                         active = isFilterActive,
-                        onClick = onFilterClick,
+                        onClick = { onFilterSheetOpenChange(true) },
                     )
                     HeaderToggleAction(
                         painter = painterResource(R.drawable.ic_whisper_save),
@@ -308,6 +320,65 @@ fun FeedScaffold(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = bottomInset + 16.dp),
         )
+
+        // The same sort-and-filter screen the app shows, rather than the
+        // View-based bottom sheet this used to open — which was the last
+        // screen in the overlay still built out of XML, and looked it.
+        //
+        // Drawn inside this composition rather than as a ModalBottomSheet: a
+        // modal sheet is its own window, and this window is created against
+        // the launcher's token with an unusual flag set. Everything already
+        // here is laid out by hand for that reason, so the sheet is too.
+        AnimatedVisibility(
+            visible = isFilterSheetOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onFilterSheetOpenChange(false) }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = isFilterSheetOpen,
+            enter = slideInVertically { it },
+            exit = slideOutVertically { it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.extraLarge.copy(
+                    bottomStart = CornerSize(0.dp),
+                    bottomEnd = CornerSize(0.dp),
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f),
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = bottomInset),
+                ) {
+                    // A grab handle, because without a modal sheet's own
+                    // chrome there is nothing else saying this is dismissible.
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 10.dp)
+                            .size(width = 32.dp, height = 4.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
+                    SortFilterSheet(onDismiss = { onFilterSheetOpenChange(false) })
+                }
+            }
+        }
 
         AnimatedVisibility(
             visible = showScrollToTop,

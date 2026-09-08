@@ -257,11 +257,11 @@ app that has avoided one everywhere else.
   it has already downloaded, which is the first thing anyone reaches for once
   the feed is longer than a screen. Local first, over titles and content
   already in the database — it needs no network and no account.
-- **The filter is confusing as it stands.** It is a bottom sheet of sources,
-  tags and sorting reached from an icon that gives no hint of what it will do
-  or whether it is currently doing it. Rework it so the active state is legible
-  from the header, so what it is filtering *by* is visible without opening it,
-  and so it reads as narrowing the feed rather than configuring it.
+- **The filter is confusing as it stands.** Half of this is done: the overlay
+  showed a View-based XML sheet while the app showed a Compose one, and the
+  two now share the app's. What is left is the sheet's own design — what it is
+  filtering *by* should be visible without opening it, and it should read as
+  narrowing the feed rather than configuring it.
 
 ### 10. Glance and header, once the rest is in
 

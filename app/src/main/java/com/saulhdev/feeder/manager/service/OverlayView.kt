@@ -41,8 +41,6 @@ import com.saulhdev.feeder.ui.theme.fontFamilyFor
 import com.saulhdev.feeder.ui.theme.typographyFor
 import com.saulhdev.feeder.ui.theme.OverlayThemeHolder
 import com.saulhdev.feeder.ui.theme.WhisperShapes
-import com.saulhdev.feeder.ui.views.AbstractFloatingView
-import com.saulhdev.feeder.ui.views.FilterBottomSheet
 import com.saulhdev.feeder.utils.extensions.safeStartActivity
 import com.saulhdev.feeder.utils.extensions.setCustomTheme
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
@@ -109,6 +107,15 @@ class OverlayView(val context: Context) :
     /** The source hidden most recently, so the feed can offer the way back. */
     private val hiddenSourceState = mutableStateOf<FeedItem?>(null)
     private val isFilterActive = mutableStateOf(false)
+
+    /**
+     * Whether the sort-and-filter sheet is showing.
+     *
+     * Held here rather than inside the composition so that the hardware back
+     * gesture can close the sheet instead of the whole panel — the sheet is
+     * drawn in this window's own Compose tree, so nothing else knows it is up.
+     */
+    private val filterSheetOpen = mutableStateOf(false)
 
     /**
      * System bar insets, in pixels, as reported to the overlay's root view.
@@ -183,8 +190,6 @@ class OverlayView(val context: Context) :
             this.container
         )
         val mainContainer = rootView.findViewById<ViewGroup>(R.id.overlay_root)
-        AbstractFloatingView.container = mainContainer
-        AbstractFloatingView.closeAllOpenViews(context)
 
         themeHolder = OverlayThemeHolder(this)
 
@@ -250,9 +255,6 @@ class OverlayView(val context: Context) :
     }
 
     override fun closePanelIfNeeded(flags: Int) {
-        if (AbstractFloatingView.isAnyOpen()) {
-            AbstractFloatingView.closeAllOpenViews(context)
-        }
         if (keepingPanelForOurLaunch) {
             // The launcher asks twice: once without the animation flag as it
             // pauses, once with it as it resumes. The resume one is the end of
@@ -265,12 +267,11 @@ class OverlayView(val context: Context) :
     }
 
     override fun onBackPressed() {
-        if (AbstractFloatingView.isAnyOpen()) {
-            AbstractFloatingView.closeAllOpenViews(context)
+        if (filterSheetOpen.value) {
+            filterSheetOpen.value = false
             return
-        } else {
-            super.onBackPressed()
         }
+        super.onBackPressed()
     }
 
     override fun onResume() {
@@ -412,13 +413,8 @@ class OverlayView(val context: Context) :
                     onUndoHideSource = { viewModel.undoHideSource() },
                     onDismissHideSource = { viewModel.forgetHiddenSource() },
                     layout = layout,
-                    onFilterClick = {
-                        if (AbstractFloatingView.isAnyOpen()) {
-                            AbstractFloatingView.closeAllOpenViews(context)
-                        } else {
-                            FilterBottomSheet.show(context, true)
-                        }
-                    },
+                    isFilterSheetOpen = filterSheetOpen.value,
+                    onFilterSheetOpenChange = { filterSheetOpen.value = it },
                     // Replaces a click handler that started a new collector on the
                     // view model every press without ever cancelling the previous
                     // one; both lists are now collected once and simply chosen

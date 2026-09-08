@@ -3,9 +3,4 @@
     <attr name="bottomSheetTheme" format="reference" />
     <attr name="bottomSheetNavBarColor" format="color" />
     <attr name="bottomSheetScrimColor" format="color" />
-    <declare-styleable name="ExpandableCardView">
-        <attr name="sectionIcon" format="reference" />
-        <attr name="sectionTitle" format="string" />
-        <attr name="iconContentDescription" format="string" />
-    </declare-styleable>
 </resources>
