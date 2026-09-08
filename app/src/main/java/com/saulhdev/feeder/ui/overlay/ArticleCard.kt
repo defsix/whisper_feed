@@ -450,6 +450,8 @@ fun ArticleMosaicTile(
 ) {
     val context = LocalContext.current
     val large = size == MosaicTileSize.Large
+    val image = item.article.imageUrl
+    val hasImage = !image.isNullOrBlank()
 
     Column(
         modifier = modifier
@@ -459,27 +461,60 @@ fun ArticleMosaicTile(
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onClick)
     ) {
-        val image = item.article.imageUrl
-        if (!image.isNullOrBlank()) {
-            AsyncImage(
-                model = image,
-                contentDescription = null,
-                // Cropped to a set ratio at the two fixed sizes, so the tile's
-                // height is the layout's decision rather than the picture's.
-                // Medium is the one that still follows the image.
-                contentScale = if (size == MosaicTileSize.Medium) ContentScale.FillWidth
-                else ContentScale.Crop,
-                modifier = when (size) {
-                    MosaicTileSize.Small  -> Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
+        if (hasImage) {
+            // The two buttons sit on the picture rather than under the text.
+            // They are IconButtons, so each one is 48dp tall whatever size the
+            // icon inside it is — in a row of their own under a half-width
+            // tile that is a band of empty space taller than the line of text
+            // beside it, which is where the gaps in the grid were coming from.
+            // Over the image they cost nothing: the space is already spent.
+            Box(modifier = Modifier.fillMaxWidth()) {
+                AsyncImage(
+                    model = image,
+                    contentDescription = null,
+                    // Cropped to a set ratio at the two fixed sizes, so the
+                    // tile's height is the layout's decision rather than the
+                    // picture's. Medium is the one that still follows it.
+                    contentScale = if (size == MosaicTileSize.Medium) ContentScale.FillWidth
+                    else ContentScale.Crop,
+                    modifier = when (size) {
+                        MosaicTileSize.Small  -> Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
 
-                    MosaicTileSize.Medium -> Modifier.fillMaxWidth()
-                    MosaicTileSize.Large  -> Modifier
+                        MosaicTileSize.Medium -> Modifier.fillMaxWidth()
+                        MosaicTileSize.Large  -> Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(2f / 1f)
+                    },
+                )
+                // A short scrim under the controls only. A photograph can be
+                // white in the corner, and a white icon on it disappears.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
                         .fillMaxWidth()
-                        .aspectRatio(2f / 1f)
-                },
-            )
+                        .height(52.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.45f),
+                                1f to Color.Transparent,
+                            )
+                        )
+                )
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SaveButton(
+                        saved = item.bookmarked,
+                        onSavedChange = onBookmark,
+                        size = 20.dp,
+                        onImage = true,
+                    )
+                    menu(Color.White)
+                }
+            }
         }
         Column(modifier = Modifier.padding(10.dp)) {
             Text(
@@ -518,12 +553,17 @@ fun ArticleMosaicTile(
                     modifier = Modifier.weight(1f),
                     iconUrl = item.feedIconUrl,
                 )
-                SaveButton(
-                    saved = item.bookmarked,
-                    onSavedChange = onBookmark,
-                    size = 18.dp,
-                )
-                menu(null)
+                // Only where there was no image to put them on. The buttons
+                // keep their full 48dp targets either way — the fix was to
+                // stop them claiming a row of their own, not to shrink them.
+                if (!hasImage) {
+                    SaveButton(
+                        saved = item.bookmarked,
+                        onSavedChange = onBookmark,
+                        size = 18.dp,
+                    )
+                    menu(null)
+                }
             }
         }
     }
