@@ -588,6 +588,115 @@ wanted earlier, is splitting `:core` from `:app` as a pure refactor with no
 desktop module — nothing user-visible, but the seam exists while the code is
 fresh.
 
+### 13. Bookmarks in, feeds out
+
+**Feasible, and cheaper than it looks — most of the engine is already built.**
+`FeedParser.alternateFeedLinksAtUrl` already reads `<link rel="alternate">` out
+of a page's head and filters on the RSS, Atom and JSON types.
+`candidateFeedUrls` already probes eight common paths including the Blogger and
+WordPress ones. `normalizeFeedUrl`/`isSameFeedUrl` already answer "is this the
+same feed", and OPML import and export already exist. What is missing is a
+bookmark parser, a queue, and a review screen — plumbing around code that
+works.
+
+The idea is a good one and the framing is the right one: *the user gives
+Whisper the websites, Whisper finds the feeds.* Nobody should have to search
+for "BBC RSS feed".
+
+#### Three parts cannot be built, because they need a server
+
+The proposal was written for something with a backend. Whisper has none, and
+§12 records why it must not acquire one.
+
+- **The shared discovery cache** — "if another Whisper user later imports the
+  same website, the known feed can be tested first" — requires a service that
+  sees which sites users are subscribing to. That is precisely the bargain
+  declined for Discover and for the web version. A **local** cache, keyed by
+  domain on the device, is worth having and costs nothing.
+- **The standalone web tool** — same CORS wall as §12. A browser cannot fetch
+  arbitrary third-party sites, so the tool would need a server proxying every
+  scan, and that server would see every bookmark file uploaded to it.
+- **The privacy section's framing.** It asks what happens to bookmark data
+  "sent to the scanning service". Nothing is sent anywhere: the file is parsed
+  on the phone and the phone does the fetching. That is a stronger answer than
+  any policy could be, and the screen should say so plainly rather than
+  reassure.
+
+#### SSRF is still a real concern, for a different reason
+
+Blocking private address ranges matters here too, but not because a server is
+being tricked into reaching its own network — because a *phone* would be
+reaching the user's own LAN. A bookmark, or a redirect from one, pointing at
+`192.168.1.1` would have Whisper probing the household router, printers and
+NAS for `/feed.xml`. Block the private ranges and `localhost`, check the
+destination again after every redirect, and allow only `http` and `https`.
+The proposal's list is right; only the reasoning changes.
+
+#### Scale is the actual engineering problem
+
+The spec's worked example is 1,482 bookmarks and 1,126 unique URLs. Costed
+honestly on a phone:
+
+- 1,126 page fetches for autodiscovery, at perhaps 100 KB each, is **~110 MB**
+  before any probing.
+- Suppose 40% advertise a feed. The other ~676 fall through to probing, and
+  `candidateFeedUrls` currently generates up to 16 candidates per URL —
+  **~10,800 further requests**, nearly all of them 404s.
+- At a dozen concurrent connections that is **twenty minutes to an hour** of
+  continuous radio, and a meaningful bite out of a mobile data allowance.
+
+Three things make it tractable, and the first is by far the biggest:
+
+1. **Group by domain before probing.** Fifteen BBC bookmarks are one site to
+   probe. This collapses the long tail more than any other change.
+2. **Probe the origin, not the path.** `candidateFeedUrls` tries both because
+   the Add Feed screen handles one URL at a time and can afford to; a scan of a
+   thousand cannot.
+3. **Wi-Fi by default, as a resumable WorkManager job.** The scan has to
+   survive the screen going off and the app being swapped out — an hour is
+   long enough that requiring the user to sit and watch it is not an option.
+
+#### Cut from the first version
+
+- **CMS-specific rules.** WordPress, Ghost, Substack, Blogger and Medium all
+  advertise their feeds in `<head>`; autodiscovery already catches them. This
+  is a page of code for cases that are handled.
+- **Three-level confidence.** Two states carry the whole distinction that
+  matters: the site *said* this is its feed, or Whisper *guessed*. A middle
+  band between them adds a word to the UI and nothing to the decision.
+
+#### The best idea in the document is buried at §46
+
+**Broken-feed recovery.** When a subscribed feed starts failing, run discovery
+against its site and offer the replacement. Whisper already surfaces broken
+feeds, so this is one screen and a use of an engine built for something else —
+and it fixes a problem every RSS reader has and none of them solve. It may be
+worth building *before* the bookmark importer: it needs only the engine that
+exists today, and it earns its keep on a feed list of forty as much as on a
+bookmark file of two thousand.
+
+#### What the first version should be
+
+One `discoverFeeds(url)` entry point, shared by the Add Feed screen (which
+should stop having its own), bookmark import, bulk paste, and broken-feed
+recovery — the proposal's §49 instinct is right and the reason to follow it is
+that four half-implementations is how this goes wrong.
+
+Then: parse Netscape `bookmarks.html`, drop non-http schemes, normalise, group
+by domain, scan with bounded concurrency, validate that what came back parses
+as a feed and has items, deduplicate several bookmarks onto one feed, and show
+a reviewable list with the four states that matter — found, several found, none
+found, unreachable. Folders become categories behind a checkbox, since Whisper
+already has categories and the mapping is free.
+
+Not deleting anything is the rule here as everywhere: a bookmark with no feed
+is reported, never silently dropped.
+
+**Where it goes:** after §7. It wants the categories and the duplicate handling
+that exist, and it is a large amount of network code to add while the reader
+itself is still being tuned. Broken-feed recovery is the exception and could
+come much sooner.
+
 ---
 
 ## Replacing Discover: what is actually possible
