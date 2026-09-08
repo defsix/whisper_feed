@@ -120,7 +120,7 @@ object Diagnostics : KoinComponent {
      */
     suspend fun export(context: Context): String? {
         val report = collect(context)
-        val name = "076feed-diagnostics-" +
+        val name = "whisper-diagnostics-" +
             SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".txt"
 
         return runCatching {
