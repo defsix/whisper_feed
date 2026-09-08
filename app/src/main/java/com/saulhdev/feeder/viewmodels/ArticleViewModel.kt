@@ -21,18 +21,25 @@ package com.saulhdev.feeder.viewmodels
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.models.fullTextClient
+import com.saulhdev.feeder.manager.models.parseFullArticleIfMissing
+import com.saulhdev.feeder.utils.blobFullFile
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlinx.coroutines.plus
 
 class ArticleViewModel(
@@ -45,6 +52,53 @@ class ArticleViewModel(
 
     fun setArticleId(value: String) {
         articleId.update { value }
+    }
+
+    /**
+     * Whether the readable version of the open article is here yet.
+     *
+     * A feed entry is usually a paragraph and a link — that is what RSS is —
+     * so a reader that shows only what the feed sent shows a teaser. The full
+     * page is fetched and put through Readability, which is what "open in the
+     * browser" was really being used for.
+     */
+    enum class FullText { Absent, Loading, Ready, Failed }
+
+    private val _fullText = MutableStateFlow(FullText.Absent)
+    val fullText: StateFlow<FullText> = _fullText.asStateFlow()
+
+    /**
+     * Fetches the readable article unless it is already stored.
+     *
+     * On demand, when the article is opened, rather than for every article of
+     * every feed during sync: the reader is opened deliberately, and one page
+     * fetched on a tap costs far less than the browser it replaces. A feed
+     * with "fetch full articles" set still prefetches during sync, and this
+     * finds that work already done.
+     */
+    fun loadFullText(id: String, link: String?, filesDir: File) {
+        if (link.isNullOrBlank()) {
+            _fullText.value = FullText.Failed
+            return
+        }
+        if (blobFullFile(id, filesDir).isFile) {
+            _fullText.value = FullText.Ready
+            return
+        }
+        _fullText.value = FullText.Loading
+        ioScope.launch {
+            val ok = parseFullArticleIfMissing(
+                feedItem = ArticleIdWithLink(uuid = id, link = link),
+                okHttpClient = fullTextClient,
+                filesDir = filesDir,
+            )
+            _fullText.value = if (ok) FullText.Ready else FullText.Failed
+        }
+    }
+
+    /** Reset when the reader moves to another article. */
+    fun resetFullText() {
+        _fullText.value = FullText.Absent
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

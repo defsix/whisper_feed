@@ -65,6 +65,8 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -82,9 +84,21 @@ fun ArticlePage(
         viewModel.setArticleId(articleId)
     }
 
-    val showFullArticle by remember {
-        derivedStateOf { state?.source?.fullTextByDefault ?: false }
+    // The readable article, fetched when this screen opens unless it is
+    // already stored. It used to be shown only when the *feed* had "fetch full
+    // articles" set, which is off by default — so opening an article normally
+    // showed the paragraph the feed sent rather than the article, which is
+    // what sent people to the browser instead.
+    val fullText by viewModel.fullText.collectAsState()
+    LaunchedEffect(articleId, state?.article?.link) {
+        val link = state?.article?.link
+        if (!link.isNullOrBlank()) {
+            viewModel.loadFullText(articleId, link, context.filesDir)
+        }
     }
+    DisposableEffect(articleId) { onDispose { viewModel.resetFullText() } }
+
+    val showFullArticle = fullText == ArticleViewModel.FullText.Ready
 
     val title by remember { derivedStateOf { state?.article?.title ?: "Neo Feed" } }
     val currentUrl by remember { derivedStateOf { state?.article?.link ?: "Neo Feed" } }
@@ -238,6 +252,15 @@ fun ArticlePage(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                if (fullText == ArticleViewModel.FullText.Loading) {
+                    item {
+                        // The feed's own excerpt stays on screen while the full
+                        // article is fetched, so the screen has something to
+                        // read immediately rather than a spinner over nothing.
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
                 }
 
                 if (showFullArticle) {

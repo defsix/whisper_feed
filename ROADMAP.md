@@ -37,7 +37,14 @@ the way.
   development leftover, so the menu's only real entry was Settings — which is
   now a single button straight to it. No dropdown in this window means no
   dropdown to position in it.
-- **Coming back from the browser lands on the home screen.** Half of this is
+- ~~**The in-app reader showed the feed's excerpt, not the article.**~~ Fixed:
+  the readable page is fetched when the reader opens. The per-feed "fetch full
+  articles" toggle still prefetches during sync; the reader no longer depends
+  on it.
+- ~~**Compact rows lost their save button whenever they had a thumbnail.**~~
+- **Coming back from the browser lands on the home screen.** The in-app reader
+  does *not* have this problem — it returns to the feed correctly — so the
+  in-app mode is the answer and the browser is the path that cannot be fixed. Half of this is
   fixed — the workspace no longer shows *before* the browser — but the return
   cannot be fixed from this side, and the reason is in Lawnchair rather than
   here. A fullscreen browser stops the launcher;

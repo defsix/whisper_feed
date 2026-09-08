@@ -89,6 +89,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.CornerSize
@@ -257,6 +258,13 @@ fun FeedScaffold(
                     actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 scrollBehavior = scrollBehavior,
+                // The bar insets for the status bar itself by default, and
+                // this window is already given the inset explicitly — see
+                // topInset, which is measured by the overlay's own listener
+                // because this window's own insets are not to be trusted.
+                // Both applied means two status bars of empty space above the
+                // glance row once the bar scrolls away.
+                windowInsets = WindowInsets(0),
                 modifier = Modifier.padding(top = topInset),
             )
 

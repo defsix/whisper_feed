@@ -19,6 +19,7 @@ package com.saulhdev.feeder.ui.overlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -342,19 +343,24 @@ fun ArticleCompactRow(
                         .size(96.dp)
                         .clip(MaterialTheme.shapes.medium),
                 )
-            } else {
-                Spacer(Modifier.width(4.dp))
+            }
+            // Compact is most of the feed, so its actions have to be here
+            // rather than only on the shapes with room. Saving used to sit in
+            // the *else* branch above — the slot where a thumbnail would
+            // otherwise go — so any compact row that had an image silently
+            // lost its save button, which is most of them.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.align(Alignment.Top),
+            ) {
+                menu(null)
                 SaveButton(
                     saved = item.bookmarked,
                     onSavedChange = onBookmark,
                     size = 20.dp,
                 )
             }
-            // Compact is most of the feed, so leaving the actions off it left
-            // "hide source" and the rest reachable on barely a quarter of the
-            // articles. Top-aligned rather than centred, so it does not drift
-            // down beside a three-line headline.
-            Box(modifier = Modifier.align(Alignment.Top)) { menu(null) }
         }
         ArticleDivider()
     }

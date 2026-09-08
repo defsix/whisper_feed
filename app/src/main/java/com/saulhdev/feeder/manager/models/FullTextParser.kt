@@ -39,7 +39,7 @@ class FullTextWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
-    private val okHttpClient: OkHttpClient = OkHttpClient.Builder().build()
+    private val okHttpClient: OkHttpClient = fullTextClient
     val repository: ArticleRepository by inject(ArticleRepository::class.java)
 
     override suspend fun doWork(): Result {
@@ -67,6 +67,15 @@ class FullTextWorker(
         }
     }
 }
+
+/**
+ * The client full-article fetches share.
+ *
+ * One per process rather than one per worker or per call: OkHttp's value is
+ * its connection pool, and a client made for a single request throws that away
+ * before it can be used.
+ */
+val fullTextClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
 
 suspend fun parseFullArticleIfMissing(
     feedItem: ArticleIdWithLink,
