@@ -218,9 +218,47 @@ it worth care rather than an afternoon:
   is arguably the correct behaviour and it is certainly a strong one, and it
   should be seen on a real feed before it is a default anything.
 
-Cheapest honest version: a setting with three positions — never / when it
-leaves the top of the screen / when the whole article has been past — plus a
-"mark all as read" and an undo window on the batch. Belongs with the other
+**Dwell, not velocity.** The instinct is right — a fling past forty headlines
+is not reading and should not count — but scroll speed is the wrong way to
+measure it. Velocity swings wildly inside a single fling, so the same gesture
+would mark some articles and not others depending on where in the deceleration
+curve they happened to be. Time on screen answers the same question directly:
+an article that was visible for longer than about a second and a half was read
+past deliberately, and one that flew by in 200ms was not. Both containers
+already expose `visibleItemsInfo`, so this is a timestamp per visible key and a
+comparison when it leaves.
+
+**Whether a read article then disappears is a separate setting, and the default
+is no.** Today `readAt` does exactly two things: it subtracts 1.5 from the
+article's weight, so a read article gets a smaller shape next time, and it
+feeds the unread count on the glance row. It changes nothing else and hides
+nothing. Three levels are worth offering, because they suit genuinely
+different readers:
+
+| Setting | Behaviour |
+|---|---|
+| **Keep** (default) | Read articles stay, at reduced weight — smaller, lower down, still there |
+| **Dim** | Also visibly marked as read — the traditional reader's greyed row |
+| **Hide** | Removed from the stream entirely |
+
+Hide must not be the default and probably should not be reachable without
+scroll-to-read being on first: on a surface people scroll idly, an article that
+vanishes because it was on screen for two seconds is indistinguishable from a
+bug, and it is gone before the reader knows to look for it.
+
+Two interactions to get right when this is built:
+
+- **Do not count the same thing twice.** The weight already shrinks read
+  articles. Dim on top of that is fine; hide makes the weight term irrelevant
+  for those articles and it should be skipped rather than left to apply to
+  nothing.
+- **Hiding needs a way back** — a "show read articles" toggle in the filter
+  sheet, not buried in Settings. The one place a reader looks for something
+  that has vanished is the filter that made it vanish.
+
+Cheapest honest version: the three-position read trigger (never / left the top
+/ on screen long enough), the three-position visibility above, "mark all as
+read", and an undo window on any batch. All belong with the other
 personalisation switches.
 
 Still open here: a visible "why is this big" affordance, the reset control, and
