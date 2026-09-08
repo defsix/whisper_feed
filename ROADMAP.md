@@ -165,6 +165,18 @@ the way.
 The numbers are labels, not a schedule — they stay put so they can be referred
 to. The working order set by the user is 1, 3, 4, 2, then the rest.
 
+**What to build next: §14, the Drive backup**, ahead of finishing §7. It is the
+one thing here that reduces a risk rather than adding a feature. Today a
+subscription list built over years exists in exactly one place, and the only
+protection is an OPML export behind a file picker that nobody remembers to
+use; a lost phone loses the lot. §14 needs nothing that is unfinished, has no
+reconciliation or id mapping to design, and is mostly a destination for bytes
+that are already produced correctly.
+
+Nothing is left half-shown by pausing §7 either — its account screen syncs
+subscriptions and says so, and the read-state mapping it is missing was never
+visible.
+
 ### 1. Adding a feed should be forgiving
 
 The whole "add source" flow is the roughest edge left, and it is what a new
@@ -598,6 +610,10 @@ locally also keeps behaviour identical with and without an account, and keeps
 the app working when the server is down. An account changes *which feeds* and
 *what has been read*, not what an article is.
 
+Google Drive is **not** a second version of this and is no longer described
+here; see §14. It is a backup destination for the OPML, it does not depend on
+any of this, and it should be built before the rest of it.
+
 #### Deliberately unfinished, and named rather than hidden
 
 - **Read state is pulled but not applied.** Matching the protocol's item ids to
@@ -612,71 +628,6 @@ the app working when the server is down. An account changes *which feeds* and
   the failure modes a first version meets.
 - **No background sync yet.** The account screen syncs on demand; hooking it
   into the existing `FeedSyncer` schedule comes with the id mapping.
-
-#### Google Drive — a place to put the OPML, not a second sync
-
-Previously recorded here as not being pursued, on two objections. One was
-wrong and the other is avoidable, so it is back.
-
-**The framing was wrong.** "It syncs your devices rather than your reading" was
-written as a dismissal and is actually the point. Google Reader sync needs a
-server the reader chose and probably runs; plenty of people will never do that
-and still stand to lose every subscription to a factory reset. For them a Drive
-backup is not a lesser sync — it is the only thing standing between them and
-starting again. The two features serve different people and should not be
-weighed against each other.
-
-**The Play Services objection is avoidable.** Google Sign-In needs Play
-Services; the Drive REST API does not. `AppAuth` performs a standard OAuth2
-flow in a browser tab and hands back a token the plain REST endpoints accept,
-so the app can talk to Drive with no proprietary dependency and keep building
-on F-Droid. F-Droid will mark it NonFreeNet, which is accurate and applies to
-every network service.
-
-**One objection does stand and should be said out loud in the interface.**
-Uploading a backup means Google holds the reader's subscription list. That is
-their own Drive and their own choice, and it is categorically different from a
-recommendation service profiling them — but this app tells people nothing
-leaves their phone, so the screen that offers this has to be equally plain that
-turning it on is the exception.
-
-**Scope is deliberately small: this is the existing export, sent somewhere
-automatic.** Not continuous synchronisation — that is §7's job and the two
-should not be confused. This is "my subscriptions are safe", nothing more, and
-keeping it that narrow is what makes it a week rather than a milestone.
-
-OPML export and bookmark export both work today and already produce exactly
-the right bytes; all that is missing is a destination that is not a file
-picker. In order:
-
-1. **`appDataFolder`, not the visible Drive.** A private folder the app owns,
-   invisible in the reader's file list, removed when the app is uninstalled.
-   Nothing of theirs to tidy up, and no chance of a stray file being edited.
-2. **The OPML, and the bookmarks.** Sources and their categories are the thing
-   worth protecting — they are what took years to assemble and what cannot be
-   reconstructed. Read state and preferences can follow later if they are
-   missed; they are not what anyone means by "I lost my feeds".
-3. **Restore on a fresh install** — the case the whole feature is for. Offered
-   during onboarding, once, when a backup is found.
-4. **Automatic, on a schedule, on Wi-Fi.** A backup nobody remembers to take is
-   not a backup.
-
-Because it is a file rather than a live connection, there is no reconciliation
-to design, no conflict to resolve and no id mapping — the three things making
-§7 the larger piece. Uploading a copy of a file that already exists is most of
-the work.
-
-**Where it goes:** it does *not* need to wait for §7, and it should not be
-built on §7's `RssService` seam either — an earlier draft of this note said it
-should, on the reasoning that Drive is a provider in the same sense. It is not.
-That interface is about reconciling with a service that has opinions about
-read state; this uploads a file. Forcing it through would mean implementing
-`sync()` as "write the OPML" and leaving every other method empty, which is a
-worse description of what is happening than a plain backup class.
-
-Being independent of §7 also makes it the better thing to ship first: it is
-smaller, it needs nothing that is unfinished, and it protects the thing people
-would actually grieve.
 
 ### 8. Ship it
 
@@ -971,6 +922,70 @@ plumbing rather than a gamble. Whole-file import — with the job queue, the
 data-use warnings and the domain grouping that scale needs — only if anyone
 asks for it.
 
+### 14. Google Drive — somewhere to put the OPML
+
+Previously recorded here as not being pursued, on two objections. One was
+wrong and the other is avoidable, so it is back.
+
+**The framing was wrong.** "It syncs your devices rather than your reading" was
+written as a dismissal and is actually the point. Google Reader sync needs a
+server the reader chose and probably runs; plenty of people will never do that
+and still stand to lose every subscription to a factory reset. For them a Drive
+backup is not a lesser sync — it is the only thing standing between them and
+starting again. The two features serve different people and should not be
+weighed against each other.
+
+**The Play Services objection is avoidable.** Google Sign-In needs Play
+Services; the Drive REST API does not. `AppAuth` performs a standard OAuth2
+flow in a browser tab and hands back a token the plain REST endpoints accept,
+so the app can talk to Drive with no proprietary dependency and keep building
+on F-Droid. F-Droid will mark it NonFreeNet, which is accurate and applies to
+every network service.
+
+**One objection does stand and should be said out loud in the interface.**
+Uploading a backup means Google holds the reader's subscription list. That is
+their own Drive and their own choice, and it is categorically different from a
+recommendation service profiling them — but this app tells people nothing
+leaves their phone, so the screen that offers this has to be equally plain that
+turning it on is the exception.
+
+**Scope is deliberately small: this is the existing export, sent somewhere
+automatic.** Not continuous synchronisation — that is §7's job and the two
+should not be confused. This is "my subscriptions are safe", nothing more, and
+keeping it that narrow is what makes it a week rather than a milestone.
+
+OPML export and bookmark export both work today and already produce exactly
+the right bytes; all that is missing is a destination that is not a file
+picker. In order:
+
+1. **`appDataFolder`, not the visible Drive.** A private folder the app owns,
+   invisible in the reader's file list, removed when the app is uninstalled.
+   Nothing of theirs to tidy up, and no chance of a stray file being edited.
+2. **The OPML, and the bookmarks.** Sources and their categories are the thing
+   worth protecting — they are what took years to assemble and what cannot be
+   reconstructed. Read state and preferences can follow later if they are
+   missed; they are not what anyone means by "I lost my feeds".
+3. **Restore on a fresh install** — the case the whole feature is for. Offered
+   during onboarding, once, when a backup is found.
+4. **Automatic, on a schedule, on Wi-Fi.** A backup nobody remembers to take is
+   not a backup.
+
+Because it is a file rather than a live connection, there is no reconciliation
+to design, no conflict to resolve and no id mapping — the three things making
+§7 the larger piece. Uploading a copy of a file that already exists is most of
+the work.
+
+**Where it goes:** it does *not* need to wait for §7, and it should not be
+built on §7's `RssService` seam either — an earlier draft of this note said it
+should, on the reasoning that Drive is a provider in the same sense. It is not.
+That interface is about reconciling with a service that has opinions about
+read state; this uploads a file. Forcing it through would mean implementing
+`sync()` as "write the OPML" and leaving every other method empty, which is a
+worse description of what is happening than a plain backup class.
+
+Being independent of §7 also makes it the better thing to ship first: it is
+smaller, it needs nothing that is unfinished, and it protects the thing people
+would actually grieve.
 ---
 
 ## Replacing Discover: what is actually possible
