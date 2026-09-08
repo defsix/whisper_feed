@@ -41,9 +41,6 @@
     <string name="theme_light">Chiaro</string>
     <string name="theme_dark">Scuro</string>
     <string name="transparency_non_transparent">Non trasparente</string>
-    <string name="transparency_low_transparency">75% trasparente</string>
-    <string name="transparency_mid_transparency">50% trasparente</string>
-    <string name="transparency_high_transparency">25% trasparente</string>
     <string name="transparency_transparent">Trasparente</string>
     <string name="background_theme_option">Basato sul tema</string>
     <string name="debug_logcat_printing">Stampa logcat esteso</string>

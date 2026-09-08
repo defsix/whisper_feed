@@ -40,14 +40,11 @@
     <string name="overlay_reload">Klicken Sie hier, um neu zu laden</string>
     <string name="title_feed_list">Feed-Liste</string>
     <string name="theme_auto_launcher">Automatisch (vom Launcher aus)</string>
-    <string name="transparency_low_transparency">75 % durchsichtig</string>
-    <string name="transparency_high_transparency">25 % durchsichtig</string>
     <string name="background_white">Weiß</string>
     <string name="theme_dark">Dunkel</string>
     <string name="transparency_non_transparent">Nicht durchsichtig</string>
     <string name="background_primary_color">Launcher: Primärfarbe</string>
     <string name="background_secondary_color">Launcher: Sekundärfarbe</string>
-    <string name="transparency_mid_transparency">50 % durchsichtig</string>
     <string name="background_theme_option">Basierend auf Farbenschema</string>
     <string name="background_amoled">Schwarz</string>
     <string name="background_tertiary_color">Launcher: Tertiärfarbe</string>

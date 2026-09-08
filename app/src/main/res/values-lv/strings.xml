@@ -64,9 +64,6 @@
     <string name="sync_three_hours">Ik pēc 3 stundām</string>
     <string name="sync_six_hours">Ik pēc 6 stundām</string>
     <string name="transparency_non_transparent">Necaurspīdīgs</string>
-    <string name="transparency_low_transparency">75% caurspīdīgs</string>
-    <string name="transparency_mid_transparency">50% caurspīdīgs</string>
-    <string name="transparency_high_transparency">25% caurspīdīgs</string>
     <string name="pref_sync_wifi">Atsvaidzināt tikai, kad pieslēgts Wi-Fi tīklam</string>
     <string name="action_restart">Palaist pa jaunu lietotni</string>
     <string name="about_source_code">Pirmkods</string>

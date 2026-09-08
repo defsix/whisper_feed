@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -283,11 +284,17 @@ private fun StarterSourcesStep(
 ) {
     val scope = rememberCoroutineScope()
     var restoring by remember { mutableStateOf(false) }
-    val selected = remember { mutableStateMapOf<String, Boolean>() }
-    val defaults = remember { StarterSources.defaultSelection() }
-    remember { defaults.forEach { selected[it] = true } }
+    // Seeded where the map is created rather than in a second remember whose
+    // only job was the side effect. A remember that returns Unit is not
+    // guaranteed to run — Compose is free to skip it — so the ticks could
+    // simply not appear.
+    val selected = remember {
+        mutableStateMapOf<String, Boolean>().apply {
+            StarterSources.defaultSelection().forEach { put(it, true) }
+        }
+    }
     val chosen = StarterSources.ALL.filter { selected[it.url] == true }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     val subscribe = {
         val picked: List<StarterSource> = chosen

@@ -319,7 +319,7 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
 fun rememberStoryClusters(articles: List<FeedItem>): Map<String, StoryCluster> {
     val prefs: FeedPreferences = koinInject()
     val enabled by prefs.breakingNews.get()
-        .collectAsState(initial = prefs.breakingNews.getValue())
+        .collectAsState(initial = remember { prefs.breakingNews.getValue() })
     return remember(articles, enabled) {
         if (!enabled) emptyMap()
         else clusterStories(articles, System.currentTimeMillis())
@@ -364,7 +364,7 @@ fun rememberReadingHabits(): Map<Long, Float> {
 fun rememberDimRead(): Boolean {
     val prefs: FeedPreferences = koinInject()
     val setting by prefs.readVisibility.get()
-        .collectAsState(initial = prefs.readVisibility.getValue())
+        .collectAsState(initial = remember { prefs.readVisibility.getValue() })
     return setting == READ_DIM
 }
 

@@ -86,7 +86,7 @@ fun MarkReadWhileScrolling(
 ) {
     val prefs: FeedPreferences = koinInject()
     val setting by prefs.markReadOnScroll.get()
-        .collectAsState(initial = prefs.markReadOnScroll.getValue())
+        .collectAsState(initial = remember { prefs.markReadOnScroll.getValue() })
     // Below a quarter of a second means off: the slider's own bottom stop,
     // and anything shorter would fire during a fling anyway.
     val thresholdMs = remember(setting) { if (setting < 0.25f) 0L else (setting * 1000).toLong() }

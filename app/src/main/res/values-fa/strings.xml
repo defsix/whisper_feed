@@ -50,9 +50,6 @@
     <string name="sync_one_hour">یک ساعت</string>
     <string name="sync_three_hours">سه ساعت</string>
     <string name="sync_six_hours">شش ساعت</string>
-    <string name="transparency_low_transparency">شفافیت ۷۵٪</string>
-    <string name="transparency_mid_transparency">شفافيت ۵۰٪</string>
-    <string name="transparency_high_transparency">شفافيت ۲۵٪</string>
     <string name="summary_feed_list">افزودن یا حذف منابع RSS</string>
     <string name="title_plugin_list">فهرست افژونه</string>
     <string name="by_author_on_date">%1$s، %2$s</string>

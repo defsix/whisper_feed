@@ -72,7 +72,7 @@ fun rememberHeldArticle(
     clusters: Map<String, StoryCluster>,
 ): FeedItem? {
     val prefs: FeedPreferences = koinInject()
-    val enabled by prefs.stickyTop.get().collectAsState(initial = prefs.stickyTop.getValue())
+    val enabled by prefs.stickyTop.get().collectAsState(initial = remember { prefs.stickyTop.getValue() })
     return remember(articles, clusters, enabled) {
         if (!enabled) return@remember null
         val first = articles.firstOrNull() ?: return@remember null

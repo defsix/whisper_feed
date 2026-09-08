@@ -36,3 +36,25 @@
 -dontwarn org.openjsse.javax.net.ssl.SSLSocket
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+# --- Moshi, used reflectively ---
+#
+# Both JSON paths in this app build their adapters with
+# KotlinJsonAdapterFactory, which reads the Kotlin class metadata at runtime
+# rather than generating an adapter at build time. moshi-kotlin ships no
+# consumer rules of its own — only moshi core does, and those cover the
+# annotations rather than the models — so without these R8 renames the fields
+# of every model and the reflective adapter no longer finds the JSON names.
+#
+# It fails only in a minified build, which is why it has never been seen: the
+# debug build these were tested with does not run R8. The two paths are
+# JsonFeed parsing (any subscription served as JSON Feed) and the Google
+# Reader sync protocol.
+-keep class kotlin.Metadata { *; }
+-keep,allowobfuscation,allowshrinking class kotlin.jvm.internal.DefaultConstructorMarker
+
+# The models themselves, with their constructors and field names intact.
+-keep class com.saulhdev.feeder.data.entity.** { *; }
+-keep class com.saulhdev.feeder.manager.sync.greader.** { *; }
+-keepclassmembers class com.saulhdev.feeder.** {
+    @com.squareup.moshi.Json <fields>;
+}

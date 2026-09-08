@@ -69,7 +69,7 @@ fun SortFilterSheet(
     var tagsPrefVar by prefs.tagsFilter
     var readVisibilityPrefVar by prefs.readVisibility
     val readVisibility by prefs.readVisibility.get()
-        .collectAsState(initial = prefs.readVisibility.getValue())
+        .collectAsState(initial = remember { prefs.readVisibility.getValue() })
     // Staged until Apply, like everything else in this sheet. A control that
     // acts the moment it is touched, sitting above an Apply button, leaves the
     // reader unsure which of the two did the work.

@@ -69,9 +69,6 @@
     <string name="sync_two_hours">ساعتان</string>
     <string name="sync_three_hours">ثلاث ساعات</string>
     <string name="sync_six_hours">ست ساعات</string>
-    <string name="transparency_low_transparency">75% شفاف</string>
-    <string name="transparency_mid_transparency">50% شفاف</string>
-    <string name="transparency_high_transparency">25% شفاف</string>
     <string name="transparency_transparent">شفاف</string>
     <string name="background_theme_option">على أساس السمة</string>
     <string name="background_secondary_color">المشغل: اللون الثانوي</string>

@@ -81,9 +81,6 @@
     <string name="sync_three_hours">তিন ঘণ্টা</string>
     <string name="sync_six_hours">ছয় ঘণ্টা</string>
     <string name="transparency_non_transparent">অস্বচ্ছ</string>
-    <string name="transparency_low_transparency">৭৫% স্বচ্ছ</string>
-    <string name="transparency_high_transparency">২৫% স্বচ্ছ</string>
-    <string name="transparency_mid_transparency">৫০% স্বচ্ছ</string>
     <string name="background_theme_option">রঙ ভিত্তিক</string>
     <string name="title_plugin_list">প্লাগিন তালিকা</string>
     <string name="source_enabled">বর্তমানে সক্রিয়</string>

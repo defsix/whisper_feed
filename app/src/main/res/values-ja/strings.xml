@@ -74,9 +74,6 @@
     <string name="sync_three_hours">3時間</string>
     <string name="sync_six_hours">6時間</string>
     <string name="transparency_non_transparent">非透明</string>
-    <string name="transparency_low_transparency">75%透明</string>
-    <string name="transparency_mid_transparency">50%透明</string>
-    <string name="transparency_high_transparency">25%透明</string>
     <string name="transparency_transparent">透明</string>
     <string name="background_theme_option">テーマに基づいた</string>
     <string name="background_white">白</string>

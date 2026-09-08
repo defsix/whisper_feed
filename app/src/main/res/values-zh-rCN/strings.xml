@@ -41,9 +41,6 @@
     <string name="theme_auto_launcher">自动（跟随启动器）</string>
     <string name="theme_dark">深色</string>
     <string name="theme_light">浅色</string>
-    <string name="transparency_high_transparency">25% 透明</string>
-    <string name="transparency_mid_transparency">50% 透明</string>
-    <string name="transparency_low_transparency">75% 透明</string>
     <string name="transparency_non_transparent">不透明</string>
     <string name="transparency_transparent">透明</string>
     <string name="background_theme_option">跟随主题</string>

@@ -32,6 +32,7 @@ import com.saulhdev.feeder.ui.navigation.NAV_BASE
 import com.saulhdev.feeder.ui.navigation.NavigationManager
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,6 +44,7 @@ import com.saulhdev.feeder.utils.THEME_DARK
 import com.saulhdev.feeder.utils.THEME_LIGHT
 import android.view.KeyEvent
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import com.saulhdev.feeder.utils.VolumeScroll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -84,13 +86,13 @@ class MainActivity : ComponentActivity() {
             // colours Compose already tracks cost a frame budget and flashed
             // the splash screen on its way back.
             val themeMode by prefs.overlayTheme.get()
-                .collectAsState(initial = prefs.overlayTheme.getValue())
+                .collectAsState(initial = remember { prefs.overlayTheme.getValue() })
             val dynamic by prefs.dynamicColor.get()
-                .collectAsState(initial = prefs.dynamicColor.getValue())
+                .collectAsState(initial = remember { prefs.dynamicColor.getValue() })
             val fontPref by prefs.appFont.get()
-                .collectAsState(initial = prefs.appFont.getValue())
+                .collectAsState(initial = remember { prefs.appFont.getValue() })
             val pureBlack by prefs.pureBlack.get()
-                .collectAsState(initial = prefs.pureBlack.getValue())
+                .collectAsState(initial = remember { prefs.pureBlack.getValue() })
 
             // One place decides light or dark, and the bars follow it rather
             // than re-deriving it from the preference on their own.
@@ -143,7 +145,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        configurePeriodicSync()
+        // Off the main thread. It reads three preferences, and on a cold start
+        // those are the first DataStore reads of the process — a file opened
+        // from disk, blocking, inside onCreate, which is the worst moment in
+        // the app's life to do it. Nothing on screen depends on the result.
+        lifecycleScope.launch(Dispatchers.IO) { configurePeriodicSync() }
         handleDeepLink(intent)
     }
 

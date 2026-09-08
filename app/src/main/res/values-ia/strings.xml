@@ -31,12 +31,10 @@
     <string name="description">Description</string>
     <string name="sync_three_hours">Tres horas</string>
     <string name="title">Titulo</string>
-    <string name="transparency_high_transparency">25% transparente</string>
     <string name="sync_two_hours">Duo horas</string>
     <string name="sync_status">Stato del syncronisation</string>
     <string name="pref_syscolors_desc">in vice del optiones \"Lanceator:\"</string>
     <string name="pref_sync_wifi">Syncronisation solmente sur WiFI</string>
-    <string name="transparency_low_transparency">75% transparente</string>
     <string name="sync_six_hours">Sex horas</string>
     <string name="transparency_transparent">Transparente</string>
     <string name="theme_auto_system">Automaticamente (ab le systema)</string>
@@ -44,7 +42,6 @@
     <string name="sync_half_hour_minutes">30 minutas</string>
     <string name="syncing">Synchronisante</string>
     <string name="pref_sync_frequency">Frequentia de syncronisation</string>
-    <string name="transparency_mid_transparency">50% transparente</string>
     <string name="transparency_non_transparent">Non transparente</string>
     <string name="sync_one_hour">Un hora</string>
     <string name="pm_desc">HomeFeeder usa illo pro monstrar datos</string>

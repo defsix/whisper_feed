@@ -18,9 +18,6 @@
     <string name="overlay_no_permission_snackbar">Mohon periksa apakah Anda sudah mengizinkan \"Akses notifikasi\" dan coba lagi.</string>
     <string name="theme_dark">Gelap</string>
     <string name="sync_two_hours">2 jam</string>
-    <string name="transparency_low_transparency">75% transparan</string>
-    <string name="transparency_mid_transparency">50% transparan</string>
-    <string name="transparency_high_transparency">25% transparan</string>
     <string name="transparency_transparent">Transparan</string>
     <string name="background_theme_option">Berbasis tema</string>
     <string name="background_white">Putih</string>

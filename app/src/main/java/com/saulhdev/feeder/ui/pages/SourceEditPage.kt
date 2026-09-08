@@ -95,7 +95,7 @@ fun SourceEditPage(
     var newTag by remember { mutableStateOf("") }
     val prefs: FeedPreferences = koinInject()
     val fullTextForAll by prefs.fullTextForAllFeeds.get()
-        .collectAsState(initial = prefs.fullTextForAllFeeds.getValue())
+        .collectAsState(initial = remember { prefs.fullTextForAllFeeds.getValue() })
     // Initialise once per feed and do not overwrite user edits when viewState re-emits.
     val editState = remember(feedId) {
         mutableStateOf(viewState)

@@ -23,9 +23,6 @@
     <string name="title_feed_list">Informasjonkanalsliste</string>
     <string name="theme_auto_system">Automatisk (fra systemet)</string>
     <string name="theme_light">Lys</string>
-    <string name="transparency_low_transparency">75% gjennomsiktig</string>
-    <string name="transparency_mid_transparency">50% gjennomsiktig</string>
-    <string name="transparency_high_transparency">25% gjennomsiktig</string>
     <string name="background_primary_color">Oppstarter: Hovedfarge</string>
     <string name="background_secondary_color">Oppstarter: Sekundær farge</string>
     <string name="background_tertiary_color">Oppstarter: Tertiær farge</string>

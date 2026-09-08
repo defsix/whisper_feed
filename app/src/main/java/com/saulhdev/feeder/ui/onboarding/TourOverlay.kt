@@ -69,6 +69,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The spotlight.
@@ -101,7 +102,26 @@ fun TourOverlay(
     // comes to rest, and the hole would sit next to the thing it describes.
     LaunchedEffect(current) {
         if (current < 0) {
-            current = TourMachine.first(steps, present()) ?: run { onFinished(); return@LaunchedEffect }
+            // Nothing has announced itself yet. onGloballyPositioned runs
+            // after composition, so on the first frame this map is empty —
+            // and an earlier version treated that as "no targets exist",
+            // finished the tour on the spot, and wrote the flag that stops it
+            // ever running again. The tour was consumed without appearing.
+            val arrived = withTimeoutOrNull(FIRST_TARGET_WAIT_MS) {
+                while (present().isEmpty()) delay(TICK_MS)
+                true
+            }
+            if (arrived == null) {
+                // Genuinely nothing to point at after a second of waiting.
+                // Finishing is right; this is the case the timeout is for.
+                onFinished()
+                return@LaunchedEffect
+            }
+            // One more beat so the rest of the row is measured too, rather
+            // than starting at whichever target happened to report first.
+            delay(SETTLE_MS)
+            current = TourMachine.first(steps, present())
+                ?: run { onFinished(); return@LaunchedEffect }
             return@LaunchedEffect
         }
         rect = null
@@ -301,6 +321,18 @@ private fun Context.animationsAreOff(): Boolean =
     Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
 private const val SETTLE_MS = 250L
+
+/**
+ * How long to wait for the first control to report where it is.
+ *
+ * Composition finishes before layout does, so on the frame the tour starts
+ * nothing has measured itself yet. A second is far longer than that takes and
+ * still short enough that a screen with genuinely nothing on it does not hang.
+ */
+private const val FIRST_TARGET_WAIT_MS = 1_000L
+
+/** How often to look while waiting for that first one. */
+private const val TICK_MS = 16L
 private const val FADE_MS = 200
 private const val SCRIM_ALPHA = 0.78f
 private const val PADDING_PX = 6f

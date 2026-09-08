@@ -73,7 +73,7 @@ fun GlanceLocationPage(
     var results by remember { mutableStateOf<List<GlancePlace>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
     val current by prefs.glancePlaceName.get()
-        .collectAsState(initial = prefs.glancePlaceName.getValue())
+        .collectAsState(initial = remember { prefs.glancePlaceName.getValue() })
 
     // Debounced so typing does not fire a request per keystroke.
     LaunchedEffect(query) {

@@ -96,9 +96,6 @@
     <string name="sync_three_hours">மூன்று மணி நேரம்</string>
     <string name="sync_six_hours">ஆறு மணி நேரம்</string>
     <string name="transparency_non_transparent">வெளிப்படையானதல்ல</string>
-    <string name="transparency_low_transparency">75% வெளிப்படையானது</string>
-    <string name="transparency_mid_transparency">50% வெளிப்படையானது</string>
-    <string name="transparency_high_transparency">25% வெளிப்படையானது</string>
     <string name="transparency_transparent">வெளிப்படையானது</string>
     <string name="background_theme_option">கருப்பொருள் அடிப்படையிலானது</string>
     <string name="fetch_full_articles_by_default">முன்னிருப்பாக முழு கட்டுரைகளையும் பெறுங்கள்</string>

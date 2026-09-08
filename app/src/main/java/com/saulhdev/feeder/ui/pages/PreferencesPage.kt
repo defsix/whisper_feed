@@ -117,7 +117,7 @@ fun PreferencesPage(
     // Turning the global switch on should start downloading now, not at the
     // next scheduled sync — the setting reads as an instruction, not a plan.
     val fullTextForAll by prefs.fullTextForAllFeeds.get()
-        .collectAsState(initial = prefs.fullTextForAllFeeds.getValue())
+        .collectAsState(initial = remember { prefs.fullTextForAllFeeds.getValue() })
     var wasFullTextForAll by remember { mutableStateOf(fullTextForAll) }
     LaunchedEffect(fullTextForAll) {
         if (fullTextForAll && !wasFullTextForAll) scheduleFullTextParse()

@@ -165,7 +165,7 @@ fun ArticleListPage(
     // runBlocking DataStore read, so reading it there blocked the main thread
     // on every article tap — the one moment the UI most has to stay responsive.
     val openMode by prefs.articleOpenMode.get()
-        .collectAsState(initial = prefs.articleOpenMode.getValue())
+        .collectAsState(initial = remember { prefs.articleOpenMode.getValue() })
     val bookmarked by viewModel.bookmarksState.collectAsState()
     val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
     val searchQuery by viewModel.searchQuery.collectAsState()

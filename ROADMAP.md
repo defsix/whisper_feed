@@ -77,6 +77,44 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**The guided tour could consume itself without ever appearing.**~~ Found by
+  audit, never seen on a device — which is the point. `onGloballyPositioned`
+  runs *after* composition, so on the frame the tour started, the map of
+  target positions was still empty. It read that as "there is nothing to point
+  at", finished immediately, and wrote the flag that stops the tour running
+  again. A one-time tour, spent without being shown. It now waits up to a
+  second for the first control to report where it is.
+
+- ~~**Every JSON model would have broken in a release build.**~~ Both JSON
+  paths — JSON Feed subscriptions and the Google Reader protocol — build their
+  adapters reflectively with `KotlinJsonAdapterFactory`. `moshi-kotlin` ships
+  no consumer ProGuard rules of its own, and nothing kept the models, so R8
+  would have renamed their fields and the reflective adapter would no longer
+  have found them. R8 renames 559 classes in this app, confirmed in the
+  mapping file. Invisible in every build tested so far, because the debug
+  build does not run R8.
+
+- ~~**A device restore would have crashed the app on launch.**~~ `allowBackup`
+  was on with both rules files left as the empty AGP templates, so Android's
+  automatic backup included the two `EncryptedSharedPreferences` files holding
+  the Google Reader and Mastodon tokens. Their key lives in the hardware
+  Keystore, which is never backed up — restoring the ciphertext without the
+  key means the first read throws rather than returning empty. Cloud backup
+  now excludes them; device-to-device transfer still carries them, because
+  there the Keystore travels too.
+
+- ~~**A blocking disk read on every recomposition, in fourteen places.**~~
+  `collectAsState(initial = pref.getValue())` reads well but the initial value
+  is an ordinary argument, evaluated on every recomposition — and `getValue()`
+  is `runBlocking` against DataStore. Two of the fourteen sat in the feed's
+  scroll path. All now wrapped in `remember`. `configurePeriodicSync()` was a
+  related case: three of those reads inside `onCreate`, on the main thread, as
+  the first DataStore access of a cold start.
+
+- ~~**The starter feeds could have appeared with none of them ticked.**~~ The
+  default selection was applied in a `remember` block that returned Unit, and
+  Compose is free to skip those. Seeded where the map is built instead.
+
 - ~~**Articles dimmed while they were being read.**~~ Read-on-scroll marked an
   article the moment its dwell timer ran out, so a card being read carefully
   faded out under the reader mid-sentence — the setting doing the exact

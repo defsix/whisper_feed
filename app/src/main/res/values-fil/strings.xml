@@ -78,8 +78,5 @@
     <string name="remove_desc">Tanggalin ang %s sa mga pinagkukuhanan ng feed\?</string>
     <string name="sync_two_hours">Dalawang Oras</string>
     <string name="sync_three_hours">Tatlong Oras</string>
-    <string name="transparency_low_transparency">75% transparent</string>
-    <string name="transparency_mid_transparency">50% transparent</string>
-    <string name="transparency_high_transparency">25% transparent</string>
     <string name="touch_to_play_video">Pindutin para i-play ang video</string>
 </resources>

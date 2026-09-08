@@ -6,9 +6,6 @@
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="transparency_non_transparent">No transparente</string>
-    <string name="transparency_low_transparency">75 % transparente</string>
-    <string name="transparency_mid_transparency">50 % transparente</string>
-    <string name="transparency_high_transparency">25 % transparente</string>
     <string name="transparency_transparent">Transparente</string>
     <string name="background_theme_option">Basado en el tema</string>
     <string name="pref_git">Código Fuente</string>

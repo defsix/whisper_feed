@@ -174,9 +174,6 @@
     <string name="sync_three_hours">Three Hours</string>
     <string name="sync_six_hours">Six Hours</string>
     <string name="transparency_non_transparent">Non Transparent</string>
-    <string name="transparency_low_transparency">75% transparent</string>
-    <string name="transparency_mid_transparency">50% transparent</string>
-    <string name="transparency_high_transparency">25% transparent</string>
     <string name="transparency_transparent">Transparent</string>
     <string name="background_theme_option">Theme based</string>
     <string name="background_white">White</string>

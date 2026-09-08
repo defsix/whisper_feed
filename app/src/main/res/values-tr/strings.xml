@@ -28,7 +28,6 @@
     <string name="edit_rss">Akış öğelerini düzenleyin</string>
     <string name="failed_to_parse">%1$s ayrıştırılmadı</string>
     <string name="title">Başlık</string>
-    <string name="transparency_low_transparency">%75 şeffaf</string>
     <string name="transparency_transparent">Şeffaflık</string>
     <string name="background_theme_option">Tema tabanı</string>
     <string name="background_white">Beyaz</string>
@@ -69,8 +68,6 @@
     <string name="sync_two_hours">İki saat</string>
     <string name="sync_three_hours">Üç saat</string>
     <string name="sync_six_hours">Altı saat</string>
-    <string name="transparency_mid_transparency">%50 şeffaf</string>
-    <string name="transparency_high_transparency">%25 şeffaf</string>
     <string name="background_primary_color">Başlatıcı:Birincil renk</string>
     <string name="background_secondary_color">Başlatıcı:İkincil renk</string>
     <string name="background_tertiary_color">Başlatıcı: Üçüncül renk</string>

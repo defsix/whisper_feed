@@ -1,13 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What Android's automatic backup is allowed to take (API 30 and below).
+
+    The two encrypted preference files are excluded because they cannot
+    survive the trip. EncryptedSharedPreferences holds its key in the
+    hardware-backed Keystore, and the Keystore is never part of a backup — so
+    a restored device gets the ciphertext without the key, and the first
+    attempt to open it throws rather than returning empty. That is a crash on
+    launch after a device restore, for exactly the people who did the right
+    thing and restored their phone.
+
+    Their contents are a Google Reader token and Mastodon tokens. Both are
+    re-obtainable by signing in again, which is a far better outcome than an
+    app that will not start.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="whisper_account.xml" />
+    <exclude domain="sharedpref" path="mastodon_tokens.xml" />
 </full-backup-content>

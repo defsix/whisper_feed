@@ -23,8 +23,6 @@
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
     <string name="transparency_non_transparent">Non transparent</string>
-    <string name="transparency_low_transparency">75 % de transparence</string>
-    <string name="transparency_mid_transparency">50 % de transparence</string>
     <string name="pref_ovr_theme">Thème de superposition</string>
     <string name="pref_compact">Mise en page compacte des articles</string>
     <string name="allow_notify_to_settings">Ouvrir les paramètres</string>
@@ -50,7 +48,6 @@
     <string name="news_image_text">image de l’article</string>
     <string name="transparency_transparent">Transparent</string>
     <string name="remove_desc">Retirer %s des sources de flux \?</string>
-    <string name="transparency_high_transparency">25 % de transparence</string>
     <string name="background_theme_option">Basé sur le thème</string>
     <string name="background_primary_color">Lanceur : Couleur principale</string>
     <string name="background_tertiary_color">Lanceur : Couleur tertiaire</string>

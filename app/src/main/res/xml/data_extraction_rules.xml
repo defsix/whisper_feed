@@ -1,19 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What leaves the device through Android's own backup and transfer (API 31+).
+
+    Two separate questions, answered differently on purpose.
+
+    cloud-backup goes to the reader's Google Drive. The encrypted credential
+    files are excluded because they cannot work after a restore: their key
+    lives in the Keystore, which is never backed up, so restoring the
+    ciphertext without the key means the first read throws and the app will
+    not start. Signing in again is a much better outcome.
+
+    device-transfer is a direct phone-to-phone copy with no cloud in between,
+    and the Keystore does move with it, so the credential files are allowed
+    through. That is also the case where losing them would be most annoying.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="whisper_account.xml" />
+        <exclude domain="sharedpref" path="mastodon_tokens.xml" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!-- Everything, credentials included: the Keystore travels too. -->
     </device-transfer>
-    -->
 </data-extraction-rules>

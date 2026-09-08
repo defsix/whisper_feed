@@ -40,7 +40,6 @@
     <string name="theme_light">Luminoasă</string>
     <string name="theme_dark">Întunecată</string>
     <string name="transparency_non_transparent">Opac</string>
-    <string name="transparency_low_transparency">75% transparent</string>
     <string name="background_white">Alb</string>
     <string name="transparency_transparent">Transparent</string>
     <string name="date_ago_now">acum</string>
@@ -64,8 +63,6 @@
     <string name="debug_content_printing">Înregistrare conținut notificări</string>
     <string name="summary_feed_list">Adăugați sau eliminați surse RSS</string>
     <string name="title_plugin_list">Lista plugin-urilor</string>
-    <string name="transparency_high_transparency">25% transparent</string>
-    <string name="transparency_mid_transparency">50% transparent</string>
     <string name="sync_three_hours">Trei ore</string>
     <string name="sync_six_hours">Șase ore</string>
     <string name="touch_to_play_video">Atinge pentru a reda videoclipul</string>

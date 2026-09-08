@@ -21,6 +21,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.annotation.RequiresApi
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
@@ -164,6 +165,9 @@ object Diagnostics : KoinComponent {
         }.getOrNull()
     }
 
+    // Guarded at the call site, and said again here so the compiler and lint
+    // can both see it rather than taking the branch on trust.
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun writeViaMediaStore(context: Context, name: String, report: String): String {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, name)
