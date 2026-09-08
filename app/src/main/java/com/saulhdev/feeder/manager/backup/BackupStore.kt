@@ -65,6 +65,8 @@ class BackupStore(
         data class Written(val name: String, val at: Long) : Result
         data class Restored(val feeds: Int) : Result
         data class SettingsRestored(val count: Int) : Result
+        data class FolderRestored(val feeds: Int, val settings: Int) : Result
+        data object NothingFound : Result
         data object NoDestination : Result
         data class Failed(val cause: Throwable?) : Result
     }
@@ -156,6 +158,56 @@ class BackupStore(
             Result.SettingsRestored(SettingsBackup.import(dataStore, json))
         } catch (t: Throwable) {
             Log.e(TAG, "Settings restore failed", t)
+            Result.Failed(t)
+        }
+    }
+
+    /**
+     * Restores everything a chosen folder holds, in one action.
+     *
+     * For the first run only, and the difference from the settings screen is
+     * deliberate rather than an inconsistency. There, restoring the settings is
+     * a separate button because overwriting every preference on a phone the
+     * reader has already arranged is dangerous. Here there is nothing to
+     * overwrite — the app was installed minutes ago — so making somebody pick
+     * two files out of the same folder would be ceremony protecting nothing.
+     *
+     * The folder is remembered as the backup destination while it is open.
+     * Somebody restoring from their backup folder has just told the app where
+     * their backups live, and asking again on the settings screen later would
+     * be asking a question already answered.
+     */
+    suspend fun restoreFolder(treeUri: Uri): Result = withContext(Dispatchers.IO) {
+        try {
+            val tree = DocumentFile.fromTreeUri(context, treeUri)
+                ?: return@withContext Result.NoDestination
+
+            val opml = tree.findFile(FILE_NAME)
+            // Any OPML in the folder, not only one this app wrote. Somebody
+            // arriving from another reader has an export of their own under
+            // whatever name that reader chose, and it is the same file.
+                ?: tree.listFiles().firstOrNull { it.name?.endsWith(".opml") == true }
+            val settings = tree.findFile(SettingsBackup.FILE_NAME)
+
+            if (opml == null && settings == null) return@withContext Result.NothingFound
+
+            val feeds = opml?.let {
+                when (val result = restore(it.uri)) {
+                    is Result.Restored -> result.feeds
+                    else -> 0
+                }
+            } ?: 0
+
+            val restored = settings?.let {
+                when (val result = restoreSettings(it.uri)) {
+                    is Result.SettingsRestored -> result.count
+                    else -> 0
+                }
+            } ?: 0
+
+            Result.FolderRestored(feeds, restored)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Folder restore failed", t)
             Result.Failed(t)
         }
     }

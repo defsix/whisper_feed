@@ -999,8 +999,23 @@ picker. In order:
    their own and it is the same file. Additive, like the import it reuses: a
    feed already subscribed is left alone, and nothing local is removed. A
    restore that deleted whatever the file did not mention would be a far more
-   dangerous operation than the word suggests. Still to do: offering it
-   unprompted during onboarding, which needs onboarding to exist.
+   dangerous operation than the word suggests.
+
+   **Offered during onboarding**, on the starter-sources step and above the
+   list rather than under it: a returning reader should not have to scroll past
+   nine feeds they do not want to reach the one thing on that screen that is
+   for them. A successful restore ends onboarding immediately — their own list
+   is back, and a starter list would be nine unasked-for feeds on top of the
+   ones they spent years choosing.
+
+   There it takes a **folder** and restores both files at once, which
+   contradicts the settings screen on purpose. There, restoring the settings is
+   a separate button because overwriting every preference on a phone somebody
+   has already arranged is dangerous. On a phone installed minutes ago there is
+   nothing to overwrite, so making them pick two files out of one folder would
+   be ceremony protecting nothing. The folder is also kept as the backup
+   destination: they have just told the app where their backups live, and
+   asking again later would be asking a question already answered.
 4. **Automatic, daily, on unmetered Wi-Fi.** Built. A manual export is not a
    backup, it is a thing people mean to do, so the scheduled version is the
    feature and the button is the reassurance. Daily rather than hourly: a
@@ -1143,8 +1158,10 @@ of success, never proof of failure. After a process restart it reads false
 until the launcher next asks for the page, and saying "not connected" then
 would send somebody back through four steps they had already done.
 
-Still to do: §14's restore offer, which now has an onboarding to be offered
-during.
+§14's restore offer lives on the starter-sources step — see that section.
+
+Still to do: nothing on this section. The Lawnchair pane became a settings
+screen instead, for the reason above.
 ---
 
 ## Replacing Discover: what is actually possible

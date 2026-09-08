@@ -64,7 +64,16 @@ import androidx.compose.runtime.mutableStateMapOf
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.StarterSource
 import com.saulhdev.feeder.data.StarterSources
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Surface
+import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.backup.BackupStore
+import com.saulhdev.feeder.manager.backup.BackupWorker
+import kotlinx.coroutines.withContext
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.components.starterSources
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +91,8 @@ import org.koin.compose.koinInject
 fun OnboardingPage(
     sourcesRepo: SourcesRepository = koinInject(),
     syncClient: SyncRestClient = koinInject(),
+    backupStore: BackupStore = koinInject(),
+    prefs: FeedPreferences = koinInject(),
     onDone: () -> Unit,
 ) {
     // The starter list is a step of its own rather than a fourth pane. It
@@ -93,6 +104,8 @@ fun OnboardingPage(
         StarterSourcesStep(
             sourcesRepo = sourcesRepo,
             syncClient = syncClient,
+            backupStore = backupStore,
+            prefs = prefs,
             onDone = onDone,
         )
         return
@@ -264,9 +277,12 @@ private data class OnboardingPane(
 private fun StarterSourcesStep(
     sourcesRepo: SourcesRepository,
     syncClient: SyncRestClient,
+    backupStore: BackupStore,
+    prefs: FeedPreferences,
     onDone: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    var restoring by remember { mutableStateOf(false) }
     val selected = remember { mutableStateMapOf<String, Boolean>() }
     val defaults = remember { StarterSources.defaultSelection() }
     remember { defaults.forEach { selected[it] = true } }
@@ -284,6 +300,45 @@ private fun StarterSourcesStep(
             syncClient.syncAllFeeds()
         }
         onDone()
+    }
+
+    // A folder, not a file. Somebody restoring has one backup folder holding
+    // both files, and asking them to find each of the two in it would be
+    // ceremony — on a fresh phone there are no settings to lose, which is the
+    // only reason the settings screen keeps the two apart.
+    val chooseBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        restoring = true
+        scope.launch(Dispatchers.IO) {
+            backupStore.remember(uri)
+            val result = backupStore.restoreFolder(uri)
+            withContext(Dispatchers.Main) {
+                restoring = false
+                when (result) {
+                    is BackupStore.Result.FolderRestored -> {
+                        // They have just told the app where their backups
+                        // live. Asking the same question again on the settings
+                        // screen later would be asking one already answered.
+                        scope.launch(Dispatchers.IO) {
+                            prefs.backupFolder.setValue(uri.toString())
+                        }
+                        BackupWorker.schedule(context)
+                        // Their own list is back; a starter list would be nine
+                        // feeds they did not ask for on top of the ones they
+                        // spent years choosing.
+                        onDone()
+                    }
+
+                    else -> Toast.makeText(
+                        context,
+                        context.getString(R.string.backup_nothing_found),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -305,6 +360,41 @@ private fun StarterSourcesStep(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // Above the list rather than under it. A returning reader should
+            // not have to scroll past nine feeds they do not want to find the
+            // one thing on the screen that is for them.
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.starter_returning_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.starter_returning_body),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { chooseBackup.launch(null) },
+                        enabled = !restoring,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (restoring) R.string.starter_restoring
+                                else R.string.starter_restore
+                            )
+                        )
+                    }
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.weight(1f),

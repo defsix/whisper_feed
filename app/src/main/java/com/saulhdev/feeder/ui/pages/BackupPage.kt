@@ -256,6 +256,11 @@ private fun report(
                     context.getString(R.string.backup_restored_none)
                 }
 
+            is BackupStore.Result.FolderRestored -> context.getString(
+                R.string.backup_folder_restored, result.feeds, result.settings
+            )
+
+            BackupStore.Result.NothingFound -> context.getString(R.string.backup_nothing_found)
             BackupStore.Result.NoDestination -> context.getString(R.string.backup_lost)
             is BackupStore.Result.Failed -> context.getString(R.string.backup_failed)
         }
