@@ -45,6 +45,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
+import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
 import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Swatches
@@ -349,6 +350,41 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * tested on device, where adb needs a network that is not always available,
      * and an app can read its own logcat without any permission. See Diagnostics.
      */
+    /**
+     * The same report, handed to the share sheet instead of to Downloads.
+     *
+     * Export is right for this phone and useless to anyone else's: it leaves a
+     * file in Downloads and expects the person to find it, attach it and send
+     * it, and most people stop before the end of that sentence. A tester gets
+     * the report into whatever they already use to talk to us, in one tap.
+     *
+     * No note dialog. Whatever they type in their mail or messaging app is the
+     * note, and asking twice for the same sentence is how a report gets
+     * abandoned. The subject line carries the version and the device so a
+     * report is identifiable before it is opened.
+     */
+    var reportProblem = StringPref(
+        titleId = R.string.report_problem,
+        summaryId = R.string.report_problem_summary,
+        icon = Phosphor.Megaphone,
+        key = REPORT_PROBLEM,
+        dataStore = dataStore,
+        onClick = {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { Diagnostics.share(context, note = "") }
+                    .onFailure {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.diagnostics_failed),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+            }
+        }
+    )
+
     var exportDiagnostics = StringPref(
         titleId = R.string.pref_export_diagnostics,
         summaryId = R.string.pref_export_diagnostics_summary,
@@ -501,6 +537,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val FEED_LAYOUT = stringPreferencesKey("pref_feed_layout")
         val CATEGORY_FILTER = stringSetPreferencesKey("pref_category_filter")
         val EXPORT_DIAGNOSTICS = stringPreferencesKey("pref_export_diagnostics")
+        val REPORT_PROBLEM = stringPreferencesKey("pref_report_problem")
 
         /** Open the tapped article in Whisper's own reader, using cached content. */
         const val OPEN_MODE_READER = "reader"

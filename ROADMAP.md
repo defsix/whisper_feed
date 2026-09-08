@@ -17,7 +17,7 @@ in the code.
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
-| 5 | Personalisation | **Started** — article weighting drives the Mosaic tile sizes and is the first thing to read the More/Less scores back. Ordering, reading habits and the reset control still to build |
+| 5 | Personalisation | **Started** — article weighting drives both Cards and Mosaic, and is the first thing to read the More/Less scores back. Reading habits, the ordering, an explanation affordance and the reset control still to build |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
@@ -197,8 +197,14 @@ writing them, and it is deliberately a display decision rather than a filter:
 a low weight makes an article small, never absent, so a bad score cannot hide
 anything. The constants are in one object and want tuning against a real feed.
 
-Still open here: the same weight should drive the Cards rhythm (currently
-positional), a visible "why is this big" affordance, and the reset control.
+Cards now reads the same weight. `FeedEmphasis` is one scale shared by both
+layouts — Cards draws Large as a full-bleed hero, Mosaic as a tile across both
+columns — so the two promote the same articles and differ only in how the
+promotion looks. The old positional rule gave the hero to whatever happened to
+be eighth.
+
+Still open here: a visible "why is this big" affordance, the reset control, and
+the reading-habit term below.
 
 **Reading habits as a weight term — and it does not need accounts.** The plan
 was to gate this on sign-in and count usage server-side. It does not have to

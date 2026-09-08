@@ -300,10 +300,12 @@ fun FeedScaffold(
                 // Mosaic is a staggered grid rather than a column, so the
                 // container changes with the layout and not only the shapes
                 // inside it. Everything else is a single column.
+                // Which article gets the big shape is one decision for every
+                // layout, so it is made once here rather than per container.
+                val emphasis = rememberFeedEmphasis(articles)
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
                 } else if (feedLayoutIsGrid(layout)) {
-                    val mosaicSizes = rememberMosaicSizes(articles)
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
                         state = gridState,
@@ -319,7 +321,7 @@ fun FeedScaffold(
                             // item, so the sizes are worked out for the whole
                             // list up front rather than asked per tile.
                             span = { index, _ ->
-                                if (mosaicSizes.getOrNull(index) == MosaicTileSize.Large)
+                                if (emphasis.getOrNull(index) == FeedEmphasis.Large)
                                     StaggeredGridItemSpan.FullLine
                                 else StaggeredGridItemSpan.SingleLane
                             },
@@ -334,8 +336,8 @@ fun FeedScaffold(
                                 onLessLikeThis = { onLessLikeThis(item) },
                                 onHideSource = { onHideSource(item) },
                                 layout = layout,
-                                mosaicSize = mosaicSizes.getOrNull(index)
-                                    ?: MosaicTileSize.Medium,
+                                emphasis = emphasis.getOrNull(index)
+                                    ?: FeedEmphasis.Medium,
                             )
                         }
                     }
@@ -356,6 +358,8 @@ fun FeedScaffold(
                                 onLessLikeThis = { onLessLikeThis(item) },
                                 onHideSource = { onHideSource(item) },
                                 layout = layout,
+                                emphasis = emphasis.getOrNull(index)
+                                    ?: FeedEmphasis.Medium,
                             )
                         }
                     }

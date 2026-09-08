@@ -111,8 +111,8 @@ import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
-import com.saulhdev.feeder.ui.overlay.MosaicTileSize
-import com.saulhdev.feeder.ui.overlay.rememberMosaicSizes
+import com.saulhdev.feeder.ui.overlay.FeedEmphasis
+import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
@@ -435,13 +435,13 @@ fun ArticleListPage(
                                 // different apps — and the same container, which for
                                 // Mosaic is a staggered grid rather than a column.
                                 else          -> {
-                                    val article: @Composable (Int, FeedItem, MosaicTileSize) -> Unit =
-                                        { index, item, mosaicSize ->
+                                    val article: @Composable (Int, FeedItem, FeedEmphasis) -> Unit =
+                                        { index, item, emphasis ->
                                         FeedArticleItem(
                                             item = item,
                                             index = index,
                                             layout = layout,
-                                            mosaicSize = mosaicSize,
+                                            emphasis = emphasis,
                                             onClick = {
                                                 viewModel.markRead(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
@@ -465,13 +465,13 @@ fun ArticleListPage(
                                         )
                                     }
 
+                                    // One decision for every layout, made once.
+                                    val emphasis = rememberFeedEmphasis(state.articles)
                                     if (searching && searchQuery.isNotBlank() &&
                                         state.articles.isEmpty()
                                     ) {
                                         SearchEmptyState(searchQuery)
                                     } else if (feedLayoutIsGrid(layout)) {
-                                        val mosaicSizes =
-                                            rememberMosaicSizes(state.articles)
                                         PullToRefreshStaggeredGrid(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
@@ -481,8 +481,8 @@ fun ArticleListPage(
                                                     state.articles,
                                                     key = { _, item -> item.id },
                                                     span = { index, _ ->
-                                                        if (mosaicSizes.getOrNull(index) ==
-                                                            MosaicTileSize.Large
+                                                        if (emphasis.getOrNull(index) ==
+                                                            FeedEmphasis.Large
                                                         ) StaggeredGridItemSpan.FullLine
                                                         else StaggeredGridItemSpan.SingleLane
                                                     },
@@ -490,8 +490,8 @@ fun ArticleListPage(
                                                     article(
                                                         index,
                                                         item,
-                                                        mosaicSizes.getOrNull(index)
-                                                            ?: MosaicTileSize.Medium,
+                                                        emphasis.getOrNull(index)
+                                                            ?: FeedEmphasis.Medium,
                                                     )
                                                 }
                                             },
@@ -509,7 +509,8 @@ fun ArticleListPage(
                                                     article(
                                                         index,
                                                         item,
-                                                        MosaicTileSize.Medium,
+                                                        emphasis.getOrNull(index)
+                                                            ?: FeedEmphasis.Medium,
                                                     )
                                                 }
                                             },

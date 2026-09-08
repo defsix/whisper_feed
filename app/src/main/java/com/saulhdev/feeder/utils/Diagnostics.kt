@@ -19,11 +19,14 @@ package com.saulhdev.feeder.utils
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.content.FileProvider
 import com.saulhdev.feeder.BuildConfig
+import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import kotlinx.coroutines.flow.first
@@ -148,6 +151,65 @@ object Diagnostics : KoinComponent {
         resolver.update(uri, values, null, null)
 
         return "Download/$name"
+    }
+
+    /**
+     * Bundles the report and hands it to the share sheet.
+     *
+     * The export above writes to Downloads, which is right for the developer's
+     * own phone and useless to a tester: it leaves them to find a file manager,
+     * locate the file and attach it themselves, and most people stop before
+     * the end of that sentence. This puts the same report into whichever app
+     * they already use to talk to us.
+     *
+     * @param note what the tester typed. It goes at the top of the report
+     *   rather than in the message body, because a message body is easy to
+     *   lose track of and the file is the thing that gets kept.
+     */
+    suspend fun share(context: Context, note: String) {
+        val report = buildString {
+            if (note.isNotBlank()) {
+                appendLine("== What happened ==")
+                appendLine(note.trim())
+                appendLine()
+            }
+            append(collect(context))
+        }
+
+        val name = "whisper-report-" +
+                SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".txt"
+
+        // The provider is scoped to exactly this directory; see file_paths.xml.
+        val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
+        // Yesterday's reports are of no use to anyone and would otherwise
+        // accumulate for the life of the install.
+        dir.listFiles()?.forEach { it.delete() }
+
+        val file = File(dir, name)
+        file.writeText(report)
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            file,
+        )
+
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(
+                Intent.EXTRA_SUBJECT,
+                "Whisper ${BuildConfig.VERSION_NAME} — ${Build.MANUFACTURER} ${Build.MODEL}",
+            )
+            if (note.isNotBlank()) putExtra(Intent.EXTRA_TEXT, note.trim())
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        val chooser = Intent.createChooser(send, context.getString(R.string.report_problem))
+        // Settings is an activity, but this is called from a preference's
+        // onClick with the application context in scope for other call sites.
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
     }
 
     @Suppress("DEPRECATION") // The permission is declared with maxSdkVersion 28.

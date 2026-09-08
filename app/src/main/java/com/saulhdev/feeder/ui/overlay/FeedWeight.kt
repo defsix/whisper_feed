@@ -141,13 +141,13 @@ fun articleWeight(
  * neighbours — large tiles have to be spaced out, and the top of the feed needs
  * an anchor — and neither can be answered by looking at one article.
  */
-fun mosaicTileSizes(
+fun feedEmphasisFor(
     items: List<FeedItem>,
     affinity: Map<String, Int>,
     nowMs: Long,
-): List<MosaicTileSize> {
+): List<FeedEmphasis> {
     val weights = items.map { articleWeight(it, affinity, nowMs) }
-    val sizes = MutableList(items.size) { MosaicTileSize.Small }
+    val sizes = MutableList(items.size) { FeedEmphasis.Small }
 
     var lastLarge = -ArticleWeight.LARGE_GAP - 1
     weights.forEachIndexed { index, weight ->
@@ -155,23 +155,23 @@ fun mosaicTileSizes(
             weight >= ArticleWeight.LARGE_AT &&
                     index - lastLarge > ArticleWeight.LARGE_GAP -> {
                 lastLarge = index
-                MosaicTileSize.Large
+                FeedEmphasis.Large
             }
 
             // A large-weight article that lands inside the gap still deserves
             // more than the smallest tile.
-            weight >= ArticleWeight.MEDIUM_AT                   -> MosaicTileSize.Medium
-            else                                                -> MosaicTileSize.Small
+            weight >= ArticleWeight.MEDIUM_AT                   -> FeedEmphasis.Medium
+            else                                                -> FeedEmphasis.Small
         }
     }
 
     // The opening anchor, if the scores did not produce one.
     val head = minOf(ArticleWeight.ANCHOR_WITHIN, items.size)
-    if (head > 0 && sizes.take(head).none { it == MosaicTileSize.Large }) {
+    if (head > 0 && sizes.take(head).none { it == FeedEmphasis.Large }) {
         val best = (0 until head)
             .filter { weights[it] > ArticleWeight.NO_IMAGE }
             .maxByOrNull { weights[it] }
-        if (best != null) sizes[best] = MosaicTileSize.Large
+        if (best != null) sizes[best] = FeedEmphasis.Large
     }
 
     return sizes
@@ -197,13 +197,13 @@ fun parseAffinity(raw: Set<String>): Map<String, Int> = raw.mapNotNull { entry -
  * read here.
  */
 @Composable
-fun rememberMosaicSizes(articles: List<FeedItem>): List<MosaicTileSize> {
+fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val prefs: FeedPreferences = koinInject()
     val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
     val affinity = remember(raw) { parseAffinity(raw) }
     // The clock is sampled per list rather than per frame: an article does not
     // need to shrink while it is being looked at.
     return remember(articles, affinity) {
-        mosaicTileSizes(articles, affinity, System.currentTimeMillis())
+        feedEmphasisFor(articles, affinity, System.currentTimeMillis())
     }
 }

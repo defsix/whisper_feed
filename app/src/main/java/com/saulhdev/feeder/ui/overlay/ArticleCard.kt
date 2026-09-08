@@ -76,7 +76,7 @@ fun FeedArticleItem(
     onLessLikeThis: () -> Unit = {},
     onHideSource: () -> Unit = {},
     layout: String = LAYOUT_CARDS,
-    mosaicSize: MosaicTileSize = MosaicTileSize.Medium,
+    emphasis: FeedEmphasis = FeedEmphasis.Medium,
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     val menu: @Composable (Color?) -> Unit = { tint ->
@@ -88,14 +88,14 @@ fun FeedArticleItem(
             tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-    when (feedCardShape(index, hasImage, layout)) {
+    when (feedCardShape(index, hasImage, layout, emphasis)) {
         FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, modifier)
         FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, modifier)
         FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, modifier)
         FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, modifier)
         FeedCardShape.Tile    -> ArticleMosaicTile(
             item, onClick, onBookmark, menu, modifier,
-            size = mosaicSize,
+            size = emphasis,
         )
     }
 }
@@ -446,10 +446,10 @@ fun ArticleMosaicTile(
     onBookmark: (Boolean) -> Unit,
     menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
-    size: MosaicTileSize = MosaicTileSize.Medium,
+    size: FeedEmphasis = FeedEmphasis.Medium,
 ) {
     val context = LocalContext.current
-    val large = size == MosaicTileSize.Large
+    val large = size == FeedEmphasis.Large
     val image = item.article.imageUrl
     val hasImage = !image.isNullOrBlank()
 
@@ -475,15 +475,15 @@ fun ArticleMosaicTile(
                     // Cropped to a set ratio at the two fixed sizes, so the
                     // tile's height is the layout's decision rather than the
                     // picture's. Medium is the one that still follows it.
-                    contentScale = if (size == MosaicTileSize.Medium) ContentScale.FillWidth
+                    contentScale = if (size == FeedEmphasis.Medium) ContentScale.FillWidth
                     else ContentScale.Crop,
                     modifier = when (size) {
-                        MosaicTileSize.Small  -> Modifier
+                        FeedEmphasis.Small  -> Modifier
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
 
-                        MosaicTileSize.Medium -> Modifier.fillMaxWidth()
-                        MosaicTileSize.Large  -> Modifier
+                        FeedEmphasis.Medium -> Modifier.fillMaxWidth()
+                        FeedEmphasis.Large  -> Modifier
                             .fillMaxWidth()
                             .aspectRatio(2f / 1f)
                     },
@@ -524,9 +524,9 @@ fun ArticleMosaicTile(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = when (size) {
-                    MosaicTileSize.Small  -> 2
-                    MosaicTileSize.Medium -> 4
-                    MosaicTileSize.Large  -> 3
+                    FeedEmphasis.Small  -> 2
+                    FeedEmphasis.Medium -> 4
+                    FeedEmphasis.Large  -> 3
                 },
                 overflow = TextOverflow.Ellipsis,
             )

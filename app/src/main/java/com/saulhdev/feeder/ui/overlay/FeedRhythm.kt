@@ -74,34 +74,50 @@ fun feedCardShape(
     index: Int,
     hasImage: Boolean,
     layout: String = LAYOUT_CARDS,
+    emphasis: FeedEmphasis = FeedEmphasis.Medium,
 ): FeedCardShape = when (layout) {
     LAYOUT_LIST -> FeedCardShape.Text
 
     // Tile even without an image: the tile already omits it, and a full-width
     // text row dropped into a half-width grid cell reads as a broken tile
-    // rather than a deliberate one.
+    // rather than a deliberate one. Which *size* of tile is the emphasis's
+    // business, and the tile reads that directly.
     LAYOUT_MOSAIC -> FeedCardShape.Tile
 
     LAYOUT_MAGAZINE -> if (hasImage) FeedCardShape.Card else FeedCardShape.Compact
 
+    // Cards was positional: a hero at 0, another every eighth, a full card
+    // every fourth. That gave the biggest shape to whatever happened to be
+    // eighth rather than to whatever was worth it, and changed an article's
+    // shape every time a sync moved it. It now reads the same emphasis Mosaic
+    // does, so the two layouts promote the same articles and differ only in
+    // how they draw the promotion.
     else -> when {
-        !hasImage      -> FeedCardShape.Compact
-        index == 0     -> FeedCardShape.Hero
-        index % 8 == 0 -> FeedCardShape.Hero
-        index % 4 == 2 -> FeedCardShape.Card
-        else           -> FeedCardShape.Compact
+        !hasImage                       -> FeedCardShape.Compact
+        emphasis == FeedEmphasis.Large  -> FeedCardShape.Hero
+        emphasis == FeedEmphasis.Medium -> FeedCardShape.Card
+        else                            -> FeedCardShape.Compact
     }
 }
 
-/** How much room a Mosaic tile takes. */
-enum class MosaicTileSize {
-    /** A short tile: image cropped wide, two lines of headline. */
+/**
+ * How much of the screen one article has earned.
+ *
+ * Shared by Cards and Mosaic rather than belonging to either. The two layouts
+ * disagree about what emphasis *looks* like — Cards answers Large with a
+ * full-bleed hero, Mosaic with a tile across both columns — but they should
+ * never disagree about which article deserves it. One scale, two renderings.
+ *
+ * See FeedWeight.kt for how an article gets one.
+ */
+enum class FeedEmphasis {
+    /** Enough to be legible and no more. The bulk of a feed. */
     Small,
 
-    /** One column, the image at its own aspect ratio. The default weight. */
+    /** The comfortable middle: an image at its own size, room to read. */
     Medium,
 
-    /** Both columns, with a summary. The thing the eye lands on. */
+    /** The thing the eye lands on. One per screenful at most. */
     Large,
 }
 
