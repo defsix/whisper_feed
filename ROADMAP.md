@@ -62,7 +62,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
-| 6 | Google Drive sync | **Part** — Google Reader protocol instead (see §7), and Drive explicitly declined. Client, account, service abstraction and sign-in screen work; read-state mapping and background sync outstanding |
+| 6 | Sync | **Part** — Google Reader protocol done first (see §7): client, account, service abstraction and sign-in screen work; read-state mapping and background sync outstanding. Google Drive backup is wanted and specified in §7, not yet built |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
 
@@ -599,9 +599,53 @@ the app working when the server is down. An account changes *which feeds* and
 - **No background sync yet.** The account screen syncs on demand; hooking it
   into the existing `FeedSyncer` schedule comes with the id mapping.
 
-Google Drive app-data sync is **not** being pursued. It syncs your own devices
-rather than your reading, and it would put a Play Services dependency into an
-app that has avoided one everywhere else.
+#### Google Drive — wanted, and it is backup rather than sync
+
+Previously recorded here as not being pursued, on two objections. One was
+wrong and the other is avoidable, so it is back.
+
+**The framing was wrong.** "It syncs your devices rather than your reading" was
+written as a dismissal and is actually the point. Google Reader sync needs a
+server the reader chose and probably runs; plenty of people will never do that
+and still stand to lose every subscription to a factory reset. For them a Drive
+backup is not a lesser sync — it is the only thing standing between them and
+starting again. The two features serve different people and should not be
+weighed against each other.
+
+**The Play Services objection is avoidable.** Google Sign-In needs Play
+Services; the Drive REST API does not. `AppAuth` performs a standard OAuth2
+flow in a browser tab and hands back a token the plain REST endpoints accept,
+so the app can talk to Drive with no proprietary dependency and keep building
+on F-Droid. F-Droid will mark it NonFreeNet, which is accurate and applies to
+every network service.
+
+**One objection does stand and should be said out loud in the interface.**
+Uploading a backup means Google holds the reader's subscription list. That is
+their own Drive and their own choice, and it is categorically different from a
+recommendation service profiling them — but this app tells people nothing
+leaves their phone, so the screen that offers this has to be equally plain that
+turning it on is the exception.
+
+**Most of it exists.** OPML export and bookmark export both work today; this is
+largely putting their output somewhere automatic rather than behind a file
+picker. Scope, in order:
+
+1. **`appDataFolder`, not the visible Drive.** A private folder the app owns,
+   invisible in the reader's file list, removed when the app is uninstalled.
+   Nothing of theirs to tidy up, and no chance of a stray file being edited.
+2. **The bundle**: OPML for sources and categories, the bookmark export, read
+   state, and preferences. One versioned file rather than four, so a restore
+   cannot half-apply.
+3. **Restore on a fresh install** — the case the whole feature is for. Offered
+   during onboarding, once, when a backup is found.
+4. **Automatic, on a schedule, on Wi-Fi.** A backup nobody remembers to take is
+   not a backup.
+
+**Where it goes:** after §7, and it should reuse §7's `RssService` seam rather
+than growing a parallel path — Drive is a *provider* in the same sense, with
+`sync()` meaning "reconcile with the backup" instead of "reconcile with a
+server". If that turns out to strain the abstraction, that is worth knowing
+before a third one is added.
 
 ### 8. Ship it
 
