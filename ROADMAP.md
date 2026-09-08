@@ -76,6 +76,17 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**An empty feed said nothing at all.**~~ No message, no spinner, no
+  artwork — the header, the glance row, the chips, and then a void. Every
+  cause looked identical, so an empty feed could not be diagnosed even from a
+  screenshot. It now says which of four things happened: no sources, a sync in
+  progress, a sync that returned nothing, or a filter excluding everything.
+  They are told apart because the right response differs completely, and
+  because "nothing here" is not information.
+- ~~**Sliders had no value on them.**~~ Every `FloatPref` has carried a
+  `specialOutputs` lambda saying how to write its value down since the class
+  was written, and nothing ever read it. The dwell slider and the overlay
+  transparency slider were both a bare track with no number anywhere.
 - ~~**The feed jumped while being scrolled.**~~ With read-on-scroll enabled,
   marking an article read subtracted from its weight, which dropped it a size,
   which shrank the card under the reader's finger and shunted everything below

@@ -217,6 +217,14 @@
     <string name="why_breaking">Several sources are covering this story</string>
     <string name="pref_sticky_top">Hold it there while you scroll</string>
     <string name="pref_sticky_top_summary">A pinned article, or a breaking story, stays at the top of the screen until you have scrolled a few articles past it.</string>
+    <string name="empty_no_sources">No sources yet</string>
+    <string name="empty_no_sources_hint">Add a website or a feed address and Whisper will do the rest. Settings, then Sources.</string>
+    <string name="empty_syncing">Fetching your feeds</string>
+    <string name="empty_syncing_hint">This is the first fetch, so it takes a moment longer than usual.</string>
+    <string name="empty_nothing_fetched">Nothing came back</string>
+    <string name="empty_nothing_fetched_hint">Your sources are set up but no articles arrived. Pull down to try again, or check Sources for a feed marked as failing.</string>
+    <string name="empty_filtered">Nothing matches</string>
+    <string name="empty_filtered_hint">Every article is filtered out by the category or filter you have chosen. Tap All, or open the filter to change it.</string>
     <string name="pref_account">Account</string>
     <string name="pref_account_summary">Optional. Keep your subscriptions and read state in step across devices.</string>
     <string name="account_explanation">Whisper works completely without an account — everything stays on this phone. Connecting one keeps your subscriptions and what you have read in step with another device, through a service you choose or run yourself.</string>

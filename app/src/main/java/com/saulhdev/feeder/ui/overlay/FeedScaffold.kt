@@ -99,6 +99,8 @@ import androidx.compose.ui.draw.clip
 import com.saulhdev.feeder.ui.pages.SortFilterSheet
 import com.saulhdev.feeder.ui.components.FeedSearchBar
 import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
+import com.saulhdev.feeder.ui.components.FeedEmptyReason
+import com.saulhdev.feeder.ui.components.FeedEmptyState
 import com.saulhdev.feeder.ui.components.SearchEmptyState
 
 /**
@@ -317,6 +319,20 @@ fun FeedScaffold(
                 )
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
+                } else if (articles.isEmpty()) {
+                    // The launcher surface cannot reach the sources list, so it
+                    // reports the two cases it can actually tell apart and
+                    // leaves "no sources" to the app, which can say where to
+                    // go and open it.
+                    FeedEmptyState(
+                        when {
+                            isRefreshing -> FeedEmptyReason.Syncing
+                            isFilterActive || selectedCategories.isNotEmpty() ->
+                                FeedEmptyReason.FilteredOut
+
+                            else -> FeedEmptyReason.NothingFetched
+                        }
+                    )
                 } else if (feedLayoutIsGrid(layout)) {
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),

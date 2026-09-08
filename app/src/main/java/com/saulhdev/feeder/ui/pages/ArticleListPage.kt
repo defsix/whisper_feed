@@ -130,6 +130,8 @@ import org.koin.compose.koinInject
 import com.saulhdev.feeder.ui.components.FeedSearchBar
 import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
+import com.saulhdev.feeder.ui.components.FeedEmptyReason
+import com.saulhdev.feeder.ui.components.FeedEmptyState
 import com.saulhdev.feeder.ui.components.SearchEmptyState
 
 @OptIn(
@@ -412,6 +414,11 @@ fun ArticleListPage(
                             // in the other.
                             val categories by sourcesRepo.getAllTagsFlow()
                                 .collectAsState(initial = emptyList())
+                            // "No sources" and "sources but no articles" are
+                            // different problems with different answers, and
+                            // the empty state has to tell them apart.
+                            val allSources by sourcesRepo.getAllSourcesFlow()
+                                .collectAsState(initial = emptyList())
                             val selectedCategories by prefs.categoryFilter.get()
                                 .collectAsState(initial = emptySet())
 
@@ -526,6 +533,22 @@ fun ArticleListPage(
                                         state.articles.isEmpty()
                                     ) {
                                         SearchEmptyState(searchQuery)
+                                    } else if (state.articles.isEmpty()) {
+                                        // Which of the four it is decides what
+                                        // the reader should do about it, so the
+                                        // reasons are told apart rather than
+                                        // collapsed into "nothing here".
+                                        FeedEmptyState(
+                                            when {
+                                                allSources.isEmpty() -> FeedEmptyReason.NoSources
+                                                state.isSyncing -> FeedEmptyReason.Syncing
+                                                state.isFilterModified ||
+                                                        selectedCategories.isNotEmpty() ->
+                                                    FeedEmptyReason.FilteredOut
+
+                                                else -> FeedEmptyReason.NothingFetched
+                                            }
+                                        )
                                     } else if (feedLayoutIsGrid(layout)) {
                                         PullToRefreshStaggeredGrid(
                                             isRefreshing = state.isSyncing,
