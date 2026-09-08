@@ -269,9 +269,12 @@ app that has avoided one everywhere else.
 
 Small, and none of it blocks anything.
 
-- **Chance of precipitation on the weather chip**, beside the condition. The
-  Open-Meteo call already returns it. Optional — the chip reads cleanly as it
-  is, so this is a judgement call to make when it is in front of us.
+- ~~**Chance of precipitation on the weather chip.**~~ Done. The note here
+  claimed the Open-Meteo call already returned it; it did not — the request
+  asked only for temperature and weather code, and now asks for
+  precipitation_probability_max as well. Shown beside the temperature with the
+  supplied rain artwork at 16dp, and only above 20%, so a dry day's chip is
+  unchanged.
 - **Account avatar, top right.** Discover puts the signed-in user there and it
   is where a hand goes looking. It waits on §7: there is no account to show
   until the Google Reader client exists, and a silhouette that opens nothing

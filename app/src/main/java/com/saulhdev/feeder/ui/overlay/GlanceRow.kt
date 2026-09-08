@@ -66,6 +66,17 @@ private const val CHIP_WIDTH_FRACTION = 0.455f
 /** The supplied artwork is rendered at this size; see docs/brand/08_icons. */
 private val ICON_SIZE = 32.dp
 
+/** Small enough to read as an annotation on the temperature, not a second icon. */
+private val RAIN_ICON_SIZE = 16.dp
+
+/**
+ * Below this, the chance of rain is not worth the space.
+ *
+ * A forecast that says 5% is saying "no", and repeating that on every dry day
+ * would make the chip busier without making it more useful.
+ */
+private const val RAIN_WORTH_MENTIONING = 20
+
 private val HOUR_MINUTE: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
@@ -117,6 +128,11 @@ fun GlanceRow(
                     value = "${weather.temperatureC.roundToInt()}°",
                     caption = weather.place.substringBefore(","),
                     iconRes = look.iconRes,
+                    // Only when it is worth knowing. A chip that reads "3%"
+                    // every dry day is noise, and the number is only ever
+                    // useful as the answer to "do I need a coat".
+                    rainChance = weather.precipitationChance
+                        ?.takeIf { it >= RAIN_WORTH_MENTIONING },
                 )
             }
             // After dark, today's sunset is behind us and repeating it is
@@ -173,6 +189,7 @@ private fun GlanceChip(
     value: String,
     @DrawableRes iconRes: Int,
     caption: String? = null,
+    rainChance: Int? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = CardDefaults.cardColors(
@@ -202,13 +219,35 @@ private fun GlanceChip(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (rainChance != null) {
+                        Spacer(Modifier.size(6.dp))
+                        // The supplied rain artwork at a small size, rather
+                        // than a percentage on its own — "20%" beside a
+                        // temperature could be anything. There is room for a
+                        // glyph and a number here and nowhere else on the
+                        // chip: the label line carries the condition and the
+                        // caption line the place, and both already truncate.
+                        Image(
+                            painter = painterResource(R.drawable.ic_glance_weather_rain),
+                            contentDescription = null,
+                            modifier = Modifier.size(RAIN_ICON_SIZE),
+                        )
+                        Text(
+                            text = "$rainChance%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
                 if (!caption.isNullOrBlank()) {
                     Text(
                         text = caption,

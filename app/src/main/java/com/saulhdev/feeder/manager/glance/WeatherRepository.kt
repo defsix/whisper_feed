@@ -49,6 +49,15 @@ data class GlanceWeather(
     val sunrises: List<String>,
     val sunsets: List<String>,
     val fetchedAt: Long,
+    /**
+     * Today's highest chance of rain, as a percentage, or null when the
+     * forecast did not carry one.
+     *
+     * The day's maximum rather than the value for this hour: the useful
+     * question a glance answers is "do I need a coat today", and an hourly
+     * figure read at 8am says nothing about the afternoon.
+     */
+    val precipitationChance: Int? = null,
 ) {
     /** Now, in the place's own local time — not the device's. */
     private val localNow: LocalDateTime
@@ -145,7 +154,7 @@ class WeatherRepository {
             val url = "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=$lat&longitude=$lon" +
                     "&current=temperature_2m,weather_code" +
-                    "&daily=sunrise,sunset" +
+                    "&daily=sunrise,sunset,precipitation_probability_max" +
                     // Two days, so that after dark there is still a sunrise
                     // ahead of "now" to show.
                     "&timezone=auto&forecast_days=2"
@@ -165,6 +174,11 @@ class WeatherRepository {
                 sunrises = times("sunrise"),
                 sunsets = times("sunset"),
                 fetchedAt = System.currentTimeMillis(),
+                // Index 0 is today. Open-Meteo sends null for days it has no
+                // probability for, which optInt would quietly turn into 0 —
+                // "no data" and "no chance of rain" are not the same answer.
+                precipitationChance = daily?.optJSONArray("precipitation_probability_max")
+                    ?.let { if (it.isNull(0)) null else it.optInt(0) },
             )
         }.getOrElse {
             Log.w(TAG, "Weather fetch failed", it)
