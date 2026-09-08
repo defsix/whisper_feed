@@ -101,6 +101,9 @@ fun PreferencesPage(
         prefs.dynamicColor,
         prefs.overlayTransparency,
     )
+    val syncPrefs = listOf(
+        prefs.account,
+    )
     val debugPrefs = listOf(
         prefs.reportProblem,
         prefs.exportDiagnostics,
@@ -141,6 +144,13 @@ fun PreferencesPage(
                 PreferenceGroup(
                     stringResource(id = R.string.title_service),
                     prefs = servicePrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
+            item(key = R.string.pref_account) {
+                PreferenceGroup(
+                    stringResource(id = R.string.pref_account),
+                    prefs = syncPrefs,
                     onPrefDialog = onPrefDialog
                 )
             }

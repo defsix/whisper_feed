@@ -28,6 +28,11 @@ import com.saulhdev.feeder.viewmodels.ArticleViewModel
 import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
+import com.saulhdev.feeder.data.content.SyncAccount
+import com.saulhdev.feeder.manager.sync.service.GoogleReaderService
+import com.saulhdev.feeder.manager.sync.service.LocalRssService
+import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
+import com.saulhdev.feeder.viewmodels.AccountViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
@@ -58,6 +63,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         }
         viewModelOf(::SourceEditViewModel)
         viewModelOf(::LearnedViewModel)
+        viewModelOf(::AccountViewModel)
         viewModelOf(::SearchFeedViewModel)
         viewModelOf(::ArticleListViewModel)
         viewModelOf(::SourceListViewModel)
@@ -77,6 +83,17 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         singleOf(::MastodonStorage)
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
+        single { SyncAccount(this@NeoApp) }
+        single { LocalRssService(this@NeoApp, get()) }
+        single {
+            RssServiceDispatcher(
+                account = get(),
+                local = get(),
+                googleReaderFactory = {
+                    GoogleReaderService(this@NeoApp, get(), get(), get())
+                },
+            )
+        }
         singleOf(::WeatherRepository)
         singleOf(::GlanceStateHolder)
     }

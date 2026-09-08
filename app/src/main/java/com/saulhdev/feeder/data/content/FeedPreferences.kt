@@ -45,6 +45,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.CheckCircle
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
+import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowUp
 import com.saulhdev.feeder.utils.READ_KEEP
 import com.saulhdev.feeder.utils.getReadVisibility
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
@@ -331,6 +332,15 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = STICKY_TOP,
         dataStore = dataStore,
         defaultValue = false
+    )
+
+    var account = StringPref(
+        titleId = R.string.pref_account,
+        summaryId = R.string.pref_account_summary,
+        icon = Phosphor.CloudArrowUp,
+        key = ACCOUNT,
+        dataStore = dataStore,
+        route = NavRoute.Account
     )
 
     var learned = StringPref(
@@ -685,6 +695,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
+        val ACCOUNT = stringPreferencesKey("pref_account")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

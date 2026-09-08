@@ -62,7 +62,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
-| 6 | Google Drive sync | **Not started** |
+| 6 | Google Drive sync | **Part** — Google Reader protocol instead (see §7), and Drive explicitly declined. Client, account, service abstraction and sign-in screen work; read-state mapping and background sync outstanding |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
 
@@ -534,6 +534,50 @@ where only `sync()` is abstract and everything else has a working *local*
 implementation that remote providers override selectively. That matches the
 local-first rule exactly — the app stays fully functional with no account, and
 sync is genuinely additive rather than a mode.
+
+#### What is built
+
+- **`GoogleReaderApi`** — the protocol itself: ClientLogin, the separate write
+  token, subscriptions, item ids, edit-tag, subscription/edit. Fourteen tests
+  cover the parsing and the identifiers.
+- **`GoogleReaderIds`** — the three shapes an id comes in, in one place. The
+  long form is sixteen hex digits, unsigned, and larger than `Long.MAX_VALUE`
+  for half its range; `toLong()` on it throws on exactly the ids whose top bit
+  is set, which is how a client works for months and then falls over on one
+  article. Tested at the boundary.
+- **`RssService`** — the abstraction, with only `sync()` abstract. Everything
+  else has a working local implementation, and `LocalRssService` is the real
+  default rather than a stub.
+- **`SyncAccount`** — one account, in `EncryptedSharedPreferences` rather than
+  DataStore because it holds a credential.
+- **The account screen** — Settings → Account. Sign in, sync, sign out.
+
+#### The division of labour, which is the design decision
+
+The remote service syncs the **subscription list** and **read state**. It does
+not fetch articles; the local path still does that.
+
+That is deliberate. Whisper's articles carry things the protocol has no field
+for — extracted full text, the chosen image, the built summary — so taking
+them from the server would mean losing those or fetching twice. Fetching
+locally also keeps behaviour identical with and without an account, and keeps
+the app working when the server is down. An account changes *which feeds* and
+*what has been read*, not what an article is.
+
+#### Deliberately unfinished, and named rather than hidden
+
+- **Read state is pulled but not applied.** Matching the protocol's item ids to
+  Whisper's own article uuids needs a mapping this version does not store, and
+  guessing would mark the wrong articles read. The ids are fetched so the shape
+  is proven against a real server. The mapping — a `remoteId` column on
+  `Article`, written at sync time — is the next piece, and the same mapping is
+  what lets read state be pushed back.
+- **Removals are not applied.** A feed the server does not mention is left
+  alone rather than deleted. Deleting somebody's subscriptions because of a
+  partial response or the wrong account is unrecoverable, and those are exactly
+  the failure modes a first version meets.
+- **No background sync yet.** The account screen syncs on demand; hooking it
+  into the existing `FeedSyncer` schedule comes with the id mapping.
 
 Google Drive app-data sync is **not** being pursued. It syncs your own devices
 rather than your reading, and it would put a Play Services dependency into an
