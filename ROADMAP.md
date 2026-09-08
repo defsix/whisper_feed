@@ -8,6 +8,50 @@ in the code.
 
 ---
 
+## What this is now
+
+Worth stating plainly, because the answer has changed and several decisions
+below were made against the old one.
+
+Whisper started as a replacement for Google Discover on Lawnchair's minus-one
+page. That was the brief, and it is why the launcher work came first. **It is
+no longer what the app is.** Four layouts, weighted ordering, breaking-news
+clustering, read state, search, source management, categories, OPML both ways,
+a reader with offline caching — that is a full RSS reader, and the launcher
+page is now one surface it renders on rather than its reason for existing.
+
+Five things follow, and they are not cosmetic:
+
+- **The Lawnchair debug step stops being a blocker.** It was recorded as
+  blocking real-world install, on the reasoning that a Discover replacement
+  which cannot reach the minus-one page is useless. A reader whose launcher
+  page is a bonus is perfectly usable without it. Getting whitelisted is still
+  worth doing; it is no longer the gate.
+- **Onboarding inverts.** The brief in `docs/ONBOARDING_PROMPT.md` argued the
+  Lawnchair pane was the one to build even if the rest slipped. That was right
+  under the old framing and wrong under this one: most people installing this
+  will not have Lawnchair, and a first run that leads with a setup step for a
+  launcher they do not use tells them they have the wrong app. One dismissible
+  pane, offered late.
+- **The audience is much larger, and so is the field.** Not "Lawnchair users
+  who miss Discover" but anyone who wants an RSS reader — against Feedly,
+  Inoreader, FreshRSS, Feeder and Read You. Being good is no longer enough on
+  its own; being *distinct* matters.
+- **What makes it distinct is the weighting, not the launcher.**
+  `docs/REFERENCES.md` §4 found no open-source prior art for transparent,
+  resettable preference learning in a feed reader, and §5 now ships it: an
+  ordering that explains itself per article and can be disagreed with per
+  source. Every competitor is chronological or opaque. That is the thing worth
+  leading with — the minus-one page is the second sentence, not the first.
+- **Getting subscriptions in becomes a competitive concern rather than a
+  convenience.** §11 and §13 move up: a reader nobody can populate in five
+  minutes loses to one they can, whatever the feed looks like afterwards.
+
+One thing this does **not** change: the web version is still impossible (§12).
+That was refused on CORS, which has nothing to do with what the app is for.
+
+---
+
 ## Where the milestones stand
 
 | # | Milestone | Status |
@@ -497,8 +541,9 @@ app that has avoided one everywhere else.
 
 ### 8. Ship it
 
-- **The Lawnchair whitelist PR** — see below. This is the single highest-value
-  item for anyone other than us using the app.
+- **The Lawnchair whitelist PR** — see below. Worth doing, and no longer the
+  gate it was recorded as: see "What this is now". The app is usable without
+  ever touching a launcher.
 - Release signing key, then GitHub Releases → F-Droid → Play, per the staged
   plan in `docs/brand/ASSET_SPEC.md` §8.
 

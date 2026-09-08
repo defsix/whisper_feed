@@ -108,25 +108,27 @@ Then a pane about adding sources, and a pane about the launcher page.
 
 ---
 
-## The thing that actually matters
+## The launcher pane — offered, not led with
 
-**Whisper's real first-run problem is not that the header is unexplained.**
-It is that the minus-one page does not work until the user enables
-`/lawnchairdebug` in Lawnchair and picks Whisper as their feed provider. See
-`UPSTREAM_NOTES.md` §3 and ROADMAP.md "Getting rid of the debug step". A
-first-run flow that walks somebody through the header and leaves them without
-the feature they installed the app for has solved the wrong problem.
+An earlier draft of this brief said the Lawnchair setup step was the thing
+that actually mattered and should be built even if the rest slipped. That was
+right when Whisper was a Discover replacement and wrong now that it is a
+reader that also renders on a launcher page — see ROADMAP.md, "What this is
+now". Most people installing this will not have Lawnchair, and a first run
+that opens with setup instructions for a launcher they do not use tells them
+they have downloaded the wrong app.
 
-So one pane, or a step after the tour, has to do this:
+So: **one pane, after the tour, and only when it is relevant.**
 
-- Detect whether Whisper is the selected provider (the overlay service being
-  bound is the signal).
-- If it is not, say plainly what has to happen, in order, in Lawnchair.
-- Offer a button that opens Lawnchair's settings where the platform allows it.
-- Let it be dismissed and reachable again from Settings, since plenty of
-  people will install this without Lawnchair at all.
+- Detect whether Whisper is the selected provider — the overlay service being
+  bound is the signal.
+- Show the pane only when Lawnchair is installed and Whisper is not yet its
+  provider. Somebody without Lawnchair should never see it.
+- Say plainly what has to happen, in order, and offer a button that opens
+  Lawnchair's settings where the platform allows it.
+- Dismissible, and reachable again from Settings afterwards.
 
-Build this pane even if the rest slips.
+Frame it as something extra the app can do, not a step that was missed.
 
 ---
 
