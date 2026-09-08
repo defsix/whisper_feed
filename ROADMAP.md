@@ -37,8 +37,24 @@ the way.
   development leftover, so the menu's only real entry was Settings — which is
   now a single button straight to it. No dropdown in this window means no
   dropdown to position in it.
-- ~~**Opening an article from the overlay flashes the home screen, and coming
-  back lands there too.**~~ Tapping an article closes the minus-one panel, shows
+- **Coming back from the browser lands on the home screen.** Half of this is
+  fixed — the workspace no longer shows *before* the browser — but the return
+  cannot be fixed from this side, and the reason is in Lawnchair rather than
+  here. A fullscreen browser stops the launcher;
+  `LauncherClient.onStop` disconnects the overlay service, which reaches
+  `OverlayCallbackImpl.onServiceStateChanged(false)` →
+  `Launcher.setLauncherOverlay(null)` → `Workspace.setLauncherOverlay`, whose
+  last line is `onOverlayScrollChanged(0)` — the workspace is snapped back to
+  home. Re-attaching on resume runs the same line again. No message the
+  overlay can send prevents it; pushing `overlayScrollChanged(1f)` afterwards
+  would slide the panel open again, but only *after* the home screen had
+  already appeared, which is worse than the problem.
+
+  The way out is not to leave the launcher at all: render the article inside
+  the overlay panel rather than starting an activity. Then nothing pauses,
+  back returns to the feed, and the trip never happens. It only helps the
+  in-app reading mode — a browser is someone else's activity by definition.
+  ~~**and flashes the home screen on the way out**~~ Tapping an article closes the minus-one panel, shows
   the desktop for a frame, and only then opens the browser; pressing back from
   the browser returns to the home screen rather than to the feed. Both halves
   are the same cause: the overlay is a window on the launcher's token, not an
