@@ -76,6 +76,20 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**The feed was empty after a restart.**~~ Not a display fault and nothing
+  was being deleted — cleanup was reporting `deleting=0` throughout. The app
+  was drowning in its own sync. A device log showed the heap pinned at 244MB
+  of 256MB, **520 blocking collections**, the main thread stalled for over a
+  second at a time and 131 frames skipped, so the feed could not draw. Two
+  causes, compounding:
+
+  `maxFeedItemCount` was passed into `syncFeed` and used only for the cleanup
+  afterwards, never to trim what was built — so a feed offering 135 entries
+  had 135 articles and 135 content bodies materialised and written, and the
+  "items per feed" setting capped nothing. And every feed synced at once, so
+  with forty-five sources every one of those payloads was live in memory
+  simultaneously. Now trimmed before anything is built, and four feeds at a
+  time, which makes the peak the largest feed rather than the whole list.
 - ~~**The search bar's two buttons did nothing.**~~ Reported by a tester with
   both circled. They were not broken: the bar was drawn *under* the status
   bar, so the back arrow and the clear button sat where the system takes the

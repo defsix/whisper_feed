@@ -44,6 +44,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -71,6 +73,16 @@ const val TAG = "RssLocalSync"
  * sync of an imported OPML created dozens of connection pools and thread pools
  * that could share nothing — no connection reuse, no keep-alive across feeds.
  */
+/**
+ * How many feeds are fetched and parsed at the same time.
+ *
+ * Not a throughput knob: it is what keeps the heap survivable. Each feed being
+ * parsed holds its whole payload, its Article objects and their content bodies
+ * live at once, so the peak is this number multiplied by the largest feed
+ * rather than by the whole subscription list.
+ */
+private const val MAX_CONCURRENT_FEEDS = 4
+
 private val syncHttpClient: OkHttpClient by lazy {
     OkHttpClient.Builder().asFeedReader().build()
 }
@@ -138,35 +150,46 @@ internal suspend fun syncFeeds(
 
                 Log.d(TAG, "Feeds to sync: ${feedsToFetch.size}")
 
+                // Every feed at once was the arrangement, and it does not
+                // survive a real subscription list. Forty-five feeds launched
+                // together each parse their payload and build their articles
+                // at the same moment, so every one of those strings is live
+                // simultaneously: a device log showed the heap pinned at
+                // 244MB of 256MB with five hundred blocking collections, the
+                // main thread stalled for over a second at a time, and a feed
+                // that could not draw because nothing could get a frame in.
+                val gate = Semaphore(MAX_CONCURRENT_FEEDS)
                 val jobs = feedsToFetch.map { feed ->
                     needFullTextSync = needFullTextSync ||
                             feed.fullTextByDefault || fullTextForAll
                     launch(coroutineContext) {
-                        try {
-                            // Mark as syncing START
-                            feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = true)
+                        gate.withPermit {
+                            try {
+                                // Mark as syncing START
+                                feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = true)
 
-                            syncFeed(
-                                context = context,
-                                feedsRepo = feedsRepo,
-                                articleRepo = articlesRepo,
-                                feedSql = feed,
-                                filesDir = context.filesDir,
-                                maxFeedItemCount = maxFeedItemCount,
-                                forceNetwork = forceNetwork,
-                                downloadTime = downloadTime
-                            )
+                                syncFeed(
+                                    context = context,
+                                    feedsRepo = feedsRepo,
+                                    articleRepo = articlesRepo,
+                                    feedSql = feed,
+                                    filesDir = context.filesDir,
+                                    maxFeedItemCount = maxFeedItemCount,
+                                    forceNetwork = forceNetwork,
+                                    downloadTime = downloadTime
+                                )
 
-                            // Successful sync, update lastSync
-                            feedsRepo.setCurrentlySyncingOn(
-                                feedId = feed.id,
-                                syncing = false,
-                                lastSync = Clock.System.now(),
-                            )
-                        } catch (e: Throwable) {
-                            Log.e(TAG, "Failed to sync ${feed.title}: ${feed.url}", e)
-                            // Error, clear syncing flag but don't update lastSync
-                            feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = false)
+                                // Successful sync, update lastSync
+                                feedsRepo.setCurrentlySyncingOn(
+                                    feedId = feed.id,
+                                    syncing = false,
+                                    lastSync = Clock.System.now(),
+                                )
+                            } catch (e: Throwable) {
+                                Log.e(TAG, "Failed to sync ${feed.title}: ${feed.url}", e)
+                                // Error, clear syncing flag but don't update lastSync
+                                feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = false)
+                            }
                         }
                     }
                 }
@@ -244,8 +267,15 @@ private suspend fun syncFeed(
         period = DateTimePeriod(days = days),
         timeZone = TimeZone.currentSystemDefault()
     ).toEpochMilliseconds()
+    // Trimmed *before* anything is built. maxFeedItemCount was passed in and
+    // then used only for the cleanup afterwards, so a feed offering 135
+    // entries had 135 Article objects and 135 content bodies materialised and
+    // written, and the setting that was supposed to cap it at 25 capped
+    // nothing. Feeds are newest-first by convention, so the newest are taken
+    // and then reversed, since insertion goes oldest first.
     val articles =
-        items?.reversed()
+        items?.take(maxFeedItemCount)
+            ?.reversed()
             ?.map { item ->
                 val itemGuid = (item.id ?: item.url).toString()
                 val article = (articleRepo.getArticleByGuid(
@@ -260,7 +290,10 @@ private suspend fun syncFeed(
             }
             ?.filterBlockedWords() ?: emptyList()
 
-    Log.d(TAG, "Prepared ${articles.size} articles for ${feedSql.title}")
+    Log.d(
+        TAG,
+        "Prepared ${articles.size} of ${items?.size ?: 0} for ${feedSql.title} (cap $maxFeedItemCount)"
+    )
 
     // The source's mark, for the line under each headline. Three places to
     // look, cheapest first: the feed's own <icon>, then whatever is already
