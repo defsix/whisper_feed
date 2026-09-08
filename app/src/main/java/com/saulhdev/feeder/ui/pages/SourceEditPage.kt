@@ -293,6 +293,69 @@ fun SourceEditView(
             )
         }
         item {
+            // Above the categories, not below them: the chip cloud grows with
+            // every category the user has, and these two switches were being
+            // pushed off the bottom of the screen by it.
+            ComposeSwitchView(
+                titleId = R.string.fetch_full_articles_by_default,
+                summaryId = R.string.fetch_full_articles_summary,
+                isChecked = editState.value.fullTextByDefault,
+                onCheckedChange = {
+                    editState.value = editState.value.copy(fullTextByDefault = it)
+                    onEdited()
+                },
+                index = 0,
+                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            ComposeSwitchView(
+                titleId = R.string.source_enabled,
+                isChecked = editState.value.isEnabled,
+                onCheckedChange = {
+                    editState.value = editState.value.copy(isEnabled = it)
+                    onEdited()
+                },
+                index = 1,
+                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+            )
+            if (editState.value.sourceType == "mastodon") {
+                Spacer(modifier = Modifier.height(4.dp))
+                ComposeSwitchView(
+                    titleId = R.string.mastodon_exclude_replies,
+                    isChecked = editState.value.excludeReplies,
+                    onCheckedChange = {
+                        editState.value = editState.value.copy(excludeReplies = it)
+                        onEdited()
+                    },
+                    index = 2,
+                    groupSize = 5
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                ComposeSwitchView(
+                    titleId = R.string.mastodon_require_link,
+                    isChecked = editState.value.requireLink,
+                    onCheckedChange = {
+                        editState.value = editState.value.copy(requireLink = it)
+                        onEdited()
+                    },
+                    index = 3,
+                    groupSize = 5
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                ComposeSwitchView(
+                    titleId = R.string.mastodon_require_image,
+                    isChecked = editState.value.requireImage,
+                    onCheckedChange = {
+                        editState.value = editState.value.copy(requireImage = it)
+                        onEdited()
+                    },
+                    index = 4,
+                    groupSize = 5
+                )
+            }
+        }
+
+        item {
             // Categories are picked, not typed. The field here was free text,
             // so a category was created by spelling it right and lost by
             // spelling it wrong — and it read as one value even though the
@@ -358,65 +421,6 @@ fun SourceEditView(
                         }
                     ),
                     modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        item {
-            ComposeSwitchView(
-                titleId = R.string.fetch_full_articles_by_default,
-                isChecked = editState.value.fullTextByDefault,
-                onCheckedChange = {
-                    editState.value = editState.value.copy(fullTextByDefault = it)
-                    onEdited()
-                },
-                index = 0,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            ComposeSwitchView(
-                titleId = R.string.source_enabled,
-                isChecked = editState.value.isEnabled,
-                onCheckedChange = {
-                    editState.value = editState.value.copy(isEnabled = it)
-                    onEdited()
-                },
-                index = 1,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
-            )
-            if (editState.value.sourceType == "mastodon") {
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_exclude_replies,
-                    isChecked = editState.value.excludeReplies,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(excludeReplies = it)
-                        onEdited()
-                    },
-                    index = 2,
-                    groupSize = 5
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_require_link,
-                    isChecked = editState.value.requireLink,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(requireLink = it)
-                        onEdited()
-                    },
-                    index = 3,
-                    groupSize = 5
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_require_image,
-                    isChecked = editState.value.requireImage,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(requireImage = it)
-                        onEdited()
-                    },
-                    index = 4,
-                    groupSize = 5
                 )
             }
         }

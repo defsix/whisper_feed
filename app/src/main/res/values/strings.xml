@@ -192,6 +192,7 @@
     <string name="title_plugin_list">Plugin List</string>
     <string name="touch_to_play_video">Touch to play video</string>
     <string name="fetch_full_articles_by_default">Fetch full articles by default</string>
+    <string name="fetch_full_articles_summary">Download the whole article while syncing, so it is ready offline. The reader fetches it on demand either way.</string>
     <string name="article_not_found">Local article not found</string>
     <string name="no_articles_found">No articles found</string>
     <string name="on_date" translatable="false">%1$s</string>
