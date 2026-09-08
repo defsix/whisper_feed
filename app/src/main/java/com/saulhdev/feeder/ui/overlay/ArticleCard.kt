@@ -91,6 +91,9 @@ fun FeedArticleItem(
     // read article fades whichever way the feed happens to be drawing it.
     val shapeModifier =
         if (dimRead && item.article.readAt != 0L) modifier.alpha(READ_ALPHA) else modifier
+    // Worked out only when the menu is opened, not for every card in the feed:
+    // this is an answer to a question almost nobody asks of almost any article.
+    val reasons = rememberWeightReasons(item)
     val menu: @Composable (Color?) -> Unit = { tint ->
         ArticleOverflowMenu(
             onMoreLikeThis = onMoreLikeThis,
@@ -98,6 +101,7 @@ fun FeedArticleItem(
             onHideSource = onHideSource,
             onShare = onShare,
             tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
+            reasons = reasons,
         )
     }
     when (feedCardShape(index, hasImage, layout, emphasis)) {

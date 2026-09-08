@@ -80,6 +80,7 @@ fun PreferencesPage(
         prefs.removeDuplicates,
         prefs.markReadOnScroll,
         prefs.markAllRead,
+        prefs.learned,
         prefs.readVisibility,
         prefs.volumeKeyScroll,
     )

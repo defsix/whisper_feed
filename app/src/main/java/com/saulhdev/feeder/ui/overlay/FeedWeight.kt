@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.data.repository.ArticleRepository
@@ -301,4 +302,92 @@ fun rememberDimRead(): Boolean {
     val setting by prefs.readVisibility.get()
         .collectAsState(initial = prefs.readVisibility.getValue())
     return setting == READ_DIM
+}
+
+/**
+ * One line of the answer to "why is this the size it is".
+ *
+ * @param labelId what the signal is, in the reader's words.
+ * @param amount how much it added or took away, so the biggest reason is
+ *   identifiable rather than merely listed.
+ */
+data class WeightReason(
+    val labelId: Int,
+    val amount: Float,
+)
+
+/**
+ * Why one article got the emphasis it did, in the order that matters most.
+ *
+ * Derived from the same terms [articleWeight] sums, and deliberately so: an
+ * explanation computed separately from the thing it explains drifts the first
+ * time either is edited, and then confidently says the wrong thing. Every
+ * branch here mirrors one there.
+ *
+ * The whole point of the weighting is that a reader can disagree with it.
+ * That needs the reasons visible at the article, not only the totals on a
+ * settings screen — by the time someone is in Settings they have stopped
+ * asking about the article that prompted the question.
+ */
+fun weightReasons(
+    item: FeedItem,
+    affinity: Map<String, Int>,
+    nowMs: Long,
+    habit: Map<Long, Float> = emptyMap(),
+): List<WeightReason> {
+    if (item.article.imageUrl.isNullOrBlank()) {
+        return listOf(WeightReason(R.string.why_no_image, 0f))
+    }
+
+    val reasons = mutableListOf<WeightReason>()
+
+    val ageHours = ((nowMs - item.timeMillis).coerceAtLeast(0L)) / 3_600_000f
+    when {
+        ageHours < 2f  -> reasons += WeightReason(R.string.why_very_fresh, 1.2f)
+        ageHours < 6f  -> reasons += WeightReason(R.string.why_fresh, 0.8f)
+        ageHours < 24f -> reasons += WeightReason(R.string.why_today, 0.4f)
+        ageHours >= 72f -> reasons += WeightReason(R.string.why_old, -0.4f)
+    }
+
+    val score = (affinity[item.sourceId] ?: 0).coerceIn(-3, 3)
+    if (score != 0) reasons += WeightReason(R.string.why_affinity, score * 0.35f)
+
+    val read = (habit[item.feed.id] ?: 0f) * ArticleWeight.HABIT_MAX
+    if (read > 0.05f) reasons += WeightReason(R.string.why_read_often, read)
+
+    val words = item.contentTitle.trim().split(Regex("\\s+")).size
+    when {
+        words < 3   -> reasons += WeightReason(R.string.why_title_short, -0.2f)
+        words <= 12 -> reasons += WeightReason(R.string.why_title_good, 0.4f)
+        words > 18  -> reasons += WeightReason(R.string.why_title_long, -0.25f)
+    }
+
+    reasons += if (item.article.description.isNotBlank())
+        WeightReason(R.string.why_has_summary, 0.3f)
+    else WeightReason(R.string.why_no_summary, -0.3f)
+
+    if (item.article.readAt != 0L) reasons += WeightReason(R.string.why_read, -1.5f)
+    if (item.bookmarked) reasons += WeightReason(R.string.why_saved, 0.4f)
+    if (item.pinned) reasons += WeightReason(R.string.why_pinned, 1.5f)
+
+    return reasons.sortedByDescending { kotlin.math.abs(it.amount) }
+}
+
+/**
+ * The reasons for one article, with the signals read from preferences.
+ *
+ * A composable so a card can ask without being handed two maps it has no
+ * other use for. It is cheap — the two flows behind it are already collected
+ * once per feed by [rememberFeedEmphasis], and the reasons themselves are a
+ * dozen comparisons.
+ */
+@Composable
+fun rememberWeightReasons(item: FeedItem): List<WeightReason> {
+    val prefs: FeedPreferences = koinInject()
+    val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
+    val affinity = remember(raw) { parseAffinity(raw) }
+    val habit = rememberReadingHabits()
+    return remember(item.id, affinity, habit) {
+        weightReasons(item, affinity, System.currentTimeMillis(), habit)
+    }
 }

@@ -17,7 +17,7 @@ in the code.
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
-| 5 | Personalisation | **Started** — article weighting drives both Cards and Mosaic, and is the first thing to read the More/Less scores back. Reading habits, the ordering, an explanation affordance and the reset control still to build |
+| 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
@@ -284,12 +284,19 @@ Two interactions that had to be right, and are:
   than infer it from behaviour, and that is only worth the screen if the
   behaviour is in question.
 
-Still open in Milestone 5 more broadly: a visible "why is this big"
-affordance, the reset control, and the reading-habit term below.
+**"Why is this here?" — built.** In the per-article menu, listing the signals
+that decided the article's size, largest first, with what each contributed.
+Derived from the same terms the weight sums rather than computed alongside
+them: an explanation written separately from the thing it explains drifts the
+first time either is edited, and then confidently says the wrong thing.
 
-**Reading habits as a weight term — and it does not need accounts.** The plan
-was to gate this on sign-in and count usage server-side. It does not have to
-wait: `readAt` is already on every article, so per-source read counts, opens
+It is at the article rather than only in Settings because by the time someone
+has walked to a settings screen they have stopped wondering about the card
+that prompted the question.
+
+**Reading habits as a weight term — built, and it did not need accounts.** The
+plan was to gate this on sign-in and count usage server-side. It did not have
+to wait: `readAt` is already on every article, so per-source read counts, opens
 per week and time-since-last-read can all be derived on device today, from data
 that is already there. What an account adds is *carrying those counts to
 another phone* — which is §7's job, not a prerequisite for the feature. Build
@@ -299,8 +306,9 @@ The term itself is a small one on purpose. A source read often gets a nudge, not
 a promotion: enough to break a tie between two similar articles, never enough
 to outrank a fresh story from somewhere else.
 
-**The diversity constraint is not optional, and it is the hard half.** Left
-alone, "favour what they read" converges on one site: it gets shown more, so it
+**The diversity constraint is not optional, and it is the hard half — built as
+two structural rules.** Left alone, "favour what they read" converges on one
+site: it gets shown more, so it
 is read more, so it is weighted higher. The counter has to be structural rather
 than a smaller coefficient, because any positive coefficient runs away
 eventually. Two rules, both cheap:
@@ -314,6 +322,20 @@ Both are display rules, which keeps the property the weighting already has: a
 low score changes how big something is and where it sits, never whether it is
 there at all. Nothing in Whisper should be able to hide an article the user
 subscribed to.
+
+**The reset control is a screen, not a button.** `docs/REFERENCES.md` §4 found
+no open-source prior art for transparent, resettable preference learning in a
+feed reader, and a bare reset is only the resettable half. "What Whisper has
+learned" lists every source with its More/Less score, how many of its articles
+were read in the last thirty days, and the resulting weight — the number the
+feed actually uses, computed by the same arithmetic rather than an
+approximation of it. A score nobody can audit is one nobody can correct.
+
+Resetting is per source as well as wholesale, so one mistaken Less can be
+undone without discarding a year of signal. Read state is deliberately not
+cleared by it: that is a record of what happened rather than an opinion about
+it, and "forget what you have learned" does not mean "mark a year of articles
+unread" to anyone who presses it.
 
 Worth restating: `docs/REFERENCES.md` §4 found **no open-source prior art** for
 transparent, resettable preference learning in a feed reader. This is

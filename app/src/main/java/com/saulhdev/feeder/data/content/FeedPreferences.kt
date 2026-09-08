@@ -48,6 +48,7 @@ import com.saulhdev.feeder.utils.READ_KEEP
 import com.saulhdev.feeder.utils.getReadVisibility
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
+import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
@@ -289,6 +290,15 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * looking. A dialog here would ask them to confirm something they cannot
      * see, which is the weaker of the two safety nets.
      */
+    var learned = StringPref(
+        titleId = R.string.pref_learned,
+        summaryId = R.string.pref_learned_summary,
+        icon = Phosphor.Graph,
+        key = LEARNED,
+        dataStore = dataStore,
+        route = NavRoute.Learned
+    )
+
     var markAllRead = StringPref(
         titleId = R.string.pref_mark_all_read,
         summaryId = R.string.pref_mark_all_read_summary,
@@ -631,6 +641,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val READ_VISIBILITY = stringPreferencesKey("pref_read_visibility")
         val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
+        val LEARNED = stringPreferencesKey("pref_learned")
 
         /**
          * Set once by the app so a preference row can reach the view model.

@@ -28,6 +28,7 @@ import com.saulhdev.feeder.viewmodels.ArticleViewModel
 import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
+import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
             savedStateHandle()
         }
         viewModelOf(::SourceEditViewModel)
+        viewModelOf(::LearnedViewModel)
         viewModelOf(::SearchFeedViewModel)
         viewModelOf(::ArticleListViewModel)
         viewModelOf(::SourceListViewModel)
