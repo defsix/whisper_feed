@@ -218,15 +218,27 @@ it worth care rather than an afternoon:
   is arguably the correct behaviour and it is certainly a strong one, and it
   should be seen on a real feed before it is a default anything.
 
-**Dwell, not velocity.** The instinct is right — a fling past forty headlines
-is not reading and should not count — but scroll speed is the wrong way to
-measure it. Velocity swings wildly inside a single fling, so the same gesture
-would mark some articles and not others depending on where in the deceleration
-curve they happened to be. Time on screen answers the same question directly:
-an article that was visible for longer than about a second and a half was read
-past deliberately, and one that flew by in 200ms was not. Both containers
-already expose `visibleItemsInfo`, so this is a timestamp per visible key and a
-comparison when it leaves.
+**Dwell, not velocity — built.** The instinct was right, that a fling past
+forty headlines is not reading, but scroll speed is the wrong way to measure
+it: velocity swings inside a single fling, so the same gesture would mark some
+articles and not others depending on where in the deceleration curve they
+landed. Time on screen asks the question directly.
+
+The threshold is the reader's, not a constant: 1, 2, 3 or 5 seconds, off by
+default. There is no right number — it depends on how fast someone reads and
+how they scroll — so guessing one and hard-coding it would only have produced
+a number to argue with. A card is on screen for roughly 300-500ms during a
+fling, so every option sits above that floor.
+
+A card also has to be at least 60% visible before its clock starts, or the two
+items straddling the edges of the viewport accrue time as fast as the one being
+looked at. Dwell accumulates while the list is still as well as while it moves:
+an article held on screen while it is read has been read, and requiring
+movement would mean the one card you stopped on was the one that never counted.
+
+Still worth doing when there is a real feed to measure against: a debug readout
+of the dwell each card accrues, so the number can be chosen from what actually
+happens rather than inferred from behaviour.
 
 **Whether a read article then disappears is a separate setting, and the default
 is no.** Today `readAt` does exactly two things: it subtracts 1.5 from the
@@ -261,10 +273,8 @@ Two interactions to get right when this is built:
   sheet, not buried in Settings. The one place a reader looks for something
   that has vanished is the filter that made it vanish.
 
-Cheapest honest version: the three-position read trigger (never / left the top
-/ on screen long enough), the three-position visibility above, "mark all as
-read", and an undo window on any batch. All belong with the other
-personalisation switches.
+Still to do here: "mark all as read", and an undo window on any batch the
+scroll trigger produces.
 
 Still open here: a visible "why is this big" affordance, the reset control, and
 the reading-habit term below.

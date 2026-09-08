@@ -148,6 +148,7 @@ fun FeedScaffold(
     onSearchingChange: (Boolean) -> Unit,
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
+    onArticleSeen: (FeedItem) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -304,6 +305,13 @@ fun FeedScaffold(
                 // layout, so it is made once here rather than per container.
                 val emphasis = rememberFeedEmphasis(articles)
                 val dimRead = rememberDimRead()
+                MarkReadWhileScrolling(
+                    articles = articles,
+                    isGrid = isGrid,
+                    listState = listState,
+                    gridState = gridState,
+                    onRead = onArticleSeen,
+                )
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
                 } else if (feedLayoutIsGrid(layout)) {

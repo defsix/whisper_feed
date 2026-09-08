@@ -44,6 +44,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.utils.READ_KEEP
+import com.saulhdev.feeder.utils.getMarkReadOnScroll
 import com.saulhdev.feeder.utils.getReadVisibility
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
@@ -273,6 +274,23 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * about tidying away what is finished should not throw away what was
      * deliberately kept.
      */
+    /**
+     * Whether scrolling past an article marks it read, and how slowly.
+     *
+     * Off by default. This is a surface people scroll idly and come back to,
+     * not an inbox, and a reader who has not asked for this and finds forty
+     * articles marked has no way to tell that is what happened.
+     */
+    var markReadOnScroll = StringSelectionPref(
+        titleId = R.string.pref_mark_read_on_scroll,
+        summaryId = R.string.pref_mark_read_on_scroll_summary,
+        icon = Phosphor.Clock,
+        key = MARK_READ_ON_SCROLL,
+        dataStore = dataStore,
+        defaultValue = "0",
+        entries = getMarkReadOnScroll(context)
+    )
+
     var readVisibility = StringSelectionPref(
         titleId = R.string.pref_read_visibility,
         summaryId = R.string.pref_read_visibility_summary,
@@ -585,6 +603,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
         val VOLUME_KEY_SCROLL = booleanPreferencesKey("pref_volume_key_scroll")
         val READ_VISIBILITY = stringPreferencesKey("pref_read_visibility")
+        val MARK_READ_ON_SCROLL = stringPreferencesKey("pref_mark_read_on_scroll")
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")

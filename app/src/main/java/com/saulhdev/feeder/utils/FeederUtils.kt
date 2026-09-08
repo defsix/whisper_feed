@@ -89,6 +89,28 @@ fun getReadVisibility(context: Context): Map<String, String> {
     )
 }
 
+/**
+ * How long an article has to be on screen before it counts as read.
+ *
+ * The values are milliseconds as strings, because that is what a
+ * StringSelectionPref stores and turning them into an enum would only mean
+ * mapping the enum back to a number at the one place that uses it.
+ *
+ * Tunable rather than fixed because there is no right answer: it depends on
+ * how fast the reader reads and how they scroll. A card is on screen for
+ * roughly 300-500ms during a fling, so every option here is above that floor;
+ * beyond it, the reader decides.
+ */
+fun getMarkReadOnScroll(context: Context): Map<String, String> {
+    return mapOf(
+        "0" to context.resources.getString(R.string.mark_read_never),
+        "1000" to context.resources.getString(R.string.mark_read_seconds, 1),
+        "2000" to context.resources.getString(R.string.mark_read_seconds, 2),
+        "3000" to context.resources.getString(R.string.mark_read_seconds, 3),
+        "5000" to context.resources.getString(R.string.mark_read_seconds, 5),
+    )
+}
+
 fun getFeedLayouts(context: Context): Map<String, String> {
     return mapOf(
         LAYOUT_CARDS to context.resources.getString(R.string.layout_cards),
