@@ -742,8 +742,20 @@ file, not a prerequisite.
 
 And the folder names are the categories. Whisper already has categories, so a
 News folder becomes the News category — which is exactly what the breaking-news
-detection in §6 reads, since it only considers sources filed under news. The
-import hands that feature its input for free.
+detection in §6 reads, since it only considers sources filed under news.
+
+**That is more than a convenience, and it is the argument for building this
+sooner rather than later.** Clustering needs several sources covering the same
+story, filed under news. Someone who has added eight feeds by hand has neither
+the sources nor the categories, so the feature that most distinguishes the app
+is switched off by default and would do nothing if it were switched on.
+Importing a News folder produces precisely the input it needs — a dozen news
+sources, already categorised, in one action. The importer is not only how
+people get started; it is what makes the clustering fire at all.
+
+The same holds for the weighting generally. Reading habits, source affinity and
+the diversity rules all want a feed with breadth in it, and all of them are
+inert on a handful of hand-added sources.
 
 So the first screen is not "choose a file" but, after choosing one, a folder
 tree with checkboxes and a count beside each:
