@@ -305,6 +305,7 @@ fun FeedScaffold(
                 // layout, so it is made once here rather than per container.
                 val emphasis = rememberFeedEmphasis(articles)
                 val dimRead = rememberDimRead()
+                val clusters = rememberStoryClusters(articles)
                 MarkReadWhileScrolling(
                     articles = articles,
                     isGrid = isGrid,
@@ -348,6 +349,7 @@ fun FeedScaffold(
                                 emphasis = emphasis.getOrNull(index)
                                     ?: FeedEmphasis.Medium,
                                 dimRead = dimRead,
+                                cluster = clusters[item.id],
                             )
                         }
                     }
@@ -371,6 +373,7 @@ fun FeedScaffold(
                                 emphasis = emphasis.getOrNull(index)
                                     ?: FeedEmphasis.Medium,
                                 dimRead = dimRead,
+                                cluster = clusters[item.id],
                             )
                         }
                     }

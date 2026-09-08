@@ -60,6 +60,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.formatArticleAge
@@ -85,6 +86,7 @@ fun FeedArticleItem(
     layout: String = LAYOUT_CARDS,
     emphasis: FeedEmphasis = FeedEmphasis.Medium,
     dimRead: Boolean = false,
+    cluster: StoryCluster? = null,
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     // One place rather than five: every shape below takes this modifier, so a
@@ -93,7 +95,11 @@ fun FeedArticleItem(
         if (dimRead && item.article.readAt != 0L) modifier.alpha(READ_ALPHA) else modifier
     // Worked out only when the menu is opened, not for every card in the feed:
     // this is an answer to a question almost nobody asks of almost any article.
-    val reasons = rememberWeightReasons(item)
+    val reasons = rememberWeightReasons(item, clusterOf(item, cluster))
+    // Only the card that was promoted says so. Every member of a cluster
+    // carries the same count, and putting it on all six would turn one story
+    // into six claims that a story is happening.
+    val coverage = cluster?.takeIf { it.leadId == item.id }?.sources
     val menu: @Composable (Color?) -> Unit = { tint ->
         ArticleOverflowMenu(
             onMoreLikeThis = onMoreLikeThis,
@@ -105,13 +111,18 @@ fun FeedArticleItem(
         )
     }
     when (feedCardShape(index, hasImage, layout, emphasis)) {
-        FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, shapeModifier)
-        FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, shapeModifier)
+        FeedCardShape.Hero    -> ArticleHeroCard(
+            item, onClick, onBookmark, onShare, menu, shapeModifier, coverage,
+        )
+        FeedCardShape.Card    -> ArticleCard(
+            item, onClick, onBookmark, onShare, menu, shapeModifier, coverage,
+        )
         FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, shapeModifier)
         FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, shapeModifier)
         FeedCardShape.Tile    -> ArticleMosaicTile(
             item, onClick, onBookmark, menu, shapeModifier,
             size = emphasis,
+            coverage = coverage,
         )
     }
 }
@@ -130,6 +141,7 @@ fun ArticleHeroCard(
     onShare: () -> Unit,
     menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
+    coverage: Int? = null,
 ) {
     val context = LocalContext.current
 
@@ -168,6 +180,10 @@ fun ArticleHeroCard(
                     .align(Alignment.BottomStart)
                     .padding(16.dp)
             ) {
+                coverage?.let {
+                    CoverageLine(sources = it, color = Color.White)
+                    Spacer(Modifier.height(4.dp))
+                }
                 val category = item.feedTag
                 if (category.isNotBlank()) {
                     Text(
@@ -229,6 +245,7 @@ fun ArticleCard(
     onShare: () -> Unit,
     menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
+    coverage: Int? = null,
 ) {
     val context = LocalContext.current
 
@@ -253,12 +270,25 @@ fun ArticleCard(
                 )
             }
 
+            coverage?.let {
+                CoverageLine(
+                    sources = it,
+                    modifier = Modifier.padding(top = if (image.isNullOrBlank()) 0.dp else 12.dp),
+                )
+            }
+
             Text(
                 text = item.contentTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = if (image.isNullOrBlank()) 0.dp else 12.dp),
+                modifier = Modifier.padding(
+                    top = when {
+                        coverage != null          -> 6.dp
+                        image.isNullOrBlank()     -> 0.dp
+                        else                      -> 12.dp
+                    }
+                ),
             )
 
             val summary = item.article.description
@@ -469,6 +499,7 @@ fun ArticleMosaicTile(
     menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
     size: FeedEmphasis = FeedEmphasis.Medium,
+    coverage: Int? = null,
 ) {
     val context = LocalContext.current
     val large = size == FeedEmphasis.Large
@@ -551,6 +582,10 @@ fun ArticleMosaicTile(
             }
         }
         Column(modifier = Modifier.padding(10.dp)) {
+            coverage?.let {
+                CoverageLine(sources = it)
+                Spacer(Modifier.height(4.dp))
+            }
             Text(
                 text = item.contentTitle,
                 style = if (large) MaterialTheme.typography.titleMedium
@@ -688,3 +723,40 @@ fun articlePlaceholder(): Int =
 
 /** How far a read article fades, when the reader has asked for that. */
 private const val READ_ALPHA = 0.55f
+
+/** The cluster map [rememberWeightReasons] wants, from the one cluster a card has. */
+private fun clusterOf(item: FeedItem, cluster: StoryCluster?): Map<String, StoryCluster> =
+    if (cluster == null) emptyMap() else mapOf(item.id to cluster)
+
+/**
+ * "Covered by 5 sources" — why this card is the size it is, said out loud.
+ *
+ * The count is the whole claim and it is worth stating plainly: a reader who
+ * sees one story given the largest card should be able to tell at a glance
+ * whether that is because several papers ran it or because the app guessed.
+ */
+@Composable
+private fun CoverageLine(
+    sources: Int,
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Phosphor.Megaphone,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(R.string.covered_by_sources, sources),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
+    }
+}

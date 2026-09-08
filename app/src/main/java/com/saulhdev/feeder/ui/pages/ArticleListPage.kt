@@ -117,6 +117,7 @@ import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
 import com.saulhdev.feeder.ui.overlay.MarkReadWhileScrolling
 import com.saulhdev.feeder.ui.overlay.rememberDimRead
+import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
@@ -477,6 +478,7 @@ fun ArticleListPage(
                                 // Mosaic is a staggered grid rather than a column.
                                 else          -> {
                                     val dimRead = rememberDimRead()
+                                    val clusters = rememberStoryClusters(state.articles)
                                     MarkReadWhileScrolling(
                                         articles = state.articles,
                                         isGrid = feedLayoutIsGrid(layout),
@@ -492,6 +494,7 @@ fun ArticleListPage(
                                             layout = layout,
                                             emphasis = emphasis,
                                             dimRead = dimRead,
+                                            cluster = clusters[item.id],
                                             onClick = {
                                                 viewModel.markRead(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {

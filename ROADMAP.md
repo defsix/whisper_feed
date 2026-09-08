@@ -353,10 +353,24 @@ inference, no clustering, nothing to get wrong. It also happens to be the
 manual escape hatch for whenever the automatic detection below gets it wrong,
 so it is worth having in place before the automatic version ships.
 
-**Breaking news detection — clustering.** The signal is the right one: when
-five sources publish about the same thing inside an hour, that is a story, and
-a single-source post is not. The hard part is "the same thing". Options, and
-the honest cost of each:
+**Breaking news detection — built, on title similarity.** The signal is the
+right one: when several sources publish about the same thing inside a few
+hours, that is a story, and a single-source post is not. The hard part was
+"the same thing", and the cheapest option turned out to work.
+
+What makes plain word overlap usable is weighting words by how *rare* they are
+in the current feed. A token in two or three titles out of four hundred is a
+proper noun identifying an event; one in fifty is a topic. Two articles sharing
+two rare tokens are almost always the same story; two sharing four common ones
+almost never are. An inverted index over the rare tokens only keeps it well
+short of comparing every pair.
+
+Ten tests cover it, including the two ways it can fail in public: inventing a
+story out of headlines that merely share a topic, and being fooled by a feed
+that appends its own name to every title.
+
+The options considered, and the honest cost of each, kept for whoever revisits
+this:
 
 - *Title similarity* — normalise, strip the source suffix, then compare on
   token overlap or trigram Jaccard. Runs locally, no network, no model, a few
@@ -389,9 +403,19 @@ and are already the user's own judgement, so the app is reading a decision the
 user made rather than guessing at one.
 
 Guard against the obvious failure: one prolific feed posting six times about
-its own topic is not breaking news. Require the cluster to span **distinct
-sources**, and require recency, or a chatty feed will hold the hero slot all
-day.
+its own topic is not breaking news. The cluster must span **distinct sources**
+— three of them — and everything in it must fall inside a twelve-hour window,
+or a chatty feed would hold the hero slot all day. Both are tested.
+
+Two things it deliberately does not do. It does not collapse the cluster: every
+member stays in the feed at whatever size it earned, and only the lead is
+promoted, because hiding four reports means choosing which four the reader does
+not see and no automatic rule here is good enough for that. And it is off by
+default — this is the one part of the weighting that infers rather than counts,
+and a feed that hands the biggest slot to the wrong article for reasons the
+reader never asked for is worse than one that never tries.
+
+**Pinning and sticky are what remain.**
 
 **Sticky until scrolled past.** A user setting, off by default. The promoted
 cluster holds the top of the viewport until the user scrolls past it, then

@@ -78,6 +78,7 @@ fun PreferencesPage(
         prefs.articleOpenMode,
         prefs.fullTextForAllFeeds,
         prefs.removeDuplicates,
+        prefs.breakingNews,
         prefs.markReadOnScroll,
         prefs.markAllRead,
         prefs.learned,

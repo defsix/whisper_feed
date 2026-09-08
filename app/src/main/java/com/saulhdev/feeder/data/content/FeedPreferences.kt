@@ -290,6 +290,31 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * looking. A dialog here would ask them to confirm something they cannot
      * see, which is the weaker of the two safety nets.
      */
+    /**
+     * Give a story several sources are covering the biggest slot.
+     *
+     * Off by default. This is the one thing in the weighting that infers
+     * rather than counts — everything else is a tally of something that
+     * happened, while this is a judgement that two headlines are about the
+     * same event, and it will occasionally be wrong in public. A reader who
+     * did not ask for it and finds the wrong article filling the screen has no
+     * way to know why.
+     *
+     * It reads sources filed under a "News" category and no others: the same
+     * burst across five review sites is a product launch, and across five
+     * football sites a transfer window. Neither wants this treatment, and the
+     * reader's own categories are a judgement already made rather than one
+     * guessed at here.
+     */
+    var breakingNews = BooleanPref(
+        titleId = R.string.pref_breaking_news,
+        summaryId = R.string.pref_breaking_news_summary,
+        icon = Phosphor.Megaphone,
+        key = BREAKING_NEWS,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
     var learned = StringPref(
         titleId = R.string.pref_learned,
         summaryId = R.string.pref_learned_summary,
@@ -642,6 +667,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
+        val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
 
         /**
          * Set once by the app so a preference row can reach the view model.

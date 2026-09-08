@@ -209,6 +209,9 @@
     <string name="why_read">You have already read it</string>
     <string name="why_saved">You saved it</string>
     <string name="why_pinned">You pinned it</string>
+    <string name="pref_breaking_news">Highlight breaking news</string>
+    <string name="pref_breaking_news_summary">When several of your News sources cover the same story within a few hours, give it the largest card. Uses sources filed under a News category only.</string>
+    <string name="why_breaking">Several sources are covering this story</string>
     <string name="pref_learned">What Whisper has learned</string>
     <string name="pref_learned_summary">Every score the feed reads from your own behaviour, and the way to undo any of it.</string>
     <string name="learned_explanation">Nothing here is guessed. These are counts of what you have pressed and opened, and the effect each one has on how prominently a source appears. None of it leaves your phone.</string>
@@ -217,6 +220,7 @@
     <string name="learned_forget">Forget this source\'s score</string>
     <string name="learned_unhide">Show this source again</string>
     <string name="learned_reset_all">Forget everything</string>
+    <string name="covered_by_sources">Covered by %1$d sources</string>
     <string name="learned_reset_all_desc">Clears every More/Less score and shows any hidden sources again. Your subscriptions, saved articles and read history are not touched.</string>
     <string name="pref_mark_all_read">Mark everything as read</string>
     <string name="pref_mark_all_read_summary">Clears the unread count. The feed offers it back until you leave it.</string>

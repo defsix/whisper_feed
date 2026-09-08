@@ -84,6 +84,22 @@ object ArticleWeight {
     const val HABIT_WINDOW_DAYS = 30L
 
     /**
+     * What a story several sources are covering is worth.
+     *
+     * The largest single term, and deliberately so. This is not a second
+     * mechanism sitting beside the weighting and competing with it for the
+     * hero slot — it is the weighting's answer to the same question everything
+     * else here answers, and the answer that ought to win. Scaled by how many
+     * sources are covering it, because three is a story and eight is the story.
+     */
+    fun breakingBonus(sources: Int): Float = when {
+        sources < Clustering.MIN_SOURCES -> 0f
+        sources < 5                      -> 1.2f
+        sources < 8                      -> 1.6f
+        else                             -> 2.0f
+    }
+
+    /**
      * How many items must pass before a source may take a second large slot.
      *
      * The first of the two structural diversity rules. A coefficient can be
@@ -127,6 +143,7 @@ fun articleWeight(
     affinity: Map<String, Int>,
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
+    clusters: Map<String, StoryCluster> = emptyMap(),
 ): Float {
     if (item.article.imageUrl.isNullOrBlank()) return ArticleWeight.NO_IMAGE
 
@@ -162,6 +179,13 @@ fun articleWeight(
     // headline in a lot of empty space.
     weight += if (item.article.description.isNotBlank()) 0.3f else -0.3f
 
+    // Several sources on the same story. Only the lead is promoted: the others
+    // are the same headline, and five large cards saying it would be worse
+    // than one. They keep whatever they earned on their own.
+    clusters[item.id]?.let { cluster ->
+        if (cluster.leadId == item.id) weight += ArticleWeight.breakingBonus(cluster.sources)
+    }
+
     // What the reader actually reads, as opposed to what they said. Taps on
     // "more like this" are rare and deliberate; opening an article is neither,
     // which is why this is capped so much lower than affinity.
@@ -189,8 +213,9 @@ fun feedEmphasisFor(
     affinity: Map<String, Int>,
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
+    clusters: Map<String, StoryCluster> = emptyMap(),
 ): List<FeedEmphasis> {
-    val weights = items.map { articleWeight(it, affinity, nowMs, habit) }
+    val weights = items.map { articleWeight(it, affinity, nowMs, habit, clusters) }
     val sizes = MutableList(items.size) { FeedEmphasis.Small }
 
     var lastLarge = -ArticleWeight.LARGE_GAP - 1
@@ -255,10 +280,31 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
     val affinity = remember(raw) { parseAffinity(raw) }
     val habit = rememberReadingHabits()
+    val clusters = rememberStoryClusters(articles)
     // The clock is sampled per list rather than per frame: an article does not
     // need to shrink while it is being looked at.
-    return remember(articles, affinity, habit) {
-        feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit)
+    return remember(articles, affinity, habit, clusters) {
+        feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters)
+    }
+}
+
+/**
+ * The stories several sources are covering, recomputed only when the feed
+ * changes.
+ *
+ * Off unless the reader has asked for it. The detection is inference, and
+ * inference is occasionally wrong in public — a feed that suddenly gives a
+ * hero slot to the wrong article, for reasons the reader did not ask for, is
+ * worse than one that never tries.
+ */
+@Composable
+fun rememberStoryClusters(articles: List<FeedItem>): Map<String, StoryCluster> {
+    val prefs: FeedPreferences = koinInject()
+    val enabled by prefs.breakingNews.get()
+        .collectAsState(initial = prefs.breakingNews.getValue())
+    return remember(articles, enabled) {
+        if (!enabled) emptyMap()
+        else clusterStories(articles, System.currentTimeMillis())
     }
 }
 
@@ -334,12 +380,22 @@ fun weightReasons(
     affinity: Map<String, Int>,
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
+    clusters: Map<String, StoryCluster> = emptyMap(),
 ): List<WeightReason> {
     if (item.article.imageUrl.isNullOrBlank()) {
         return listOf(WeightReason(R.string.why_no_image, 0f))
     }
 
     val reasons = mutableListOf<WeightReason>()
+
+    clusters[item.id]?.let { cluster ->
+        if (cluster.leadId == item.id) {
+            reasons += WeightReason(
+                R.string.why_breaking,
+                ArticleWeight.breakingBonus(cluster.sources),
+            )
+        }
+    }
 
     val ageHours = ((nowMs - item.timeMillis).coerceAtLeast(0L)) / 3_600_000f
     when {
@@ -382,12 +438,15 @@ fun weightReasons(
  * dozen comparisons.
  */
 @Composable
-fun rememberWeightReasons(item: FeedItem): List<WeightReason> {
+fun rememberWeightReasons(
+    item: FeedItem,
+    clusters: Map<String, StoryCluster> = emptyMap(),
+): List<WeightReason> {
     val prefs: FeedPreferences = koinInject()
     val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
     val affinity = remember(raw) { parseAffinity(raw) }
     val habit = rememberReadingHabits()
-    return remember(item.id, affinity, habit) {
-        weightReasons(item, affinity, System.currentTimeMillis(), habit)
+    return remember(item.id, affinity, habit, clusters) {
+        weightReasons(item, affinity, System.currentTimeMillis(), habit, clusters)
     }
 }
