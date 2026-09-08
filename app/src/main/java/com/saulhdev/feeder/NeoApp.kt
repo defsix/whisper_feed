@@ -29,6 +29,7 @@ import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
 import com.saulhdev.feeder.data.content.SyncAccount
+import com.saulhdev.feeder.manager.backup.BackupStore
 import com.saulhdev.feeder.manager.sync.service.GoogleReaderService
 import com.saulhdev.feeder.manager.sync.service.LocalRssService
 import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
@@ -84,6 +85,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
         single { SyncAccount(this@NeoApp) }
+        single { BackupStore(this@NeoApp, get()) }
         single { LocalRssService(this@NeoApp, get()) }
         single {
             RssServiceDispatcher(

@@ -44,6 +44,7 @@ import com.saulhdev.feeder.ui.pages.ArticlePage
 import com.saulhdev.feeder.ui.pages.ChangelogPage
 import com.saulhdev.feeder.ui.pages.BlockedWordsPage
 import com.saulhdev.feeder.ui.pages.AccountPage
+import com.saulhdev.feeder.ui.pages.BackupPage
 import com.saulhdev.feeder.ui.pages.LearnedPage
 import com.saulhdev.feeder.ui.pages.LicensePage
 import com.saulhdev.feeder.ui.pages.MainPage
@@ -104,6 +105,7 @@ fun NavigationManager(
             composable<NavRoute.Categories> { CategoryListPage() }
             composable<NavRoute.Learned> { LearnedPage() }
             composable<NavRoute.Account> { AccountPage() }
+            composable<NavRoute.Backup> { BackupPage() }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
             composable<NavRoute.MastodonAdd> { MastodonAddPage() }
             composable<NavRoute.MastodonCallback>(
@@ -178,6 +180,9 @@ open class NavRoute {
 
     @Serializable
     data object Account : NavRoute()
+
+    @Serializable
+    data object Backup : NavRoute()
 
     @Serializable
     data object BlockedWords : NavRoute()

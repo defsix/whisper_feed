@@ -10,6 +10,7 @@ core-ktx = "1.19.0"
 core-splashscreen = "1.0.1"
 datastore-preferences = "1.2.1"
 datetime = "0.8.0"
+documentfile = "1.1.0"
 immutables = "0.5.1"
 jsoup = "1.23.2"
 jvmVersion = "21"
@@ -43,6 +44,7 @@ work-runtime-ktx = "2.11.2"
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "core-splashscreen" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore-preferences" }
+documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 materialkolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialkolor" }

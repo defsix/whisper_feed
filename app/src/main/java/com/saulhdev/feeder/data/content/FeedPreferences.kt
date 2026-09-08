@@ -334,6 +334,30 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = false
     )
 
+    /**
+     * Where backups are written, as a persisted tree Uri, or empty.
+     *
+     * A `StringPref` holding a Uri rather than a type of its own: the picker
+     * hands back a string, DataStore stores strings, and the one place that
+     * needs it back as a Uri can say so.
+     */
+    var backupFolder = StringPref(
+        titleId = R.string.pref_backup,
+        summaryId = R.string.pref_backup_summary,
+        icon = Phosphor.CloudArrowUp,
+        key = BACKUP_FOLDER,
+        dataStore = dataStore,
+        route = NavRoute.Backup
+    )
+
+    /** When the last automatic backup succeeded, for the status line. */
+    var backupLastRun = StringPref(
+        titleId = R.string.pref_backup,
+        icon = Phosphor.CloudArrowUp,
+        key = BACKUP_LAST_RUN,
+        dataStore = dataStore,
+    )
+
     var account = StringPref(
         titleId = R.string.pref_account,
         summaryId = R.string.pref_account_summary,
@@ -696,6 +720,8 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
         val ACCOUNT = stringPreferencesKey("pref_account")
+        val BACKUP_FOLDER = stringPreferencesKey("pref_backup_folder")
+        val BACKUP_LAST_RUN = stringPreferencesKey("pref_backup_last_run")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

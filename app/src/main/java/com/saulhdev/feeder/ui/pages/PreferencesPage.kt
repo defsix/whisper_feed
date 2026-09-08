@@ -102,6 +102,7 @@ fun PreferencesPage(
         prefs.overlayTransparency,
     )
     val syncPrefs = listOf(
+        prefs.backupFolder,
         prefs.account,
     )
     val debugPrefs = listOf(

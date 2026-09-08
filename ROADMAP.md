@@ -972,17 +972,41 @@ OPML export and bookmark export both work today and already produce exactly
 the right bytes; all that is missing is a destination that is not a file
 picker. In order:
 
-1. **`appDataFolder`, not the visible Drive.** A private folder the app owns,
-   invisible in the reader's file list, removed when the app is uninstalled.
-   Nothing of theirs to tidy up, and no chance of a stray file being edited.
-2. **The OPML, and the bookmarks.** Sources and their categories are the thing
-   worth protecting — they are what took years to assemble and what cannot be
-   reconstructed. Read state and preferences can follow later if they are
-   missed; they are not what anyone means by "I lost my feeds".
-3. **Restore on a fresh install** — the case the whole feature is for. Offered
-   during onboarding, once, when a backup is found.
-4. **Automatic, on a schedule, on Wi-Fi.** A backup nobody remembers to take is
-   not a backup.
+1. ~~**`appDataFolder`, not the visible Drive.**~~ **Built, and not this way.**
+   Reaching Drive's own API needs an OAuth client registered against the app's
+   package and signing certificate — a step this project cannot take on its
+   users' behalf, that would need repeating for the debug build, the release
+   build and any fork, and that would have left the feature unusable until
+   somebody did it.
+
+   The **Storage Access Framework** needs none of it. Drive ships a
+   `DocumentsProvider`, so it appears in the system's own folder picker, and a
+   persistable permission lets the app keep writing there afterwards. No OAuth,
+   no client id, no Google dependency to declare for F-Droid.
+
+   It is also plainly better: Dropbox, OneDrive, Nextcloud and an SD card are
+   all in the same picker, so this is not a Google feature spelled generically
+   — it works wherever the reader already keeps things. The file is visible in
+   their storage rather than hidden, which for a backup is the right way round.
+2. **The OPML.** Built. Sources and their categories, written by the same code
+   the manual export uses — a destination, not a second format. One file,
+   overwritten: a backup that accumulates is a folder somebody has to tidy,
+   and the second-newest copy of a subscription list has never been the one
+   anyone wanted. Bookmarks can follow; they are not what anyone means by "I
+   lost my feeds".
+3. **Restore.** Built, as a file picker that accepts any OPML rather than only
+   one Whisper wrote — somebody arriving from another reader has an export of
+   their own and it is the same file. Additive, like the import it reuses: a
+   feed already subscribed is left alone, and nothing local is removed. A
+   restore that deleted whatever the file did not mention would be a far more
+   dangerous operation than the word suggests. Still to do: offering it
+   unprompted during onboarding, which needs onboarding to exist.
+4. **Automatic, daily, on unmetered Wi-Fi.** Built. A manual export is not a
+   backup, it is a thing people mean to do, so the scheduled version is the
+   feature and the button is the reassurance. Daily rather than hourly: a
+   subscription list changes a few times a month, and rewriting an identical
+   file to somebody's cloud storage every hour would be rude to their storage
+   and their battery for nothing.
 
 Because it is a file rather than a live connection, there is no reconciliation
 to design, no conflict to resolve and no id mapping — the three things making

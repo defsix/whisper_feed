@@ -157,6 +157,7 @@ dependencies {
 
     //Security
     implementation(libs.security.crypto)
+    implementation(libs.documentfile)
 
     //Squareup
     implementation(libs.moshi)
