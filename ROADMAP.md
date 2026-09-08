@@ -1097,6 +1097,24 @@ picker. In order:
    written, so an older build reads what it understands from a newer backup and
    leaves no junk behind.
 
+6. **Backups are the only way data leaves the phone, and the app says so.**
+   Android's automatic backup was on — the platform default — which meant the
+   reading database, the subscription list and every preference were being
+   copied to the reader's Google Drive silently, with no moment where they
+   were asked. An app that tells people nothing leaves their phone cannot also
+   do that in the background, so it is off: no cloud backup, and no
+   device-to-device transfer either.
+
+   Dropping device transfer is the sharper end of the trade and is deliberate.
+   It never touches a server and would have been defensible to keep, but it is
+   still data leaving without being chosen — and this section exists precisely
+   so the new-phone case has an answer the reader picked. One sentence that is
+   true beats two with an exception in them.
+
+   The backup screen now says it in the app, above the button that turns it
+   on, rather than in a privacy policy nobody opens: what is written, where it
+   goes, and that the platform's own backup is switched off.
+
 Because it is a file rather than a live connection, there is no reconciliation
 to design, no conflict to resolve and no id mapping — the three things making
 §7 the larger piece. Uploading a copy of a file that already exists is most of

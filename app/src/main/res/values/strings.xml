@@ -223,8 +223,10 @@
     <string name="empty_filtered">Nothing matches</string>
     <string name="empty_filtered_hint">Every article is filtered out by the category or filter you have chosen. Tap All, or open the filter to change it.</string>
     <string name="pref_backup">Back up your subscriptions</string>
-    <string name="pref_backup_summary">Keep a copy of your feed list in Drive, Dropbox, or anywhere else on this phone.</string>
+    <string name="pref_backup_summary">Off until you choose a folder. The only thing that ever sends your data off this phone.</string>
     <string name="backup_explanation">Your subscription list took a long time to build and exists only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day, over Wi-Fi.</string>
+    <string name="backup_only_time">This is the only time your data leaves this phone.\n\nWhisper has no server and no account of its own, and Android\u2019s automatic backup \u2014 which would copy your feeds and reading history to Google Drive without asking \u2014 is switched off. Nothing is sent anywhere until you choose a folder below, and then only to that folder. It can be on this phone, an SD card, or a cloud service you already use.</string>
+    <string name="backup_off">Backups are off. Nothing is leaving this phone.</string>
     <string name="backup_choose">Choose where backups go</string>
     <string name="backup_change">Choose a different folder</string>
     <string name="backup_now">Back up now</string>

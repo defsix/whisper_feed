@@ -13,9 +13,21 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <!--
+        allowBackup is off, and that is the whole point rather than an
+        oversight. Android's automatic backup would copy the reading database,
+        the subscription list and every preference to the reader's Google
+        Drive, silently, with no moment where they were asked. This app tells
+        people nothing leaves their phone, and it has to be true by default.
+
+        The reader can still keep a copy, and that is the backup screen: they
+        choose the folder, they see the files, and choosing it is the moment
+        the data leaves. A restore during onboarding covers the new-phone case
+        the platform backup would otherwise have handled.
+    -->
     <application
         android:name=".NeoApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:networkSecurityConfig="@xml/network_security_config"

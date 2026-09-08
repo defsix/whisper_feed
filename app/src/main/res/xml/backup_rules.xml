@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    What Android's automatic backup is allowed to take (API 30 and below).
-
-    The two encrypted preference files are excluded because they cannot
-    survive the trip. EncryptedSharedPreferences holds its key in the
-    hardware-backed Keystore, and the Keystore is never part of a backup — so
-    a restored device gets the ciphertext without the key, and the first
-    attempt to open it throws rather than returning empty. That is a crash on
-    launch after a device restore, for exactly the people who did the right
-    thing and restored their phone.
-
-    Their contents are a Google Reader token and Mastodon tokens. Both are
-    re-obtainable by signing in again, which is a far better outcome than an
-    app that will not start.
+    Belt and braces. allowBackup is already false in the manifest, so nothing
+    here runs — but if it is ever turned back on, this makes sure that is a
+    deliberate act rather than an accident that silently starts uploading a
+    reader's subscriptions and reading history.
 -->
 <full-backup-content>
-    <exclude domain="sharedpref" path="whisper_account.xml" />
-    <exclude domain="sharedpref" path="mastodon_tokens.xml" />
+    <exclude domain="root" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
 </full-backup-content>
