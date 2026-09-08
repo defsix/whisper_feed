@@ -106,6 +106,9 @@ class OverlayView(val context: Context) :
 
     /** The source hidden most recently, so the feed can offer the way back. */
     private val hiddenSourceState = mutableStateOf<FeedItem?>(null)
+
+    /** Mirrored from the view model, which owns the query the feed is filtered by. */
+    private val searchQuery = mutableStateOf("")
     private val isFilterActive = mutableStateOf(false)
 
     /**
@@ -116,6 +119,9 @@ class OverlayView(val context: Context) :
      * drawn in this window's own Compose tree, so nothing else knows it is up.
      */
     private val filterSheetOpen = mutableStateOf(false)
+
+    /** Whether the header has been swapped for the search field. */
+    private val searching = mutableStateOf(false)
 
     /**
      * System bar insets, in pixels, as reported to the overlay's root view.
@@ -218,6 +224,9 @@ class OverlayView(val context: Context) :
             viewModel.recentlyHidden.collect { hiddenSourceState.value = it }
         }
         syncScope.launch {
+            viewModel.searchQuery.collect { searchQuery.value = it }
+        }
+        syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
         }
         syncScope.launch {
@@ -269,6 +278,11 @@ class OverlayView(val context: Context) :
     override fun onBackPressed() {
         if (filterSheetOpen.value) {
             filterSheetOpen.value = false
+            return
+        }
+        if (searching.value) {
+            searching.value = false
+            viewModel.setSearchQuery("")
             return
         }
         super.onBackPressed()
@@ -415,6 +429,13 @@ class OverlayView(val context: Context) :
                     layout = layout,
                     isFilterSheetOpen = filterSheetOpen.value,
                     onFilterSheetOpenChange = { filterSheetOpen.value = it },
+                    searchQuery = searchQuery.value,
+                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                    isSearching = searching.value,
+                    onSearchingChange = {
+                        searching.value = it
+                        if (!it) viewModel.setSearchQuery("")
+                    },
                     // Replaces a click handler that started a new collector on the
                     // view model every press without ever cancelling the previous
                     // one; both lists are now collected once and simply chosen

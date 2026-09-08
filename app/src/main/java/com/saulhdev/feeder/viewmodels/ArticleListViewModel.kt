@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -52,6 +53,20 @@ class ArticleListViewModel(
     val prefs: FeedPreferences,
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
+
+    /**
+     * What the user is searching for, empty when they are not.
+     *
+     * Local to what has already been downloaded: every article in the feed is
+     * already in the database, so this needs no network, no account and no
+     * index — and it works on a train.
+     */
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    fun setSearchQuery(value: String) {
+        _searchQuery.value = value
+    }
 
     private val sortFilterState = combine(
         prefs.sortingFilter.get(),
@@ -86,7 +101,15 @@ class ArticleListViewModel(
         // Categories narrow the feed (include); the filter sheet's tagsFilter
         // mutes (exclude) and is applied in processArticles. These were the same
         // preference read both ways, so any selection cancelled itself out.
-        prefs.categoryFilter.get()
+        //
+        // A search deliberately ignores the selected category. "I know I read
+        // something about X" does not come with a memory of which category it
+        // was filed under, and a search that silently only covered the chip you
+        // happen to have selected would look like the article was gone.
+        combine(
+            prefs.categoryFilter.get(),
+            _searchQuery.map { it.isNotBlank() },
+        ) { categories, searching -> if (searching) emptySet() else categories }
             .distinctUntilChanged()
             .flatMapLatest { categories ->
                 val source =
@@ -115,8 +138,11 @@ class ArticleListViewModel(
         sortFilterState,
         prefs.removeDuplicates.get(),
         prefs.hiddenSources.get(),
-    ) { articles, sfm, removeDuplicate, hidden ->
-        processArticles(articles, sfm, removeDuplicate, hidden)
+        // Debounced so a fast typist does not re-filter and re-sort the whole
+        // feed on every keystroke; the list is rebuilt once they pause.
+        _searchQuery.debounce { if (it.isBlank()) 0L else SEARCH_DEBOUNCE_MS },
+    ) { articles, sfm, removeDuplicate, hidden, query ->
+        processArticles(articles, sfm, removeDuplicate, hidden, query)
     }.flowOn(Dispatchers.Default)
 
     val articleListState: StateFlow<ArticleListState> = combine(
@@ -230,12 +256,16 @@ class ArticleListViewModel(
     }
 
     // HELPERS
+
+
     private fun processArticles(
         articles: List<FeedItem>,
         sfm: SortFilterModel,
         removeDuplicate: Boolean,
         hiddenSources: Set<String> = emptySet(),
+        query: String = "",
     ): List<FeedItem> {
+        val terms = query.trim().takeIf(String::isNotEmpty)
         // One pass rather than four. Each `let` here used to allocate a whole
         // new list, so a feed of a few thousand articles built three throwaway
         // copies before the sort even started — on every emission.
@@ -243,6 +273,7 @@ class ArticleListViewModel(
         val filtered = articles.asSequence()
             .filter { item ->
                 when {
+                    terms != null && !item.matchesSearch(terms) -> false
                     seenLinks != null && !seenLinks.add(item.link) -> false
                     // "Hide source" is permanent and survives a filter reset;
                     // sourcesFilter below is the filter sheet's scratchpad.
@@ -275,7 +306,27 @@ class ArticleListViewModel(
  * rebuilding the list. Long enough to swallow a whole feed's inserts, short
  * enough that finished sources appear while a sync is still running.
  */
+/**
+ * Whether an article answers a search.
+ *
+ * Headline, source and summary, in that order of likelihood. The full article
+ * body is deliberately not searched: it lives in a file per article rather
+ * than in the database, so covering it would mean reading every one of them
+ * off disk on every keystroke, or building an index — neither of which is
+ * worth it before the shorter fields prove too thin.
+ */
+internal fun FeedItem.matchesSearch(query: String): Boolean {
+    val q = query.trim()
+    if (q.isEmpty()) return true
+    return contentTitle.contains(q, ignoreCase = true) ||
+            feedTitle.contains(q, ignoreCase = true) ||
+            article.description.contains(q, ignoreCase = true)
+}
+
 private const val INVALIDATION_DEBOUNCE_MS = 300L
+
+/** How long to let typing settle before rebuilding the list for a search. */
+private const val SEARCH_DEBOUNCE_MS = 250L
 
 data class ArticleListState(
     val articles: List<FeedItem> = emptyList(),

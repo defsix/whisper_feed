@@ -95,6 +95,9 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import com.saulhdev.feeder.ui.pages.SortFilterSheet
+import com.saulhdev.feeder.ui.components.FeedSearchBar
+import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
+import com.saulhdev.feeder.ui.components.SearchEmptyState
 
 /**
  * The whole minus-one surface: header, category strip and article list.
@@ -137,6 +140,10 @@ fun FeedScaffold(
     layout: String,
     isFilterSheetOpen: Boolean,
     onFilterSheetOpenChange: (Boolean) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isSearching: Boolean,
+    onSearchingChange: (Boolean) -> Unit,
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -180,7 +187,14 @@ fun FeedScaffold(
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            TopAppBar(
+            if (isSearching) {
+                FeedSearchBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    onClose = { onSearchingChange(false) },
+                    modifier = Modifier.padding(top = topInset),
+                )
+            } else TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // ic_launcher_foreground is an adaptive-icon layer:
@@ -206,6 +220,11 @@ fun FeedScaffold(
                     // they have to show when they are on — the View header only
                     // ever tinted the bookmark toggle, and the filter gave no
                     // indication at all that it was narrowing the feed.
+                    HeaderAction(
+                        icon = Phosphor.MagnifyingGlass,
+                        description = stringResource(R.string.action_search),
+                        onClick = { onSearchingChange(true) },
+                    )
                     HeaderToggleAction(
                         icon = Phosphor.FunnelSimple,
                         description = stringResource(R.string.pref_cat_filters),
@@ -249,11 +268,16 @@ fun FeedScaffold(
                 onSetLocation = onSettings,
             )
 
-            CategoryChipRow(
-                categories = categories,
-                selected = selectedCategories,
-                onSelectedChange = onCategoriesChange,
-            )
+            // Hidden while searching: a search deliberately ignores the
+            // selected category, so leaving the chips up — one of them
+            // highlighted — would claim a narrowing that is not happening.
+            if (!isSearching) {
+                CategoryChipRow(
+                    categories = categories,
+                    selected = selectedCategories,
+                    onSelectedChange = onCategoriesChange,
+                )
+            }
 
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -267,7 +291,9 @@ fun FeedScaffold(
                 // Mosaic is a staggered grid rather than a column, so the
                 // container changes with the layout and not only the shapes
                 // inside it. Everything else is a single column.
-                if (feedLayoutIsGrid(layout)) {
+                if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
+                    SearchEmptyState(searchQuery)
+                } else if (feedLayoutIsGrid(layout)) {
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
                         state = gridState,

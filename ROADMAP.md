@@ -253,10 +253,12 @@ app that has avoided one everywhere else.
 
 ### 9. Search, and a filter that explains itself
 
-- **Search the feed** from the header. Nothing in the app can find an article
-  it has already downloaded, which is the first thing anyone reaches for once
-  the feed is longer than a screen. Local first, over titles and content
-  already in the database — it needs no network and no account.
+- ~~**Search the feed** from the header.~~ Done, in both surfaces. Over the
+  headline, the source and the summary — all already in the database, so it
+  needs no network, no account and no index. The article body is deliberately
+  not covered: it lives in a file per article, so searching it would mean
+  reading every one off disk on each keystroke, or building an index. Worth
+  revisiting if the shorter fields prove too thin.
 - **The filter is confusing as it stands.** Half of this is done: the overlay
   showed a View-based XML sheet while the app showed a Compose one, and the
   two now share the app's. What is left is the sheet's own design — what it is

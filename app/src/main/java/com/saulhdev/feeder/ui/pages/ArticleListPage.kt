@@ -116,6 +116,10 @@ import com.saulhdev.feeder.ui.overlay.GlanceRow
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
 import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.ui.components.FeedSearchBar
+import com.saulhdev.feeder.ui.components.HeaderAction
+import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
+import com.saulhdev.feeder.ui.components.SearchEmptyState
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -146,6 +150,8 @@ fun ArticleListPage(
         .collectAsState(initial = prefs.articleOpenMode.getValue())
     val bookmarked by viewModel.bookmarksState.collectAsState()
     val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    var searching by remember { mutableStateOf(false) }
     val gridState = rememberLazyStaggeredGridState()
 
     // The same offer the overlay feed makes: hiding a source is one tap from a
@@ -201,7 +207,11 @@ fun ArticleListPage(
                         containerColor = Color.Transparent,
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
-                            TopAppBar(
+                            if (searching) FeedSearchBar(
+                                query = searchQuery,
+                                onQueryChange = viewModel::setSearchQuery,
+                                onClose = { searching = false },
+                            ) else TopAppBar(
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.background,
                                     scrolledContainerColor = MaterialTheme.colorScheme.background,
@@ -226,6 +236,12 @@ fun ArticleListPage(
                                     // a Surface with its own padding between
                                     // two IconButtons, which is what made the
                                     // spacing look off.
+                                    HeaderAction(
+                                        icon = Phosphor.MagnifyingGlass,
+                                        description = stringResource(R.string.action_search),
+                                        onClick = { searching = true },
+                                    )
+
                                     HeaderToggleAction(
                                         icon = if (state.isFilterModified) Phosphor.Filtered
                                         else Phosphor.Filter,
@@ -444,7 +460,11 @@ fun ArticleListPage(
                                         )
                                     }
 
-                                    if (feedLayoutIsGrid(layout)) {
+                                    if (searching && searchQuery.isNotBlank() &&
+                                        state.articles.isEmpty()
+                                    ) {
+                                        SearchEmptyState(searchQuery)
+                                    } else if (feedLayoutIsGrid(layout)) {
                                         PullToRefreshStaggeredGrid(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
