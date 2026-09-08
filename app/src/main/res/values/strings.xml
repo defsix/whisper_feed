@@ -358,4 +358,34 @@
     <string name="blocked_words_add">Add</string>
     <string name="blocked_words_empty">No blocked words</string>
     <string name="mastodon_no_token">No Mastodon token found for this account</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Curate. Read. Breathe.</string>
+    <string name="onboarding_welcome_body">A calmer, more focused way to follow the world.</string>
+    <string name="onboarding_sources_title">Your sources, your choice</string>
+    <string name="onboarding_sources_body">Add the sites you already read. No algorithm decides what you see, and nothing about your reading leaves your phone.</string>
+    <string name="onboarding_calm_title">Read at your own pace</string>
+    <string name="onboarding_calm_body">Whisper learns which sources you return to and gives them more room. Everything else stays out of the way.</string>
+    <string name="onboarding_get_started">Get started</string>
+
+    <!-- Guided tour -->
+    <string name="tour_next">Next</string>
+    <string name="tour_skip">Skip</string>
+    <string name="tour_got_it">Got it</string>
+    <string name="tour_step_of">%1$d of %2$d</string>
+    <string name="tour_glance_title">The glance</string>
+    <string name="tour_glance_body">Weather, sunset, and how much is waiting for you. Tap it to set your location.</string>
+    <string name="tour_chips_title">Categories</string>
+    <string name="tour_chips_body">Everything at once, or one subject at a time. The launcher page follows whatever you choose here.</string>
+    <string name="tour_article_title">Every article has a menu</string>
+    <string name="tour_article_body">More like this, less like this, save it, or ask why an article is the size it is.</string>
+    <string name="tour_bookmarks_title">Saved articles</string>
+    <string name="tour_bookmarks_body">Anything you save is kept on your phone and stays readable offline.</string>
+    <string name="tour_filter_title">Sort and filter</string>
+    <string name="tour_filter_body">Change the order, mute a source, or hide what you have already read.</string>
+    <string name="tour_overflow_title">Settings</string>
+    <string name="tour_overflow_body">Layout, what gets fetched in full, and what Whisper has learned about your reading.</string>
+    <string name="pref_show_tour">Show the tour again</string>
+    <string name="pref_show_tour_queued">The tour will start when you go back to your feed.</string>
+    <string name="pref_show_tour_summary">Walk through the feed\'s controls</string>
 </resources>

@@ -83,6 +83,7 @@ fun PreferencesPage(
         prefs.markReadOnScroll,
         prefs.markAllRead,
         prefs.learned,
+        prefs.showTour,
         prefs.readVisibility,
         prefs.volumeKeyScroll,
     )

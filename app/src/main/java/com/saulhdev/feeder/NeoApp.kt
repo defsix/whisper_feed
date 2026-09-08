@@ -9,6 +9,7 @@ import androidx.multidex.MultiDexApplication
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
+import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.repository.ArticleRepository
@@ -38,7 +39,9 @@ import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.androix.startup.KoinStartup
@@ -120,6 +123,32 @@ class NeoApp : MultiDexApplication(), KoinStartup {
 
     fun onAppStarted() {
         registerActivityLifecycleCallbacks(activityHandler)
+        stampOnboardingForExistingInstalls()
+    }
+
+    /**
+     * Tells an upgrade from a fresh install, once.
+     *
+     * There is no version number to compare against — the preference simply
+     * does not exist on either — so the question is answered by the only
+     * honest signal available: an install that already has sources has been
+     * used, and somebody who has been reading with this for a year must not be
+     * welcomed to it as though they had just arrived.
+     *
+     * A genuinely new install has no sources, so this does nothing and the
+     * welcome runs. It stays correct if they close the app before finishing:
+     * still no sources, so they are still new.
+     */
+    private fun stampOnboardingForExistingInstalls() {
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            val prefs: FeedPreferences = get()
+            if (prefs.onboardingSeen.getValue()) return@launch
+            val sources: SourcesRepository = get()
+            if (sources.getAllSources().isNotEmpty()) {
+                prefs.onboardingSeen.setValue(true)
+                prefs.tourSeen.setValue(true)
+            }
+        }
     }
 
     @KoinExperimentalAPI

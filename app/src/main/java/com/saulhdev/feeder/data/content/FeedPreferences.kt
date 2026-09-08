@@ -376,6 +376,60 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.Learned
     )
 
+    /**
+     * Whether the welcome panes have been shown.
+     *
+     * Not a setting anybody sees — a fact the app remembers. It is stamped
+     * true without showing anything when the app first starts on an install
+     * that already has sources, which is how an upgrade is told from a fresh
+     * install without a version number to compare against: somebody who has
+     * been using this for a year must not be welcomed to it.
+     */
+    var onboardingSeen = BooleanPref(
+        titleId = R.string.pref_show_tour,
+        icon = Phosphor.Info,
+        key = ONBOARDING_SEEN,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
+    /**
+     * Whether the guided tour has run.
+     *
+     * Separate from [onboardingSeen] because the two wait for different
+     * things. The welcome panes can be shown to an empty app; the tour points
+     * at real controls holding real articles, so it has to wait for a first
+     * sync — which on a new install is minutes after the welcome, not seconds.
+     */
+    var tourSeen = BooleanPref(
+        titleId = R.string.pref_show_tour,
+        icon = Phosphor.Info,
+        key = TOUR_SEEN,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
+    /** The row that puts the tour back. */
+    var showTour = StringPref(
+        titleId = R.string.pref_show_tour,
+        summaryId = R.string.pref_show_tour_summary,
+        icon = Phosphor.Info,
+        key = SHOW_TOUR,
+        dataStore = dataStore,
+        onClick = {
+            CoroutineScope(Dispatchers.IO).launch {
+                tourSeen.setValue(false)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.pref_show_tour_queued),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    )
+
     var markAllRead = StringPref(
         titleId = R.string.pref_mark_all_read,
         summaryId = R.string.pref_mark_all_read_summary,
@@ -722,6 +776,9 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val ACCOUNT = stringPreferencesKey("pref_account")
         val BACKUP_FOLDER = stringPreferencesKey("pref_backup_folder")
         val BACKUP_LAST_RUN = stringPreferencesKey("pref_backup_last_run")
+        val ONBOARDING_SEEN = booleanPreferencesKey("pref_onboarding_seen")
+        val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
+        val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

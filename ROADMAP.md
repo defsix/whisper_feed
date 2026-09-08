@@ -1046,6 +1046,67 @@ worse description of what is happening than a plain backup class.
 Being independent of §7 also makes it the better thing to ship first: it is
 smaller, it needs nothing that is unfinished, and it protects the thing people
 would actually grieve.
+
+### 15. Onboarding and the guided tour
+
+Built. Two things, and the second is worth more than the first.
+
+**The welcome.** Three panes over the supplied artwork, picked by the rendered
+surface's luminance rather than the theme setting — the theme has three values
+and one of them is pure black, so what the copy has to sit against is whatever
+actually got painted. Skip is on every pane, not only the last: somebody who
+knows what an RSS reader is should not have to swipe through three panes to be
+let in, and Back on the first pane leaves rather than trapping them in a
+carousel on their first minute with the app.
+
+**The tour**, which is the part that teaches anything. Six stops on real
+controls: the glance row, the category chips, an article card's menu, the
+bookmarks toggle, the filter button and the settings menu. Six is the limit —
+every extra stop is another chance for somebody not to finish, and a tour
+nobody finishes taught nothing.
+
+Three details are worth recording because they are where this goes wrong:
+
+- **`querySelector` does not translate.** The web version finds its targets by
+  selector and measures them with `getBoundingClientRect`. Compose has neither
+  and cannot be given them, so the targets announce themselves instead:
+  `Modifier.tourTarget(TourTarget.Chips)` writes its own bounds into a map the
+  overlay reads. The compiler then guarantees a step names a control that
+  exists, which no string selector could.
+- **The hole needs an offscreen layer.** `BlendMode.Clear` without
+  `CompositingStrategy.Offscreen` punches through to black rather than to the
+  app underneath. One line, and the whole effect depends on it.
+- **Look, don't touch.** Advancing is always the tooltip's own button, never a
+  tap on the lit control, so the tour never has to guess whether the real
+  interaction happened the way it expected — and a mis-tap cannot navigate away
+  mid-tour.
+
+**Never on an upgrade**, and there is no version number to check against: the
+preference does not exist on either an upgrade or a fresh install. So the
+question is answered by the only honest signal available — an install that
+already has sources has been used, and is stamped as having seen both without
+being shown either. A genuinely new install has no sources, so nothing is
+stamped and the welcome runs. It stays correct if they close the app halfway:
+still no sources, so still new.
+
+**The tour waits for articles.** Separate flag from the welcome, because the
+two wait for different things: the panes can be shown to an empty app, the
+tour points at real controls holding real headlines, and spotlighting an empty
+feed would look broken at precisely the wrong moment. On a new install that is
+minutes after the welcome, not seconds.
+
+The step machine is pure and tested — advancing, a target that is not on
+screen, the last step, and the counter. A control can be missing for perfectly
+ordinary reasons (the glance row is a setting, the chips need categories), and
+a tour that stalls pointing at nothing is worse than one a step shorter, so
+absent targets are stepped over and the counter says "1 of 4" rather than
+promising six stops that will not arrive.
+
+Replayable from Settings, next to "What Whisper has learned".
+
+Still to do: the Lawnchair pane, offered late and only when Lawnchair is
+installed and Whisper is not yet its provider — and §14's restore offer, which
+now has an onboarding to be offered during.
 ---
 
 ## Replacing Discover: what is actually possible
@@ -1125,8 +1186,9 @@ Small, and cheaper now than later.
   ImageVector sources with no licence recorded anywhere. `docs/licenses/
   Phosphor-MIT.txt` now carries it; new icons are parsed from the upstream
   SVG rather than retyped.
-- **Assets still open**: onboarding background and article placeholders, listed
-  in `docs/brand/ASSET_SPEC.md`. The horizontal lockup is no longer needed —
+- **Assets still open**: the empty-bookmarks state. The onboarding backgrounds
+  and the untagged horizontal lockup are wired in as of §15; article
+  placeholders and the empty-feed states were done earlier. The horizontal lockup is no longer needed —
   the app bar composes the symbol and the wordmark itself, which keeps the two
   independently sizeable. Still missing if the cobalt splash is ever wanted
   back: a light colourway of the symbol, since the vivid gradient loses two of

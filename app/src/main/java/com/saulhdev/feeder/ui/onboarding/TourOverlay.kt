@@ -1,0 +1,308 @@
+/*
+ * This file is part of Whisper
+ * Copyright (c) 2026   Whisper contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+package com.saulhdev.feeder.ui.onboarding
+
+import android.content.Context
+import android.provider.Settings
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.saulhdev.feeder.R
+import kotlinx.coroutines.delay
+
+/**
+ * The spotlight.
+ *
+ * A scrim over the whole screen with a hole cut in it over one real control,
+ * and one sentence beside the hole. Nothing here knows what a feed is: it is
+ * handed a rect and a sentence, which is the only reason it can be reused for
+ * a second screen later without being rewritten.
+ */
+@Composable
+fun TourOverlay(
+    steps: List<TourStep> = TOUR_STEPS,
+    onFinished: () -> Unit,
+) {
+    val targets = LocalTourTargets.current
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val animate = remember(context) { !context.animationsAreOff() }
+
+    var current by remember { mutableStateOf(-1) }
+    var rect by remember { mutableStateOf<Rect?>(null) }
+
+    // What is actually on screen. Read fresh at every step rather than once at
+    // the start: the chips row appears as soon as a sync produces categories,
+    // and a set captured before that would hide a step that is now there.
+    val present = { targets.keys.toSet() }
+
+    // Wait a beat before measuring. A step whose control is still animating in
+    // would otherwise be spotlighted where it started rather than where it
+    // comes to rest, and the hole would sit next to the thing it describes.
+    LaunchedEffect(current) {
+        if (current < 0) {
+            current = TourMachine.first(steps, present()) ?: run { onFinished(); return@LaunchedEffect }
+            return@LaunchedEffect
+        }
+        rect = null
+        delay(SETTLE_MS)
+        val measured = targets[steps[current].target]
+        if (measured == null) {
+            // The control stopped existing between choosing this step and
+            // arriving at it. Advancing is the only sane response; stalling
+            // would leave the reader looking at a lit hole over nothing.
+            val next = TourMachine.next(steps, current, present())
+            if (next == null) onFinished() else current = next
+        } else {
+            rect = measured
+        }
+    }
+
+    if (current < 0) return
+    val step = steps[current]
+    val hole = rect ?: return
+
+    // Skip counts the same as finishing. The point of the flag is "do not show
+    // this again", and somebody who has decided they do not want it has said
+    // that at least as clearly as somebody who pressed Next six times.
+    BackHandler { onFinished() }
+
+    val advance = {
+        val next = TourMachine.next(steps, current, present())
+        if (next == null) onFinished() else current = next
+    }
+
+    val alpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(if (animate) FADE_MS else 0),
+        label = "tourScrim",
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Look, don't touch. Advancing is always the tooltip's own button,
+            // so the tour never has to guess whether the real interaction
+            // happened the way it expected — and a mis-tap on a spotlighted
+            // control cannot navigate away mid-tour.
+            .pointerInput(Unit) { detectTapGestures { } }
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                // Without an offscreen layer, BlendMode.Clear punches through
+                // to black rather than to the app underneath. This is the one
+                // line that makes the hole a hole.
+                .graphicsLayer(
+                    alpha = alpha,
+                    compositingStrategy = CompositingStrategy.Offscreen,
+                )
+                .clearAndSetSemantics { }
+        ) {
+            drawRect(Color.Black.copy(alpha = SCRIM_ALPHA))
+            val pad = PADDING_PX * density.density
+            drawRoundRect(
+                color = Color.Transparent,
+                topLeft = Offset(hole.left - pad, hole.top - pad),
+                size = Size(hole.width + pad * 2, hole.height + pad * 2),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                    HOLE_RADIUS_DP * density.density
+                ),
+                blendMode = BlendMode.Clear,
+            )
+        }
+
+        TourTooltip(
+            step = step,
+            hole = hole,
+            position = TourMachine.position(steps, current, present()),
+            isLast = TourMachine.isLast(steps, current, present()),
+            onSkip = onFinished,
+            onNext = advance,
+        )
+    }
+}
+
+/**
+ * The card, placed so it does not cover the thing it is talking about.
+ *
+ * Below the target, above it when there is no room below, and at the foot of
+ * the screen when the target is too tall for either — which is the case for a
+ * large article card on a short phone.
+ */
+@Composable
+private fun TourTooltip(
+    step: TourStep,
+    hole: Rect,
+    position: Pair<Int, Int>,
+    isLast: Boolean,
+    onSkip: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val density = LocalDensity.current
+    // Measured rather than guessed at: the placement below depends on the
+    // card's height, and the text is translated into fifteen languages with
+    // fifteen different heights.
+    var height by remember { mutableStateOf(0) }
+    val gap = GAP_DP * density.density
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .onSizeChanged { height = it.height }
+                .graphicsLayer {
+                    val below = hole.bottom + gap
+                    val above = hole.top - gap - height
+                    translationY = when {
+                        below + height <= size.height -> below
+                        above >= 0f -> above
+                        // Neither fits: the target is most of the screen. The
+                        // foot of it is the least bad place, and the lit hole
+                        // is still visible above the card.
+                        else -> (size.height - height - gap).coerceAtLeast(0f)
+                    }
+                }
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(step.titleId),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(step.bodyId),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Dots(position)
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.tour_step_of, position.first, position.second
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onSkip) {
+                        Text(stringResource(R.string.tour_skip))
+                    }
+                    TextButton(onClick = onNext) {
+                        Text(
+                            stringResource(
+                                if (isLast) R.string.tour_got_it else R.string.tour_next
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dots(position: Pair<Int, Int>) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(position.second) { i ->
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (i + 1 == position.first) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outlineVariant
+                    )
+            )
+        }
+    }
+}
+
+/**
+ * Whether the reader has asked the system for less movement.
+ *
+ * An animated scrim is exactly the kind of thing that setting exists to stop,
+ * and honouring it here costs one read.
+ */
+private fun Context.animationsAreOff(): Boolean =
+    Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
+private const val SETTLE_MS = 250L
+private const val FADE_MS = 200
+private const val SCRIM_ALPHA = 0.78f
+private const val PADDING_PX = 6f
+private const val HOLE_RADIUS_DP = 16f
+private const val GAP_DP = 12f

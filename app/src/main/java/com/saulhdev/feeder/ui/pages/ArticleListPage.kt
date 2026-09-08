@@ -133,6 +133,11 @@ import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
 import com.saulhdev.feeder.ui.components.FeedEmptyReason
 import com.saulhdev.feeder.ui.components.FeedEmptyState
 import com.saulhdev.feeder.ui.components.SearchEmptyState
+import com.saulhdev.feeder.ui.onboarding.ProvideTourTargets
+import com.saulhdev.feeder.ui.onboarding.TourOverlay
+import com.saulhdev.feeder.ui.onboarding.TourTarget
+import com.saulhdev.feeder.ui.onboarding.tourTarget
+import androidx.compose.foundation.layout.Box
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -208,6 +213,11 @@ fun ArticleListPage(
     }
 
     var showBookmarks by remember { mutableStateOf(false) }
+    // True until DataStore says otherwise, so neither the welcome nor the tour
+    // flashes over the feed for a frame on every launch of an app that has
+    // already shown both.
+    val onboardingSeen by prefs.onboardingSeen.get().collectAsState(initial = true)
+    val tourSeen by prefs.tourSeen.get().collectAsState(initial = true)
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val showFAB by remember { derivedStateOf { listState.firstVisibleItemIndex > 4 } }
@@ -231,6 +241,8 @@ fun ArticleListPage(
         }
     }
 
+    ProvideTourTargets {
+    Box(modifier = Modifier.fillMaxSize()) {
     NavigableListDetailPaneScaffold(
         navigator = paneNavigator,
         listPane = {
@@ -291,6 +303,7 @@ fun ArticleListPage(
                                         onClick = { searching = true },
                                     )
 
+                                    Box(modifier = Modifier.tourTarget(TourTarget.Filter)) {
                                     HeaderToggleAction(
                                         icon = if (state.isFilterModified) Phosphor.Filtered
                                         else Phosphor.Filter,
@@ -302,14 +315,18 @@ fun ArticleListPage(
                                             }
                                         },
                                     )
+                                    }
 
+                                    Box(modifier = Modifier.tourTarget(TourTarget.Bookmarks)) {
                                     HeaderToggleAction(
                                         painter = painterResource(R.drawable.ic_whisper_save),
                                         description = stringResource(id = R.string.title_bookmarks),
                                         active = showBookmarks,
                                         onClick = { showBookmarks = !showBookmarks },
                                     )
+                                    }
 
+                                    Box(modifier = Modifier.tourTarget(TourTarget.Overflow)) {
                                     OverflowMenu {
                                         DropdownMenuItem(
                                             text = {
@@ -378,6 +395,7 @@ fun ArticleListPage(
                                             }
                                         )
                                     }
+                                    }
                                 }
                             )
                         },
@@ -426,9 +444,11 @@ fun ArticleListPage(
                             GlanceRow(
                                 state = glance,
                                 onSetLocation = { navController.navigate(NavRoute.Settings) },
+                                modifier = Modifier.tourTarget(TourTarget.Glance),
                             )
 
                             CategoryChipRow(
+                                modifier = Modifier.tourTarget(TourTarget.Chips),
                                 categories = categories,
                                 selected = selectedCategories,
                                 onSelectedChange = { picked ->
@@ -499,6 +519,12 @@ fun ArticleListPage(
                                         FeedArticleItem(
                                             item = item,
                                             index = index,
+                                            // The tour points at one card, and
+                                            // the first is the only one certain
+                                            // to be on screen when it runs.
+                                            modifier = if (index == 0)
+                                                Modifier.tourTarget(TourTarget.Article)
+                                            else Modifier,
                                             layout = layout,
                                             emphasis = emphasis,
                                             dimRead = dimRead,
@@ -615,6 +641,22 @@ fun ArticleListPage(
             }
         }
     )
+
+    // The welcome first, then the tour — and the tour waits for articles.
+    // Spotlighting an empty feed would teach nothing and look broken, which on
+    // a new install is exactly the wrong first impression: the sync that fills
+    // it takes a moment longer than the app takes to open.
+    when {
+        !onboardingSeen -> OnboardingPage {
+            scope.launch(Dispatchers.IO) { prefs.onboardingSeen.setValue(true) }
+        }
+
+        !tourSeen && state.articles.isNotEmpty() && !searching -> TourOverlay {
+            scope.launch(Dispatchers.IO) { prefs.tourSeen.setValue(true) }
+        }
+    }
+    }
+    }
 }
 
 /**
