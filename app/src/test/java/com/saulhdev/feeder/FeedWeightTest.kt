@@ -156,6 +156,31 @@ class FeedWeightTest {
     }
 
     @Test
+    fun `reading an article is what makes it shrink, which is why size is settled`() {
+        // The bug this pins: with read-on-scroll enabled, marking an article
+        // read subtracts enough weight to drop it a size, so the card shrank
+        // under the reader's finger and everything below it jumped. The weight
+        // change is correct and stays; rememberFeedEmphasis settles the size
+        // per article for as long as the feed is open so it cannot be seen.
+        val items = (0 until 8).map { item(source = "S$it", hoursAgo = 0) }
+        val before = feedEmphasisFor(items, emptyMap(), NOW)
+
+        val read = items.mapIndexed { i, it ->
+            if (i == 2) it.copy(article = it.article.copy(readAt = NOW - 1000)) else it
+        }
+        val after = feedEmphasisFor(read, emptyMap(), NOW)
+
+        assertTrue(
+            "reading an article should lower its weight",
+            weight(read[2]) < weight(items[2]),
+        )
+        assertTrue(
+            "and that is exactly what would resize it mid-scroll",
+            before[2] != after[2],
+        )
+    }
+
+    @Test
     fun `affinity parses back the way it was written`() {
         assertEquals(mapOf("12" to -2, "7" to 4), parseAffinity(setOf("12:-2", "7:4")))
         // Junk in the set must not take the rest of it down with it.

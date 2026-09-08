@@ -32,6 +32,15 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**The feed jumped while being scrolled.**~~ With read-on-scroll enabled,
+  marking an article read subtracted from its weight, which dropped it a size,
+  which shrank the card under the reader's finger and shunted everything below
+  it up the screen — once per article, continuously, for the whole scroll.
+  An article's size is now settled for as long as the feed is open: whatever
+  it was first given, it keeps. Read state was the visible cause and not the
+  only one, since marking read also rewrites the reading-habit counts and
+  re-runs the clustering, so all three inputs change at once.
+
 - ~~**The overflow menu opens over the status bar.**~~ Removed rather than
   repositioned. Reload is what pull-to-refresh is for and Restart was a
   development leftover, so the menu's only real entry was Settings — which is

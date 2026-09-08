@@ -281,10 +281,28 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val affinity = remember(raw) { parseAffinity(raw) }
     val habit = rememberReadingHabits()
     val clusters = rememberStoryClusters(articles)
-    // The clock is sampled per list rather than per frame: an article does not
-    // need to shrink while it is being looked at.
+
+    // An article keeps the size it was first given for as long as the feed is
+    // open. Without this the feed reflows under the reader's finger: marking
+    // an article read subtracts from its weight, so scrolling past one with
+    // read-on-scroll enabled shrank it from a card to a row and shunted
+    // everything below it up the screen. Every article did it in turn, so the
+    // whole list jumped continuously while being scrolled.
+    //
+    // Read state was the visible cause but not the only one. Marking read also
+    // rewrites the reading-habit counts and re-runs the clustering, so all
+    // three inputs change identity at once and keying the cache on any of them
+    // would defeat it. It is keyed on nothing instead, and lives exactly as
+    // long as the feed's composition — changing a setting means leaving the
+    // feed, which is when recomputing from scratch is wanted and unnoticeable.
+    val settled = remember { mutableMapOf<String, FeedEmphasis>() }
+
     return remember(articles, affinity, habit, clusters) {
-        feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters)
+        val fresh = feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters)
+        articles.forEachIndexed { index, item ->
+            settled.getOrPut(item.id) { fresh[index] }
+        }
+        articles.map { settled[it.id] ?: FeedEmphasis.Medium }
     }
 }
 
