@@ -187,7 +187,7 @@
     <string name="debug_logcat_printing">Extensive logcat printing</string>
     <string name="debug_content_printing">Log notification content</string>
     <string name="summary_feed_list">Add or remove RSS sources</string>
-    <string name="source_code_url" translatable="false">https://github.com/defsix/076feed</string>
+    <string name="source_code_url" translatable="false">https://github.com/defsix/whisper_feed</string>
     <string name="telegram_channel" translatable="false">t.me/neo_launcher</string>
     <string name="title_plugin_list">Plugin List</string>
     <string name="touch_to_play_video">Touch to play video</string>
