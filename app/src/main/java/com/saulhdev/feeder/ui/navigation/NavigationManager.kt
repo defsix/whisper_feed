@@ -53,6 +53,7 @@ import com.saulhdev.feeder.ui.pages.MastodonCallbackPage
 import com.saulhdev.feeder.ui.pages.GlanceLocationPage
 import com.saulhdev.feeder.ui.pages.PreferencesPage
 import com.saulhdev.feeder.ui.pages.CategoryListPage
+import com.saulhdev.feeder.ui.pages.LauncherPage
 import com.saulhdev.feeder.ui.pages.SourceAddPage
 import com.saulhdev.feeder.ui.pages.SourceListPage
 import com.saulhdev.feeder.ui.views.ComposeWebView
@@ -106,6 +107,7 @@ fun NavigationManager(
             composable<NavRoute.Learned> { LearnedPage() }
             composable<NavRoute.Account> { AccountPage() }
             composable<NavRoute.Backup> { BackupPage() }
+            composable<NavRoute.Launcher> { LauncherPage() }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
             composable<NavRoute.MastodonAdd> { MastodonAddPage() }
             composable<NavRoute.MastodonCallback>(
@@ -183,6 +185,9 @@ open class NavRoute {
 
     @Serializable
     data object Backup : NavRoute()
+
+    @Serializable
+    data object Launcher : NavRoute()
 
     @Serializable
     data object BlockedWords : NavRoute()

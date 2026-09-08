@@ -409,6 +409,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = false,
     )
 
+    /** How to put Whisper on a launcher's left-most page. */
+    var launcherSetup = StringPref(
+        titleId = R.string.pref_launcher,
+        summaryId = R.string.pref_launcher_summary,
+        icon = Phosphor.Info,
+        key = LAUNCHER_SETUP,
+        dataStore = dataStore,
+        route = NavRoute.Launcher
+    )
+
     /** The row that puts the tour back. */
     var showTour = StringPref(
         titleId = R.string.pref_show_tour,
@@ -779,6 +789,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val ONBOARDING_SEEN = booleanPreferencesKey("pref_onboarding_seen")
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
+        val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

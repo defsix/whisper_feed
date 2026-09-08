@@ -18,9 +18,12 @@ class OverlayService(): Service() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
+        // The one moment the app can know a launcher is actually using it.
+        LauncherLink.onBound()
         return overlaysController.onBind(intent)
     }
     override fun onUnbind(intent: Intent): Boolean {
+        LauncherLink.onUnbound()
         this.overlaysController.onUnbind(intent)
         return false
     }

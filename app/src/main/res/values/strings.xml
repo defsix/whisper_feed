@@ -388,4 +388,20 @@
     <string name="pref_show_tour">Show the tour again</string>
     <string name="pref_show_tour_queued">The tour will start when you go back to your feed.</string>
     <string name="pref_show_tour_summary">Walk through the feed\'s controls</string>
+
+    <!-- Launcher page setup -->
+    <string name="pref_launcher">Launcher page</string>
+    <string name="pref_launcher_summary">Put Whisper on your home screen\'s left-most page</string>
+    <string name="launcher_explanation">Some launchers let another app fill the page to the left of the home screen — the slot Google Discover uses on a Pixel. Whisper can be that page. This is a bonus rather than a requirement: the app works exactly the same without it.</string>
+    <string name="launcher_connected">Connected. Your launcher is using Whisper for its left-most page.</string>
+    <string name="launcher_none_installed">No launcher that supports this was found on this phone. Lawnchair is the one this has been tested with.</string>
+    <string name="launcher_step_debug">Open your app drawer, tap the search field, and type <b>/lawnchairdebug</b>. Nothing appears to happen — that is expected.</string>
+    <string name="launcher_step_menu">Open Lawnchair\'s settings. A build icon has appeared in the overflow area; tap it to reach the <b>Debug menu</b>.</string>
+    <string name="launcher_step_whitelist">Turn on <b>Ignore feed whitelist</b>. Lawnchair keeps a fixed list of apps allowed to be the feed, and Whisper is not on it yet.</string>
+    <string name="launcher_step_pick">Go to <b>Home screen settings → Feed provider</b> and choose <b>Whisper</b>.</string>
+    <string name="launcher_open">Open launcher settings</string>
+    <string name="launcher_permission_title">Display over other apps</string>
+    <string name="launcher_permission_body">Without this, the page appears but tapping an article does nothing. On a sideloaded build the switch is greyed out until you allow it: Settings → Apps → Whisper → ⋮ → Allow restricted settings.</string>
+    <string name="launcher_permission_granted">Granted. Articles will open when you tap them.</string>
+    <string name="launcher_permission_open">Grant the permission</string>
 </resources>
