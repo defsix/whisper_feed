@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.utils.READ_DIM
 import org.koin.compose.koinInject
 
 /**
@@ -206,4 +207,20 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     return remember(articles, affinity) {
         feedEmphasisFor(articles, affinity, System.currentTimeMillis())
     }
+}
+
+/**
+ * Whether read articles should be faded, for the current setting.
+ *
+ * A separate reader from the hide rule, which lives in the view model where
+ * the list is built: fading is a rendering decision and removing is a
+ * filtering one, and putting both in the same place would mean the feed had to
+ * be rebuilt to change how it looks.
+ */
+@Composable
+fun rememberDimRead(): Boolean {
+    val prefs: FeedPreferences = koinInject()
+    val setting by prefs.readVisibility.get()
+        .collectAsState(initial = prefs.readVisibility.getValue())
+    return setting == READ_DIM
 }

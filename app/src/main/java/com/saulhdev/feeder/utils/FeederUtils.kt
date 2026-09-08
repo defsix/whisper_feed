@@ -67,6 +67,28 @@ const val LAYOUT_MAGAZINE = "magazine"
 const val LAYOUT_LIST = "list"
 const val LAYOUT_MOSAIC = "mosaic"
 
+/** What happens to an article once it has been read. See getReadVisibility. */
+const val READ_KEEP = "keep"
+const val READ_DIM = "dim"
+const val READ_HIDE = "hide"
+
+/**
+ * How much an article that has been read should get out of the way.
+ *
+ * Keep is the default and the safe one: a read article already loses weight,
+ * so it shrinks and sinks without disappearing. Hide is the traditional
+ * reader's behaviour and belongs to people who treat a feed as an inbox — it
+ * is offered, not assumed, because on a surface people scroll idly an article
+ * that vanishes is indistinguishable from one that was never there.
+ */
+fun getReadVisibility(context: Context): Map<String, String> {
+    return mapOf(
+        READ_KEEP to context.resources.getString(R.string.read_visibility_keep),
+        READ_DIM to context.resources.getString(R.string.read_visibility_dim),
+        READ_HIDE to context.resources.getString(R.string.read_visibility_hide),
+    )
+}
+
 fun getFeedLayouts(context: Context): Map<String, String> {
     return mapOf(
         LAYOUT_CARDS to context.resources.getString(R.string.layout_cards),

@@ -192,6 +192,12 @@
     <string name="title_plugin_list">Plugin List</string>
     <string name="touch_to_play_video">Touch to play video</string>
     <string name="fetch_full_articles_by_default">Fetch full articles by default</string>
+    <string name="pref_read_visibility">Articles you have read</string>
+    <string name="pref_read_visibility_summary">A read article always loses weight and sinks. This is whether it also fades or goes.</string>
+    <string name="read_visibility_keep">Keep them</string>
+    <string name="read_visibility_dim">Fade them</string>
+    <string name="read_visibility_hide">Hide them</string>
+    <string name="show_read_articles">Show articles you have read</string>
     <string name="pref_volume_key_scroll">Volume keys scroll the feed</string>
     <string name="pref_volume_key_scroll_summary">Volume down pages forward, volume up pages back. Only inside the app — the launcher keeps its own keys.</string>
     <string name="report_problem">Report a problem</string>

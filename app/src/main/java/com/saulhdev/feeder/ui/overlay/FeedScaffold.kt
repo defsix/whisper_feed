@@ -303,6 +303,7 @@ fun FeedScaffold(
                 // Which article gets the big shape is one decision for every
                 // layout, so it is made once here rather than per container.
                 val emphasis = rememberFeedEmphasis(articles)
+                val dimRead = rememberDimRead()
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
                 } else if (feedLayoutIsGrid(layout)) {
@@ -338,6 +339,7 @@ fun FeedScaffold(
                                 layout = layout,
                                 emphasis = emphasis.getOrNull(index)
                                     ?: FeedEmphasis.Medium,
+                                dimRead = dimRead,
                             )
                         }
                     }
@@ -360,6 +362,7 @@ fun FeedScaffold(
                                 layout = layout,
                                 emphasis = emphasis.getOrNull(index)
                                     ?: FeedEmphasis.Medium,
+                                dimRead = dimRead,
                             )
                         }
                     }

@@ -43,6 +43,9 @@ import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
+import com.saulhdev.feeder.utils.READ_KEEP
+import com.saulhdev.feeder.utils.getReadVisibility
+import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
@@ -262,6 +265,24 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * surprise, and this one only pays off for people who read one-handed.
      * See VolumeScroll for why this rather than a motion gesture.
      */
+    /**
+     * What becomes of an article once it has been opened.
+     *
+     * Saved and pinned articles are never hidden by this, whatever it is set
+     * to: those are the two ways a reader has said "keep this", and a setting
+     * about tidying away what is finished should not throw away what was
+     * deliberately kept.
+     */
+    var readVisibility = StringSelectionPref(
+        titleId = R.string.pref_read_visibility,
+        summaryId = R.string.pref_read_visibility_summary,
+        icon = Phosphor.EyeSlash,
+        key = READ_VISIBILITY,
+        dataStore = dataStore,
+        defaultValue = READ_KEEP,
+        entries = getReadVisibility(context)
+    )
+
     var volumeKeyScroll = BooleanPref(
         titleId = R.string.pref_volume_key_scroll,
         summaryId = R.string.pref_volume_key_scroll_summary,
@@ -563,6 +584,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         const val OPEN_MODE_BROWSER = "browser"
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
         val VOLUME_KEY_SCROLL = booleanPreferencesKey("pref_volume_key_scroll")
+        val READ_VISIBILITY = stringPreferencesKey("pref_read_visibility")
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")

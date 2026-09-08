@@ -114,6 +114,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
 import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
+import com.saulhdev.feeder.ui.overlay.rememberDimRead
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
@@ -450,6 +451,7 @@ fun ArticleListPage(
                                 // different apps — and the same container, which for
                                 // Mosaic is a staggered grid rather than a column.
                                 else          -> {
+                                    val dimRead = rememberDimRead()
                                     val article: @Composable (Int, FeedItem, FeedEmphasis) -> Unit =
                                         { index, item, emphasis ->
                                         FeedArticleItem(
@@ -457,6 +459,7 @@ fun ArticleListPage(
                                             index = index,
                                             layout = layout,
                                             emphasis = emphasis,
+                                            dimRead = dimRead,
                                             onClick = {
                                                 viewModel.markRead(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {

@@ -241,6 +241,11 @@ different readers:
 | **Dim** | Also visibly marked as read — the traditional reader's greyed row |
 | **Hide** | Removed from the stream entirely |
 
+**All three are built**, ahead of the rest of this section, since they stand on
+their own: opening an article is already the one thing that marks it read, so
+the setting does something real today and does not wait on the scroll trigger.
+Saved and pinned articles are never hidden by it, whatever it is set to.
+
 Hide must not be the default and probably should not be reachable without
 scroll-to-read being on first: on a surface people scroll idly, an article that
 vanishes because it was on screen for two seconds is indistinguishable from a

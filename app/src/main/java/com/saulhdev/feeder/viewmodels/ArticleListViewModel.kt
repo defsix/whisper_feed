@@ -26,6 +26,7 @@ import com.saulhdev.feeder.data.entity.SORT_TITLE
 import com.saulhdev.feeder.data.entity.SortFilterModel
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.utils.READ_HIDE
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -141,8 +142,17 @@ class ArticleListViewModel(
         // Debounced so a fast typist does not re-filter and re-sort the whole
         // feed on every keystroke; the list is rebuilt once they pause.
         _searchQuery.debounce { if (it.isBlank()) 0L else SEARCH_DEBOUNCE_MS },
-    ) { articles, sfm, removeDuplicate, hidden, query ->
-        processArticles(articles, sfm, removeDuplicate, hidden, query)
+        prefs.readVisibility.get(),
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        processArticles(
+            articles = values[0] as List<FeedItem>,
+            sfm = values[1] as SortFilterModel,
+            removeDuplicate = values[2] as Boolean,
+            hiddenSources = values[3] as Set<String>,
+            query = values[4] as String,
+            hideRead = values[5] as String == READ_HIDE,
+        )
     }.flowOn(Dispatchers.Default)
 
     val articleListState: StateFlow<ArticleListState> = combine(
@@ -264,6 +274,7 @@ class ArticleListViewModel(
         removeDuplicate: Boolean,
         hiddenSources: Set<String> = emptySet(),
         query: String = "",
+        hideRead: Boolean = false,
     ): List<FeedItem> {
         val terms = query.trim().takeIf(String::isNotEmpty)
         // One pass rather than four. Each `let` here used to allocate a whole
@@ -285,6 +296,13 @@ class ArticleListViewModel(
                     // more than one.
                     sfm.tagsFilter.isNotEmpty() &&
                             item.feedTags.any { it in sfm.tagsFilter } -> false
+
+                    // Saved and pinned survive: those are the two ways a
+                    // reader has said "keep this", and a setting about
+                    // tidying away what is finished must not throw away
+                    // what was deliberately kept.
+                    hideRead && item.article.readAt != 0L &&
+                            !item.bookmarked && !item.pinned -> false
 
                     else -> true
                 }

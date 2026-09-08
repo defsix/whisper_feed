@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
@@ -83,8 +84,13 @@ fun FeedArticleItem(
     onHideSource: () -> Unit = {},
     layout: String = LAYOUT_CARDS,
     emphasis: FeedEmphasis = FeedEmphasis.Medium,
+    dimRead: Boolean = false,
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
+    // One place rather than five: every shape below takes this modifier, so a
+    // read article fades whichever way the feed happens to be drawing it.
+    val shapeModifier =
+        if (dimRead && item.article.readAt != 0L) modifier.alpha(READ_ALPHA) else modifier
     val menu: @Composable (Color?) -> Unit = { tint ->
         ArticleOverflowMenu(
             onMoreLikeThis = onMoreLikeThis,
@@ -95,12 +101,12 @@ fun FeedArticleItem(
         )
     }
     when (feedCardShape(index, hasImage, layout, emphasis)) {
-        FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, modifier)
-        FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, modifier)
-        FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, modifier)
-        FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, modifier)
+        FeedCardShape.Hero    -> ArticleHeroCard(item, onClick, onBookmark, onShare, menu, shapeModifier)
+        FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, shapeModifier)
+        FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, shapeModifier)
+        FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, shapeModifier)
         FeedCardShape.Tile    -> ArticleMosaicTile(
-            item, onClick, onBookmark, menu, modifier,
+            item, onClick, onBookmark, menu, shapeModifier,
             size = emphasis,
         )
     }
@@ -675,3 +681,6 @@ private fun FeedItem.relativeAge(context: android.content.Context): String =
 fun articlePlaceholder(): Int =
     if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) R.drawable.placeholder_article_dark
     else R.drawable.placeholder_article_light
+
+/** How far a read article fades, when the reader has asked for that. */
+private const val READ_ALPHA = 0.55f

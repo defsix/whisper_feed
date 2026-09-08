@@ -34,6 +34,7 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.ChipsSwitch
 import com.saulhdev.feeder.ui.components.DeSelectAll
+import com.saulhdev.feeder.ui.components.ComposeSwitchView
 import com.saulhdev.feeder.ui.components.ExpandableItemsBlock
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.components.SelectChip
@@ -42,6 +43,8 @@ import com.saulhdev.feeder.ui.icons.phosphor.ArrowUUpLeft
 import com.saulhdev.feeder.ui.icons.phosphor.Check
 import com.saulhdev.feeder.ui.icons.phosphor.SortAscending
 import com.saulhdev.feeder.ui.icons.phosphor.SortDescending
+import com.saulhdev.feeder.utils.READ_HIDE
+import com.saulhdev.feeder.utils.READ_KEEP
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -64,6 +67,15 @@ fun SortFilterSheet(
     var sortAscPrefVar by prefs.sortingAsc
     var sourcesPrefVar by prefs.sourcesFilter
     var tagsPrefVar by prefs.tagsFilter
+    var readVisibilityPrefVar by prefs.readVisibility
+    val readVisibility by prefs.readVisibility.get()
+        .collectAsState(initial = prefs.readVisibility.getValue())
+    // Staged until Apply, like everything else in this sheet. A control that
+    // acts the moment it is touched, sitting above an Apply button, leaves the
+    // reader unsure which of the two did the work.
+    var showReadOption by remember(readVisibility) {
+        mutableStateOf(readVisibility != READ_HIDE)
+    }
 
     var sortOption by remember(state.sortFilter.sort) {
         mutableStateOf(state.sortFilter.sort)
@@ -103,6 +115,7 @@ fun SortFilterSheet(
                         sortAscPrefVar = prefs.sortingAsc.defaultValue
                         sourcesPrefVar = prefs.sourcesFilter.defaultValue
                         tagsPrefVar = prefs.tagsFilter.defaultValue
+                        readVisibilityPrefVar = prefs.readVisibility.defaultValue
                         onDismiss()
                     }
                     ActionButton(
@@ -115,6 +128,15 @@ fun SortFilterSheet(
                             sortAscPrefVar = sortAscOption
                             sourcesPrefVar = sourcesOption.toSet()
                             tagsPrefVar = tagsOption.toSet()
+                            // Turning them back on restores Keep rather than
+                            // Fade: Fade is a deliberate choice made in
+                            // Settings, and a switch labelled "show" should
+                            // not quietly pick a different way of showing.
+                            if (showReadOption) {
+                                if (readVisibility == READ_HIDE) readVisibilityPrefVar = READ_KEEP
+                            } else {
+                                readVisibilityPrefVar = READ_HIDE
+                            }
                             onDismiss()
                         }
                     )
@@ -164,6 +186,20 @@ fun SortFilterSheet(
                         }
                     )
                 }
+            }
+
+            item {
+                // The way back. Hiding read articles is set in Settings, but
+                // the filter that made something vanish is the one place a
+                // reader looks for it — and a switch buried two screens away
+                // is indistinguishable from the articles being gone for good.
+                ComposeSwitchView(
+                    titleId = R.string.show_read_articles,
+                    isChecked = showReadOption,
+                    onCheckedChange = { showReadOption = it },
+                    index = 0,
+                    groupSize = 1,
+                )
             }
 
             item {
