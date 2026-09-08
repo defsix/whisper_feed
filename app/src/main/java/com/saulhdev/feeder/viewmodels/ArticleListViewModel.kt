@@ -195,9 +195,10 @@ class ArticleListViewModel(
         BookmarksState()
     )
 
-    fun unpinArticle(id: String) {
+    /** Holds an article at the top of the feed, or lets it go. */
+    fun setPinned(id: String, pinned: Boolean) {
         viewModelScope.launch {
-            articleRepo.unpinArticle(id)
+            articleRepo.setPinned(id, pinned)
         }
     }
 
@@ -362,8 +363,15 @@ class ArticleListViewModel(
             SORT_SOURCE -> compareBy(FeedItem::displayTitle)
             else        -> compareBy(FeedItem::timeMillis)
         }
-        val sorted = if (sfm.sortAsc) filtered.sortedWith(comparator)
+        val ordered = if (sfm.sortAsc) filtered.sortedWith(comparator)
         else filtered.sortedWith(comparator.reversed())
+
+        // Pinned articles sit above everything, whichever sort is active. A
+        // pin means "I am following this, keep it in front of me", and a sort
+        // that moved it away would be answering a question the reader did not
+        // ask. sortedBy is stable, so the order inside each group is the one
+        // the sort just produced.
+        val sorted = ordered.sortedByDescending { it.pinned }
 
         // Sorting by source is a request to see one source's articles
         // together, so spreading them would be undoing what was asked.

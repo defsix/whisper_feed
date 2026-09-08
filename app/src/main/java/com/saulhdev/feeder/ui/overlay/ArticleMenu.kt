@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
+import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.ui.icons.phosphor.Prohibit
@@ -73,6 +74,8 @@ fun ArticleOverflowMenu(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     reasons: List<WeightReason> = emptyList(),
+    pinned: Boolean = false,
+    onPin: (Boolean) -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     var explain by remember { mutableStateOf(false) }
@@ -94,6 +97,13 @@ fun ArticleOverflowMenu(
         MenuEntry(R.string.less_like_this, Phosphor.Prohibit) {
             expanded = false
             onLessLikeThis()
+        }
+        MenuEntry(
+            if (pinned) R.string.unpin_article else R.string.pin_article,
+            Phosphor.Asterisk,
+        ) {
+            expanded = false
+            onPin(!pinned)
         }
         MenuEntry(R.string.hide_source, Phosphor.EyeSlash) {
             expanded = false

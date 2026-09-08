@@ -453,7 +453,6 @@ fun ArticleListPage(
                                                         )
                                                     }
                                                 }
-                                                scope.launch { viewModel.unpinArticle(item.id) }
                                             },
                                             onBookmark = { viewModel.bookmarkArticle(item.id, it) },
                                             onShare = {
@@ -495,6 +494,7 @@ fun ArticleListPage(
                                             emphasis = emphasis,
                                             dimRead = dimRead,
                                             cluster = clusters[item.id],
+                                            onPin = { viewModel.setPinned(item.id, it) },
                                             onClick = {
                                                 viewModel.markRead(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {

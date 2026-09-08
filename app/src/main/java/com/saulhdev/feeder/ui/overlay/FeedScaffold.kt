@@ -149,6 +149,7 @@ fun FeedScaffold(
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
     onArticleSeen: (FeedItem) -> Unit = {},
+    onPin: (FeedItem, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -350,6 +351,7 @@ fun FeedScaffold(
                                     ?: FeedEmphasis.Medium,
                                 dimRead = dimRead,
                                 cluster = clusters[item.id],
+                                onPin = { onPin(item, it) },
                             )
                         }
                     }
@@ -374,6 +376,7 @@ fun FeedScaffold(
                                     ?: FeedEmphasis.Medium,
                                 dimRead = dimRead,
                                 cluster = clusters[item.id],
+                                onPin = { onPin(item, it) },
                             )
                         }
                     }

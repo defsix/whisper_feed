@@ -145,6 +145,17 @@ class FeedWeightTest {
     }
 
     @Test
+    fun `saving an article is not the same as pinning it`() {
+        // These used to be one switch: bookmarking set both, so a saved
+        // article collected both bonuses and pinning meant nothing on its own.
+        val saved = item(saved = true)
+        val pinned = item(pinned = true)
+        val both = item(saved = true, pinned = true)
+        assertTrue(weight(saved) < weight(pinned))
+        assertTrue(weight(pinned) < weight(both))
+    }
+
+    @Test
     fun `affinity parses back the way it was written`() {
         assertEquals(mapOf("12" to -2, "7" to 4), parseAffinity(setOf("12:-2", "7:4")))
         // Junk in the set must not take the rest of it down with it.

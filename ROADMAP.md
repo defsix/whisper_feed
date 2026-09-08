@@ -345,13 +345,28 @@ build-it-ourselves rather than assembly, and should be budgeted that way.
 
 Three related asks, in increasing order of difficulty.
 
-**Pinning is the easy one and should be built first.** A user pins an article
-they are following; it holds the top of the feed until unpinned. It needs one
-boolean on `Article`, an entry in the per-card overflow menu (§3), and a rule
-that pinned items sort above everything regardless of the active sort. No
-inference, no clustering, nothing to get wrong. It also happens to be the
-manual escape hatch for whenever the automatic detection below gets it wrong,
-so it is worth having in place before the automatic version ships.
+**Pinning — built.** A reader pins an article they are following and it holds
+the top of the feed until unpinned, whichever sort is active. No inference,
+nothing to get wrong, and it is the manual escape hatch for whenever the
+automatic detection below gets it wrong.
+
+The boolean on `Article` was already there, and that turned out to be the
+problem rather than the head start: `bookmarkArticle` set `pinned` to the same
+value as `bookmarked`, so saving an article pinned it and unsaving released it.
+Pinning could not mean anything on its own, and every saved article was
+quietly collecting both weight bonuses. The two are different things — saving
+is "I want to find this later", pinning is "I am following this, keep it in
+front of me" — and they are now separate switches.
+
+Since pinning was never reachable from the interface, every pinned row in an
+existing database is a saved article rather than a pinned one. Migration 13→14
+clears the column, so upgrading does not put every article the reader has ever
+saved at the top of their feed.
+
+Opening a pinned article no longer releases it either. That was right when a
+pin was a side effect of saving; it is wrong when a pin means the reader is
+following a story, since reading today's report is not a signal that they have
+stopped.
 
 **Breaking news detection — built, on title similarity.** The signal is the
 right one: when several sources publish about the same thing inside a few

@@ -192,6 +192,9 @@
     <string name="title_plugin_list">Plugin List</string>
     <string name="touch_to_play_video">Touch to play video</string>
     <string name="fetch_full_articles_by_default">Fetch full articles by default</string>
+    <string name="pin_article">Pin to the top</string>
+    <string name="unpin_article">Unpin</string>
+    <string name="pinned_label">Pinned</string>
     <string name="why_this_size">Why is this here?</string>
     <string name="why_explanation">Whisper sizes and orders articles from these signals alone. Nothing here comes from anywhere but your own phone.</string>
     <string name="why_no_image">No picture, so it stays small whatever else is true</string>

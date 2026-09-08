@@ -60,6 +60,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
@@ -87,6 +88,7 @@ fun FeedArticleItem(
     emphasis: FeedEmphasis = FeedEmphasis.Medium,
     dimRead: Boolean = false,
     cluster: StoryCluster? = null,
+    onPin: (Boolean) -> Unit = {},
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     // One place rather than five: every shape below takes this modifier, so a
@@ -108,6 +110,8 @@ fun FeedArticleItem(
             onShare = onShare,
             tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
             reasons = reasons,
+            pinned = item.pinned,
+            onPin = onPin,
         )
     }
     when (feedCardShape(index, hasImage, layout, emphasis)) {
@@ -180,6 +184,10 @@ fun ArticleHeroCard(
                     .align(Alignment.BottomStart)
                     .padding(16.dp)
             ) {
+                if (item.pinned) {
+                    PinnedLine(color = Color.White)
+                    Spacer(Modifier.height(4.dp))
+                }
                 coverage?.let {
                     CoverageLine(sources = it, color = Color.White)
                     Spacer(Modifier.height(4.dp))
@@ -270,10 +278,21 @@ fun ArticleCard(
                 )
             }
 
+            if (item.pinned) {
+                PinnedLine(
+                    modifier = Modifier.padding(top = if (image.isNullOrBlank()) 0.dp else 12.dp),
+                )
+            }
             coverage?.let {
                 CoverageLine(
                     sources = it,
-                    modifier = Modifier.padding(top = if (image.isNullOrBlank()) 0.dp else 12.dp),
+                    modifier = Modifier.padding(
+                        top = when {
+                            item.pinned           -> 4.dp
+                            image.isNullOrBlank() -> 0.dp
+                            else                  -> 12.dp
+                        }
+                    ),
                 )
             }
 
@@ -284,7 +303,7 @@ fun ArticleCard(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(
                     top = when {
-                        coverage != null          -> 6.dp
+                        coverage != null || item.pinned -> 6.dp
                         image.isNullOrBlank()     -> 0.dp
                         else                      -> 12.dp
                     }
@@ -582,6 +601,10 @@ fun ArticleMosaicTile(
             }
         }
         Column(modifier = Modifier.padding(10.dp)) {
+            if (item.pinned) {
+                PinnedLine()
+                Spacer(Modifier.height(4.dp))
+            }
             coverage?.let {
                 CoverageLine(sources = it)
                 Spacer(Modifier.height(4.dp))
@@ -723,6 +746,35 @@ fun articlePlaceholder(): Int =
 
 /** How far a read article fades, when the reader has asked for that. */
 private const val READ_ALPHA = 0.55f
+
+/**
+ * The mark on an article the reader is following.
+ *
+ * Without it a pinned article is simply first for no visible reason, which
+ * reads as the sort being broken — and the reader has no way to find the thing
+ * they need to press to release it.
+ */
+@Composable
+private fun PinnedLine(
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = Phosphor.Asterisk,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(13.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(R.string.pinned_label),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
+    }
+}
 
 /** The cluster map [rememberWeightReasons] wants, from the one cluster a card has. */
 private fun clusterOf(item: FeedItem, cluster: StoryCluster?): Map<String, StoryCluster> =

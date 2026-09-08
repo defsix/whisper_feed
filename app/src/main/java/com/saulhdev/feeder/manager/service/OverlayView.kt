@@ -421,6 +421,7 @@ class OverlayView(val context: Context) :
                         }
                     },
                     onArticleSeen = { viewModel.markReadOnScroll(it.id) },
+                    onPin = { item, pinned -> viewModel.setPinned(item.id, pinned) },
                     onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
                     onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
                     onHideSource = { viewModel.hideSource(it) },

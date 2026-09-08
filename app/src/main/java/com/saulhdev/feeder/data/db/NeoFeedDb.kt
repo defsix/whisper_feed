@@ -46,7 +46,7 @@ const val ID_ALL: Long = -1L
         Feed::class,
         Article::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -229,7 +229,21 @@ val allMigrations = arrayOf(
     MIGRATION_10_11,
     MIGRATION_11_12,
     MIGRATION_12_13,
+    MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_13_14 : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Pinning has never been reachable from the interface: the only thing
+        // that ever set this column was bookmarking, which set both at once.
+        // So every pinned row in an existing database is a saved article
+        // rather than a pinned one, and leaving them would put every article
+        // the reader has ever saved at the top of the feed the moment pinning
+        // starts meaning something.
+        db.execSQL("UPDATE Article SET pinned = 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_12_13 : Migration(12, 13) {

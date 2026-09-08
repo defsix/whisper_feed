@@ -119,9 +119,10 @@ class ArticleViewModel(
             ArticlePageState()
         )
 
-    fun unpinArticle(id: String) {
+    /** Holds an article at the top of the feed, or lets it go. */
+    fun setPinned(id: String, pinned: Boolean) {
         viewModelScope.launch {
-            articleRepo.unpinArticle(id)
+            articleRepo.setPinned(id, pinned)
         }
     }
 

@@ -168,21 +168,31 @@ class ArticleRepository(db: NeoFeedDb) {
 
     fun countReadSince(since: Long): Flow<Int> = articlesDao.countReadSince(since).flowOn(cc)
 
+    /**
+     * Saves an article, and only that.
+     *
+     * This used to set `pinned` to the same value, so saving something put it
+     * at the top of the feed and unsaving took it down again. The two are
+     * different things — saving is "I want to find this later", pinning is "I
+     * am following this, keep it in front of me" — and conflating them meant
+     * neither could be used without the other happening.
+     */
     suspend fun bookmarkArticle(
         articleId: String,
         bookmark: Boolean,
     ) = withContext(jcc) {
         articlesDao.getArticleById(articleId)?.let {
-            articlesDao.updateFeedArticle(it.copy(bookmarked = bookmark, pinned = bookmark))
+            articlesDao.updateFeedArticle(it.copy(bookmarked = bookmark))
         }
     }
 
-    suspend fun unpinArticle(
+    /** Holds an article at the top of the feed, or lets it go. */
+    suspend fun setPinned(
         articleId: String,
-        pin: Boolean = false,
+        pinned: Boolean,
     ) = withContext(jcc) {
         articlesDao.getArticleById(articleId)?.let {
-            articlesDao.updateFeedArticle(it.copy(pinned = pin))
+            articlesDao.updateFeedArticle(it.copy(pinned = pinned))
         }
     }
 
