@@ -76,6 +76,7 @@ fun FeedArticleItem(
     onLessLikeThis: () -> Unit = {},
     onHideSource: () -> Unit = {},
     layout: String = LAYOUT_CARDS,
+    mosaicSize: MosaicTileSize = MosaicTileSize.Medium,
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     val menu: @Composable (Color?) -> Unit = { tint ->
@@ -94,7 +95,7 @@ fun FeedArticleItem(
         FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, modifier)
         FeedCardShape.Tile    -> ArticleMosaicTile(
             item, onClick, onBookmark, menu, modifier,
-            size = mosaicTileSize(index, hasImage),
+            size = mosaicSize,
         )
     }
 }

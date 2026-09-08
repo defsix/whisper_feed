@@ -303,6 +303,7 @@ fun FeedScaffold(
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
                 } else if (feedLayoutIsGrid(layout)) {
+                    val mosaicSizes = rememberMosaicSizes(articles)
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
                         state = gridState,
@@ -314,14 +315,12 @@ fun FeedScaffold(
                         itemsIndexed(
                             articles,
                             key = { _, item -> item.id },
-                            // The grid decides the span before it composes the
-                            // item, so the rhythm is asked here too.
-                            span = { index, item ->
-                                if (mosaicSpansFullLine(
-                                        index,
-                                        !item.article.imageUrl.isNullOrBlank(),
-                                    )
-                                ) StaggeredGridItemSpan.FullLine
+                            // The grid needs the span before it composes the
+                            // item, so the sizes are worked out for the whole
+                            // list up front rather than asked per tile.
+                            span = { index, _ ->
+                                if (mosaicSizes.getOrNull(index) == MosaicTileSize.Large)
+                                    StaggeredGridItemSpan.FullLine
                                 else StaggeredGridItemSpan.SingleLane
                             },
                         ) { index, item ->
@@ -335,6 +334,8 @@ fun FeedScaffold(
                                 onLessLikeThis = { onLessLikeThis(item) },
                                 onHideSource = { onHideSource(item) },
                                 layout = layout,
+                                mosaicSize = mosaicSizes.getOrNull(index)
+                                    ?: MosaicTileSize.Medium,
                             )
                         }
                     }

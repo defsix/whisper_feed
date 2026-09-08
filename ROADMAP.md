@@ -189,6 +189,17 @@ More/Less like this, source affinity, hide source and topic, reset,
 chronological and smart ordering. `readAt` exists now, which is the first piece
 of article state; the rest of the signal model is still to design.
 
+**First consumer shipped: article weighting in Mosaic.** `FeedWeight.kt` scores
+each article — image, freshness, source affinity, headline length, whether a
+summary exists, read state, saved, pinned — and the score picks the tile size.
+It is the first thing that reads the affinity scores back rather than only
+writing them, and it is deliberately a display decision rather than a filter:
+a low weight makes an article small, never absent, so a bad score cannot hide
+anything. The constants are in one object and want tuning against a real feed.
+
+Still open here: the same weight should drive the Cards rhythm (currently
+positional), a visible "why is this big" affordance, and the reset control.
+
 Worth restating: `docs/REFERENCES.md` §4 found **no open-source prior art** for
 transparent, resettable preference learning in a feed reader. This is
 build-it-ourselves rather than assembly, and should be budgeted that way.

@@ -111,7 +111,8 @@ import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
-import com.saulhdev.feeder.ui.overlay.mosaicSpansFullLine
+import com.saulhdev.feeder.ui.overlay.MosaicTileSize
+import com.saulhdev.feeder.ui.overlay.rememberMosaicSizes
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
@@ -434,11 +435,13 @@ fun ArticleListPage(
                                 // different apps — and the same container, which for
                                 // Mosaic is a staggered grid rather than a column.
                                 else          -> {
-                                    val article: @Composable (Int, FeedItem) -> Unit = { index, item ->
+                                    val article: @Composable (Int, FeedItem, MosaicTileSize) -> Unit =
+                                        { index, item, mosaicSize ->
                                         FeedArticleItem(
                                             item = item,
                                             index = index,
                                             layout = layout,
+                                            mosaicSize = mosaicSize,
                                             onClick = {
                                                 viewModel.markRead(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
@@ -467,6 +470,8 @@ fun ArticleListPage(
                                     ) {
                                         SearchEmptyState(searchQuery)
                                     } else if (feedLayoutIsGrid(layout)) {
+                                        val mosaicSizes =
+                                            rememberMosaicSizes(state.articles)
                                         PullToRefreshStaggeredGrid(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
@@ -475,15 +480,20 @@ fun ArticleListPage(
                                                 itemsIndexed(
                                                     state.articles,
                                                     key = { _, item -> item.id },
-                                                    span = { index, item ->
-                                                        if (mosaicSpansFullLine(
-                                                                index,
-                                                                !item.article.imageUrl.isNullOrBlank(),
-                                                            )
+                                                    span = { index, _ ->
+                                                        if (mosaicSizes.getOrNull(index) ==
+                                                            MosaicTileSize.Large
                                                         ) StaggeredGridItemSpan.FullLine
                                                         else StaggeredGridItemSpan.SingleLane
                                                     },
-                                                ) { index, item -> article(index, item) }
+                                                ) { index, item ->
+                                                    article(
+                                                        index,
+                                                        item,
+                                                        mosaicSizes.getOrNull(index)
+                                                            ?: MosaicTileSize.Medium,
+                                                    )
+                                                }
                                             },
                                         )
                                     } else {
@@ -495,7 +505,13 @@ fun ArticleListPage(
                                                 itemsIndexed(
                                                     state.articles,
                                                     key = { _, item -> item.id },
-                                                ) { index, item -> article(index, item) }
+                                                ) { index, item ->
+                                                    article(
+                                                        index,
+                                                        item,
+                                                        MosaicTileSize.Medium,
+                                                    )
+                                                }
                                             },
                                         )
                                     }
