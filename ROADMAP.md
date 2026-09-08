@@ -62,9 +62,10 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
-| 6 | Sync | **Part** — Google Reader protocol done first (see §7): client, account, service abstraction and sign-in screen work; read-state mapping and background sync outstanding. Google Drive backup is wanted and specified in §7, not yet built |
+| 6 | Sync | **Part** — backup is done (§14): folder picker, OPML, settings file, daily unmetered job, first-run restore. Google Reader protocol (§7) is partly built — client, account, service abstraction and sign-in screen work; read-state mapping, removals and background sync outstanding |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
+| — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
 
 The card **rhythm** (hero / card / compact) is what Cards does *within* one
 layout; the four layouts are what the user chooses between. Both exist now.
@@ -179,17 +180,20 @@ the way.
 The numbers are labels, not a schedule — they stay put so they can be referred
 to. The working order set by the user is 1, 3, 4, 2, then the rest.
 
-**What to build next: §14, the Drive backup**, ahead of finishing §7. It is the
-one thing here that reduces a risk rather than adding a feature. Today a
-subscription list built over years exists in exactly one place, and the only
-protection is an OPML export behind a file picker that nobody remembers to
-use; a lost phone loses the lot. §14 needs nothing that is unfinished, has no
-reconciliation or id mapping to design, and is mostly a destination for bytes
-that are already produced correctly.
+**§14 and §15 are done.** The backup that reduced the real risk — a
+subscription list built over years existing in exactly one place — is built,
+scheduled and offered on first run, and the app now explains itself to
+somebody opening it for the first time.
 
-Nothing is left half-shown by pausing §7 either — its account screen syncs
-subscriptions and says so, and the read-state mapping it is missing was never
-visible.
+**What to build next: §8, shipping it.** Everything above is being tested by
+three people on builds handed to them directly, which does not scale and does
+not produce the feedback that finds the remaining problems. A release signing
+key and a GitHub release are a day's work and change who can find the app.
+
+Finishing §7 is the other candidate and is the larger one: the read-state
+mapping is the piece that makes an account worth having, and until it lands
+the account screen syncs subscriptions and nothing else. It is honest about
+that today, which is why it can wait.
 
 ### 1. Adding a feed should be forgiving
 
@@ -1230,9 +1234,11 @@ Small, and cheaper now than later.
   from the code and measured where it could be measured — text widths against
   the real font, icon alpha, migration SQL. The on-device checks have all been
   yours. Emulator-based screenshot tests would change that.
-- **Test coverage is 14 unit tests**, on article age and tag splitting. The sync
-  and filter performance work, the theme resolution and the day/night rule are
-  all untested and all have the shape that benefits most from tests.
+- **Test coverage is 99 unit tests**, across article age, tag splitting, feed
+  layout and weighting, clustering, the settings backup format, the tour's step
+  machine and the starter list. Still untested and still the shape that would
+  benefit: theme resolution, the day/night rule, and the sync and filter
+  performance work. Nothing on a device — see the first item.
 - ~~**Dead code**~~ — cleared. Nine unreferenced files and eight drawables
   removed, along with eight unused DAO methods, one of which had an
   `@Relation` without `@Transaction`: the same shape as the OPML crash fixed
