@@ -77,6 +77,16 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**Articles dimmed while they were being read.**~~ Read-on-scroll marked an
+  article the moment its dwell timer ran out, so a card being read carefully
+  faded out under the reader mid-sentence — the setting doing the exact
+  opposite of what it is for. Time on screen is now the *qualifier* and being
+  scrolled past is the *trigger*: an article is marked when it has been looked
+  at long enough **and** has left the top of the screen. Leaving through the
+  bottom is scrolling back, not reading past, so it keeps the time it earned.
+  Two consequences, both correct: an article left on screen is never marked,
+  and the last article in the list cannot be marked at all.
+
 - ~~**The read-count offer interrupted every scroll.**~~ The undo for
   automatic read marks waited 1.2 seconds after the last one before offering
   itself, which is not a pause — it is what happens between two flicks of a

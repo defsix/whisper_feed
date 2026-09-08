@@ -270,9 +270,9 @@
     <string name="pref_mark_all_read">Mark everything as read</string>
     <string name="pref_mark_all_read_summary">Clears the unread count. The feed offers it back until you leave it.</string>
     <string name="pref_mark_read_on_scroll">Mark as read while scrolling</string>
-    <string name="pref_mark_read_on_scroll_summary">How long an article has to stay on screen before it counts as read. Set it to what matches your own reading — a fling past a card gives it about half a second.</string>
+    <string name="pref_mark_read_on_scroll_summary">How long an article has to be on screen before scrolling past it counts as reading it. Nothing is marked while you are still looking at it. A fling past a card gives it about half a second.</string>
     <string name="mark_read_never">Never — only when opened</string>
-    <string name="mark_read_seconds">After %1$.1f seconds on screen</string>
+    <string name="mark_read_seconds">After %1$.1f seconds on screen, once scrolled past</string>
     <string name="pref_read_visibility">Articles you have read</string>
     <string name="pref_read_visibility_summary">A read article always loses weight and sinks. This is whether it also fades or goes.</string>
     <string name="read_visibility_keep">Keep them</string>
