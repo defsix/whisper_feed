@@ -22,6 +22,7 @@ import android.util.Log
 import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import com.saulhdev.feeder.data.entity.JsonFeed
+import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.saulhdev.feeder.utils.JsonFeedParser
 import com.saulhdev.feeder.utils.extensions.asFeed
 import com.saulhdev.feeder.utils.relativeLinkIntoAbsolute
@@ -48,6 +49,7 @@ private const val YOUTUBE_CHANNEL_ID_ATTR = "data-channel-external-id"
 
 class FeedParser {
     private val client = OkHttpClient.Builder()
+        .asFeedReader()
         .connectTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

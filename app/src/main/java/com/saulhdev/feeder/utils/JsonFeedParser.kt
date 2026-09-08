@@ -20,6 +20,7 @@ package com.saulhdev.feeder.utils
 
 
 import com.saulhdev.feeder.data.entity.JsonFeed
+import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.saulhdev.feeder.utils.extensions.trustAllCerts
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -46,6 +47,7 @@ fun cachingHttpClient(
     }
 
     builder
+        .asFeedReader()
         .connectTimeout(connectTimeoutSecs, TimeUnit.SECONDS)
         .readTimeout(readTimeoutSecs, TimeUnit.SECONDS)
         .followRedirects(true)

@@ -32,6 +32,7 @@ import com.saulhdev.feeder.manager.mastodon.MastodonFeedSync
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.models.getResponse
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
+import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.saulhdev.feeder.utils.blobFile
 import com.saulhdev.feeder.utils.blobOutputStream
 import com.saulhdev.feeder.utils.getSyncDays
@@ -70,7 +71,9 @@ const val TAG = "RssLocalSync"
  * sync of an imported OPML created dozens of connection pools and thread pools
  * that could share nothing — no connection reuse, no keep-alive across feeds.
  */
-private val syncHttpClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
+private val syncHttpClient: OkHttpClient by lazy {
+    OkHttpClient.Builder().asFeedReader().build()
+}
 
 suspend fun syncFeeds(
     context: Context,

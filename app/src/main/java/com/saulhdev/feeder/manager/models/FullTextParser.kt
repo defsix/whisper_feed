@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
 import com.saulhdev.feeder.data.repository.ArticleRepository
+import com.saulhdev.feeder.utils.HttpIdentity.asArticleReader
 import com.saulhdev.feeder.utils.blobFullFile
 import com.saulhdev.feeder.utils.blobFullOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +80,9 @@ class FullTextWorker(
  * its connection pool, and a client made for a single request throws that away
  * before it can be used.
  */
-val fullTextClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
+val fullTextClient: OkHttpClient by lazy {
+    OkHttpClient.Builder().asArticleReader().build()
+}
 
 suspend fun parseFullArticleIfMissing(
     feedItem: ArticleIdWithLink,
