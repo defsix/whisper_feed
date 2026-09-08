@@ -408,6 +408,55 @@ worth something, which depends on the reader having been used for a while.
 
 ---
 
+### 12. A desktop reader — last, and only as an app
+
+Bottom of the pile deliberately. Recorded so the reasoning is not re-derived.
+
+**Not as a website.** A browser cannot fetch a third-party feed: the
+same-origin policy stops it and news sites do not serve CORS headers to
+strangers. Importing an OPML file is fine — that is a local file — but the
+forty feeds it names are all blocked, so a web version needs a server
+proxying every fetch. That server then sees every feed every user subscribes
+to and every article they open, which is the one thing this reader exists not
+to do. It is also a permanent hosting bill and a liability the Android app
+does not have.
+
+This is why Feedly makes it look easy: **Feedly is the server.** It fetches
+every feed centrally, for everyone, and the browser only ever talks to
+Feedly. That is a different product with a different bargain, not a smaller
+version of this one.
+
+**As a desktop app, yes.** Checked against the actual dependency set rather
+than assumed:
+
+- Room 2.8.4 publishes a `standard-jvm` variant, so the database and every
+  DAO port unchanged.
+- OkHttp, Rome, Readability4J, Jsoup, TagSoup and Moshi are plain JVM.
+- DataStore is multiplatform.
+
+The work is three things: `androidx.compose` → Compose Multiplatform, which
+brings the theme, shape scale, Inter and the whole card set across because the
+Material 3 API is near-identical; Coil 2 → 3 for images; and replacing
+WorkManager with a coroutine scheduler, which is simpler on desktop than on
+Android. What does not come across: the launcher overlay, and dynamic colour,
+since Material You is an Android API — desktop would use the static palette.
+
+**What OPML does not carry.** It is the source list and its categories. No
+read state, no bookmarks, no article state of any kind. A desktop reader seeded
+from OPML opens with everything unread, including the hundreds already dealt
+with on the phone, and the two drift apart from that moment. That makes it *a
+separate reader that happens to have the same feeds*, not the same reader on a
+bigger screen. Continuity needs §7; once §7 exists a desktop client inherits it.
+
+**Order:** after §7, after v1 ships. The styling it would reuse is the part
+still changing weekly, and adding a second platform while testers are being
+recruited works against the testing. The cheap de-risking step, if it is
+wanted earlier, is splitting `:core` from `:app` as a pure refactor with no
+desktop module — nothing user-visible, but the seam exists while the code is
+fresh.
+
+---
+
 ## Replacing Discover: what is actually possible
 
 The short version: **the minus-one page belongs to the launcher, not to
