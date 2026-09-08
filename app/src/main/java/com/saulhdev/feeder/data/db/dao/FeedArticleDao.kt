@@ -130,8 +130,21 @@ interface FeedArticleDao {
     )
     fun countReadSince(since: Long): Flow<Int>
 
-    @Query("SELECT * FROM ArticleIdWithLink")
-    fun getArticleIdLinks(): Flow<List<ArticleIdWithLink>>
+    /**
+     * Articles whose full text should be prefetched.
+     *
+     * The ArticleIdWithLink view answers this for the per-source switch, but a
+     * view takes no parameters and the global switch is a parameter, so the
+     * same rule is spelled out here with [allFeeds] widening it.
+     */
+    @Query(
+        """
+        SELECT Article.uuid, Article.link FROM Article
+        JOIN Feeds f ON Article.feedId = f.id
+        WHERE :allFeeds OR f.fullTextByDefault = 1 OR Article.bookmarked = 1
+        """
+    )
+    fun getArticleIdLinks(allFeeds: Boolean): Flow<List<ArticleIdWithLink>>
 
     // Embedded FeedItem
     @Transaction

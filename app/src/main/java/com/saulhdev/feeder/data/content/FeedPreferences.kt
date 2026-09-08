@@ -41,6 +41,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Bug
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
+import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
@@ -233,6 +234,23 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
             OPEN_MODE_READER to context.getString(R.string.article_open_reader),
             OPEN_MODE_BROWSER to context.getString(R.string.article_open_browser),
         )
+    )
+
+    /**
+     * Prefetch the full article for every feed, not one feed at a time.
+     *
+     * The per-source switch stays: this is the blanket answer for people who
+     * always want the whole article, and turning it on means never visiting
+     * forty source screens to say so. It only widens — a source with its own
+     * switch on still prefetches when this is off.
+     */
+    var fullTextForAllFeeds = BooleanPref(
+        titleId = R.string.pref_full_text_all_feeds,
+        summaryId = R.string.pref_full_text_all_feeds_summary,
+        icon = Phosphor.CloudArrowDown,
+        key = FULL_TEXT_ALL_FEEDS,
+        dataStore = dataStore,
+        defaultValue = false
     )
 
     var removeDuplicates = BooleanPref(
@@ -490,6 +508,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         /** Hand the article's URL to the device's default browser. */
         const val OPEN_MODE_BROWSER = "browser"
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
+        val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")
         val SYNC_FREQUENCY = stringPreferencesKey("pref_sync_frequency")

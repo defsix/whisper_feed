@@ -7,6 +7,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.blobFullFile
@@ -41,11 +42,14 @@ class FullTextWorker(
 
     private val okHttpClient: OkHttpClient = fullTextClient
     val repository: ArticleRepository by inject(ArticleRepository::class.java)
+    private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
 
     override suspend fun doWork(): Result {
         Log.i("FeederFullText", "Parsing full texts for articles if missing")
         val itemsToSync: List<ArticleIdWithLink> =
-            repository.getFeedsItemsWithDefaultFullTextParse()
+            repository.getFeedsItemsWithDefaultFullTextParse(
+                allFeeds = prefs.fullTextForAllFeeds.getValue()
+            )
                 .firstOrNull()
                 ?: return Result.success()
 

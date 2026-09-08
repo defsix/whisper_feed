@@ -84,6 +84,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import com.saulhdev.feeder.NeoApp
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
@@ -110,6 +111,7 @@ import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
+import com.saulhdev.feeder.ui.overlay.mosaicSpansFullLine
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
@@ -473,6 +475,14 @@ fun ArticleListPage(
                                                 itemsIndexed(
                                                     state.articles,
                                                     key = { _, item -> item.id },
+                                                    span = { index, item ->
+                                                        if (mosaicSpansFullLine(
+                                                                index,
+                                                                !item.article.imageUrl.isNullOrBlank(),
+                                                            )
+                                                        ) StaggeredGridItemSpan.FullLine
+                                                        else StaggeredGridItemSpan.SingleLane
+                                                    },
                                                 ) { index, item -> article(index, item) }
                                             },
                                         )

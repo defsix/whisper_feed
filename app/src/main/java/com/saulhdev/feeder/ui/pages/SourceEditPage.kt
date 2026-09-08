@@ -60,6 +60,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.saulhdev.feeder.R
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.entity.SourceEditViewState
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.ComposeSwitchView
@@ -93,6 +95,9 @@ fun SourceEditPage(
     val sourcesState by sourcesViewModel.state.collectAsState()
     val allTags = sourcesState.allTags
     var newTag by remember { mutableStateOf("") }
+    val prefs: FeedPreferences = koinInject()
+    val fullTextForAll by prefs.fullTextForAllFeeds.get()
+        .collectAsState(initial = prefs.fullTextForAllFeeds.getValue())
     // Initialise once per feed and do not overwrite user edits when viewState re-emits.
     val editState = remember(feedId) {
         mutableStateOf(viewState)
@@ -180,6 +185,7 @@ fun SourceEditPage(
                 allTags = allTags,
                 newTag = newTag,
                 onNewTagChange = { newTag = it },
+                fullTextForAll = fullTextForAll,
             )
         }
     }
@@ -216,6 +222,7 @@ fun SourceEditView(
     allTags: List<String> = emptyList(),
     newTag: String = "",
     onNewTagChange: (String) -> Unit = {},
+    fullTextForAll: Boolean = false,
 ) {
     val (focusTitle, focusTag) = createRefs()
     val focusManager = LocalFocusManager.current
@@ -298,8 +305,12 @@ fun SourceEditView(
             // pushed off the bottom of the screen by it.
             ComposeSwitchView(
                 titleId = R.string.fetch_full_articles_by_default,
-                summaryId = R.string.fetch_full_articles_summary,
-                isChecked = editState.value.fullTextByDefault,
+                // When the global switch is on this one cannot change anything,
+                // so it says why rather than sitting there looking broken.
+                summaryId = if (fullTextForAll) R.string.fetch_full_articles_all_feeds_on
+                else R.string.fetch_full_articles_summary,
+                isChecked = fullTextForAll || editState.value.fullTextByDefault,
+                isEnabled = !fullTextForAll,
                 onCheckedChange = {
                     editState.value = editState.value.copy(fullTextByDefault = it)
                     onEdited()

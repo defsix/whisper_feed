@@ -32,6 +32,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.content.StringSelectionPref
+import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.ui.components.PreferenceGroup
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.dialog.BaseDialog
@@ -63,6 +66,7 @@ fun PreferencesPage(
         prefs.syncRange,
         prefs.syncOnlyOnWifi,
         prefs.articleOpenMode,
+        prefs.fullTextForAllFeeds,
         prefs.removeDuplicates,
     )
     val filterPrefs = listOf(
@@ -84,6 +88,16 @@ fun PreferencesPage(
         prefs.exportDiagnostics,
         prefs.about,
     )
+
+    // Turning the global switch on should start downloading now, not at the
+    // next scheduled sync — the setting reads as an instruction, not a plan.
+    val fullTextForAll by prefs.fullTextForAllFeeds.get()
+        .collectAsState(initial = prefs.fullTextForAllFeeds.getValue())
+    var wasFullTextForAll by remember { mutableStateOf(fullTextForAll) }
+    LaunchedEffect(fullTextForAll) {
+        if (fullTextForAll && !wasFullTextForAll) scheduleFullTextParse()
+        wasFullTextForAll = fullTextForAll
+    }
 
     val openDialog = remember { mutableStateOf(false) }
     var dialogPref by remember { mutableStateOf<Any?>(null) }

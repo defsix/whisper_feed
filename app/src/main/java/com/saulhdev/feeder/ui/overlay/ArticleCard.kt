@@ -92,7 +92,10 @@ fun FeedArticleItem(
         FeedCardShape.Card    -> ArticleCard(item, onClick, onBookmark, onShare, menu, modifier)
         FeedCardShape.Compact -> ArticleCompactRow(item, onClick, onBookmark, menu, modifier)
         FeedCardShape.Text    -> ArticleTextRow(item, onClick, onBookmark, menu, modifier)
-        FeedCardShape.Tile    -> ArticleMosaicTile(item, onClick, onBookmark, menu, modifier)
+        FeedCardShape.Tile    -> ArticleMosaicTile(
+            item, onClick, onBookmark, menu, modifier,
+            size = mosaicTileSize(index, hasImage),
+        )
     }
 }
 
@@ -425,11 +428,15 @@ fun ArticleTextRow(
 /**
  * The Mosaic layout's tile: image, headline, source, in one column.
  *
- * Half-width, so the headline gets three lines rather than two and the image
- * keeps its own aspect ratio instead of being cropped to a fixed one — the
- * varying heights that result are what make the staggered grid look like a
- * mosaic rather than a table. There is no share button and no summary: at this
- * width neither survives, and the overflow menu carries share anyway.
+ * Comes in three weights. The original relied on the images' own aspect ratios
+ * for variety, but press photography is nearly all 16:9, so every tile came out
+ * the same height and the grid read as a table. [size] now sets it: a Small
+ * tile crops its image short and stops the headline at two lines, a Medium one
+ * lets the image keep its shape, and a Large one takes both columns and earns
+ * the width with a wider crop and a line of summary.
+ *
+ * There is no share button at any size — at half width it does not survive, and
+ * the overflow menu carries share anyway.
  */
 @Composable
 fun ArticleMosaicTile(
@@ -438,8 +445,10 @@ fun ArticleMosaicTile(
     onBookmark: (Boolean) -> Unit,
     menu: @Composable (Color?) -> Unit = {},
     modifier: Modifier = Modifier,
+    size: MosaicTileSize = MosaicTileSize.Medium,
 ) {
     val context = LocalContext.current
+    val large = size == MosaicTileSize.Large
 
     Column(
         modifier = modifier
@@ -454,19 +463,50 @@ fun ArticleMosaicTile(
             AsyncImage(
                 model = image,
                 contentDescription = null,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
+                // Cropped to a set ratio at the two fixed sizes, so the tile's
+                // height is the layout's decision rather than the picture's.
+                // Medium is the one that still follows the image.
+                contentScale = if (size == MosaicTileSize.Medium) ContentScale.FillWidth
+                else ContentScale.Crop,
+                modifier = when (size) {
+                    MosaicTileSize.Small  -> Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+
+                    MosaicTileSize.Medium -> Modifier.fillMaxWidth()
+                    MosaicTileSize.Large  -> Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2f / 1f)
+                },
             )
         }
         Column(modifier = Modifier.padding(10.dp)) {
             Text(
                 text = item.contentTitle,
-                style = MaterialTheme.typography.titleSmall,
+                style = if (large) MaterialTheme.typography.titleMedium
+                else MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 4,
+                maxLines = when (size) {
+                    MosaicTileSize.Small  -> 2
+                    MosaicTileSize.Medium -> 4
+                    MosaicTileSize.Large  -> 3
+                },
                 overflow = TextOverflow.Ellipsis,
             )
+            if (large) {
+                val summary = item.article.description
+                if (summary.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ArticleMeta(

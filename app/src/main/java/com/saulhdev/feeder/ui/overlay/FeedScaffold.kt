@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -310,7 +311,20 @@ fun FeedScaffold(
                             .fillMaxSize()
                             .padding(horizontal = 10.dp),
                     ) {
-                        itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
+                        itemsIndexed(
+                            articles,
+                            key = { _, item -> item.id },
+                            // The grid decides the span before it composes the
+                            // item, so the rhythm is asked here too.
+                            span = { index, item ->
+                                if (mosaicSpansFullLine(
+                                        index,
+                                        !item.article.imageUrl.isNullOrBlank(),
+                                    )
+                                ) StaggeredGridItemSpan.FullLine
+                                else StaggeredGridItemSpan.SingleLane
+                            },
+                        ) { index, item ->
                             FeedArticleItem(
                                 item = item,
                                 index = index,

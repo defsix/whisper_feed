@@ -54,9 +54,11 @@ enum class FeedCardShape {
  *    screen, each one worth stopping at — for reading rather than triage.
  *  - **List** drops images entirely. Most articles per screen, for getting
  *    through a backlog.
- *  - **Mosaic** is the same tile repeated in a staggered grid, where the
- *    variation comes from the tiles' own heights rather than from a pattern
- *    imposed on them.
+ *  - **Mosaic** is a staggered grid of three tile sizes. Leaving it to the
+ *    images' own aspect ratios was not enough variation in practice: news
+ *    photography is overwhelmingly 16:9, so every tile came out the same
+ *    height and the grid read as a table. The sizes are imposed the same way
+ *    Cards imposes its rhythm, with the largest crossing both columns.
  *
  * The Cards pattern is positional rather than content-derived on purpose.
  * Deriving it from the article — image size, title length, source — would make
@@ -89,6 +91,47 @@ fun feedCardShape(
         else           -> FeedCardShape.Compact
     }
 }
+
+/** How much room a Mosaic tile takes. */
+enum class MosaicTileSize {
+    /** A short tile: image cropped wide, two lines of headline. */
+    Small,
+
+    /** One column, the image at its own aspect ratio. The default weight. */
+    Medium,
+
+    /** Both columns, with a summary. The thing the eye lands on. */
+    Large,
+}
+
+/**
+ * The size for the Mosaic tile at [index].
+ *
+ * Positional for the same reason the Cards rhythm is: a size derived from the
+ * article would change as a sync reorders the feed, and the same article would
+ * be large or small depending on what loaded near it.
+ *
+ * A large tile needs a picture to be worth the width it takes, so an article
+ * without one is never large — it takes the small shape instead, which is the
+ * one that does not pretend to have an image.
+ */
+fun mosaicTileSize(index: Int, hasImage: Boolean): MosaicTileSize = when {
+    !hasImage         -> MosaicTileSize.Small
+    index == 0        -> MosaicTileSize.Large
+    index % 11 == 0   -> MosaicTileSize.Large
+    index % 3 == 1    -> MosaicTileSize.Small
+    else              -> MosaicTileSize.Medium
+}
+
+/**
+ * Whether the tile at [index] crosses both columns.
+ *
+ * The grid needs this before it composes the item — a span is a property of the
+ * slot, not of what goes in it — so it is asked separately rather than read
+ * back off the tile.
+ */
+fun mosaicSpansFullLine(index: Int, hasImage: Boolean): Boolean =
+    mosaicTileSize(index, hasImage) == MosaicTileSize.Large
 
 /**
  * Whether a layout wants a staggered grid rather than a single column.

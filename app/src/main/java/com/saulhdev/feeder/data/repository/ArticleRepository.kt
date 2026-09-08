@@ -164,8 +164,8 @@ class ArticleRepository(db: NeoFeedDb) {
         )
     }
 
-    fun getFeedsItemsWithDefaultFullTextParse(): Flow<List<ArticleIdWithLink>> =
-        articlesDao.getArticleIdLinks()
+    fun getFeedsItemsWithDefaultFullTextParse(allFeeds: Boolean): Flow<List<ArticleIdWithLink>> =
+        articlesDao.getArticleIdLinks(allFeeds)
             .flowOn(cc)
 
     fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()

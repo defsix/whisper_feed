@@ -106,6 +106,9 @@ internal suspend fun syncFeeds(
     val articlesRepo: ArticleRepository by inject(ArticleRepository::class.java)
     val downloadTime = Clock.System.now()
     var needFullTextSync = false
+    // Read once: the answer cannot change halfway through a sync, and reading
+    // it per feed would hit the DataStore once for every source.
+    val fullTextForAll = prefs.fullTextForAllFeeds.getValue()
     val time = measureTimeMillis {
         try {
             supervisorScope {
@@ -133,7 +136,8 @@ internal suspend fun syncFeeds(
                 Log.d(TAG, "Feeds to sync: ${feedsToFetch.size}")
 
                 val jobs = feedsToFetch.map { feed ->
-                    needFullTextSync = needFullTextSync || feed.fullTextByDefault
+                    needFullTextSync = needFullTextSync ||
+                            feed.fullTextByDefault || fullTextForAll
                     launch(coroutineContext) {
                         try {
                             // Mark as syncing START
