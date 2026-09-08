@@ -203,20 +203,17 @@ columns — so the two promote the same articles and differ only in how the
 promotion looks. The old positional rule gave the hero to whatever happened to
 be eighth.
 
-**Scrolling past as a read mark — viable, and it should be an option.** Every
-traditional reader does this and `readAt` already exists, so the mechanics are
-small: both containers expose `layoutInfo.visibleItemsInfo`, so an item that
-has gone off the top can be marked in a batch on a debounce. Two things make
-it worth care rather than an afternoon:
+**Scrolling past as a read mark — built.** Two things kept it off by default,
+and both still hold:
 
-- **It must be off by default.** This is a Discover-shaped surface, not an
-  inbox — people scroll it idly and come back to something they glimpsed. A
-  reader who has not asked for it and finds forty articles greyed out has lost
-  them, and there is no undo for a bulk mark that happened invisibly.
+- **This is a Discover-shaped surface, not an inbox.** People scroll it idly
+  and come back to something they glimpsed. A reader who has not asked for
+  this and finds forty articles marked has no way to tell that is what
+  happened.
 - **It interacts with the weighting.** Read articles carry a −1.5 term, so
-  scroll-to-read makes everything already seen shrink on the next pass. That
-  is arguably the correct behaviour and it is certainly a strong one, and it
-  should be seen on a real feed before it is a default anything.
+  scroll-to-read shrinks everything already seen on the next pass. That is
+  arguably correct and it is certainly strong, and it wants seeing on a real
+  feed before it is anyone's default.
 
 **Dwell, not velocity — built.** The instinct was right, that a fling past
 forty headlines is not reading, but scroll speed is the wrong way to measure
@@ -236,9 +233,6 @@ looked at. Dwell accumulates while the list is still as well as while it moves:
 an article held on screen while it is read has been read, and requiring
 movement would mean the one card you stopped on was the one that never counted.
 
-Still worth doing when there is a real feed to measure against: a debug readout
-of the dwell each card accrues, so the number can be chosen from what actually
-happens rather than inferred from behaviour.
 
 **Whether a read article then disappears is a separate setting, and the default
 is no.** Today `readAt` does exactly two things: it subtracts 1.5 from the
@@ -263,21 +257,35 @@ scroll-to-read being on first: on a surface people scroll idly, an article that
 vanishes because it was on screen for two seconds is indistinguishable from a
 bug, and it is gone before the reader knows to look for it.
 
-Two interactions to get right when this is built:
+Two interactions that had to be right, and are:
 
 - **Do not count the same thing twice.** The weight already shrinks read
-  articles. Dim on top of that is fine; hide makes the weight term irrelevant
-  for those articles and it should be skipped rather than left to apply to
-  nothing.
-- **Hiding needs a way back** — a "show read articles" toggle in the filter
-  sheet, not buried in Settings. The one place a reader looks for something
-  that has vanished is the filter that made it vanish.
+  articles. Fade on top of that is fine; hide makes the weight term irrelevant
+  for those articles rather than compounding with it.
+- **Hiding needs a way back** — a "show articles you have read" switch in the
+  filter sheet, not buried in Settings. The one place a reader looks for
+  something that has vanished is the filter that made it vanish. It is staged
+  until Apply like every other control in that sheet, and turning read
+  articles back on restores Keep rather than Fade: Fade is a choice made
+  deliberately in Settings, and a switch labelled "show" should not quietly
+  pick a different way of showing.
 
-Still to do here: "mark all as read", and an undo window on any batch the
-scroll trigger produces.
+#### Still open in this corner
 
-Still open here: a visible "why is this big" affordance, the reset control, and
-the reading-habit term below.
+- **"Mark all as read."** The bulk escape hatch every traditional reader has,
+  and the obvious companion to a feed that now marks things on its own.
+- **An undo window on a scroll-produced batch.** A single mark is recoverable
+  because the reader saw it happen; forty in one scroll is not, and the
+  scroll trigger can produce forty. Nothing else in the app performs a bulk
+  change without an undo.
+- **A debug readout of accrued dwell**, showing what each card banked as it
+  passed. Worth building only if the four thresholds turn out not to cover
+  it — the point is to choose the number from what actually happens rather
+  than infer it from behaviour, and that is only worth the screen if the
+  behaviour is in question.
+
+Still open in Milestone 5 more broadly: a visible "why is this big"
+affordance, the reset control, and the reading-habit term below.
 
 **Reading habits as a weight term — and it does not need accounts.** The plan
 was to gate this on sign-in and count usage server-side. It does not have to
