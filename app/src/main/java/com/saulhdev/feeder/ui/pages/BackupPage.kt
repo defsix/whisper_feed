@@ -49,6 +49,7 @@ import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowUp
+import com.saulhdev.feeder.ui.icons.phosphor.Nut
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -93,6 +94,13 @@ fun BackupPage(
             report(store.backUp(uri), context) { message = it }
             prefs.backupLastRun.setValue(System.currentTimeMillis().toString())
         }
+    }
+
+    val chooseSettings = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch { report(store.restoreSettings(uri), context) { message = it } }
     }
 
     val chooseBackup = rememberLauncherForActivityResult(
@@ -180,6 +188,20 @@ fun BackupPage(
 
             item {
                 OutlinedActionButton(
+                    text = stringResource(R.string.backup_restore_settings),
+                    icon = Phosphor.Nut,
+                    modifier = Modifier.fillMaxWidth(),
+                    positive = true,
+                    // Chosen separately from the feeds on purpose: adding
+                    // somebody's subscriptions to a new phone is additive and
+                    // safe, and overwriting every setting on a phone already
+                    // arranged the way they like it is not.
+                    onClick = { chooseSettings.launch(arrayOf("application/json", "*/*")) },
+                )
+            }
+
+            item {
+                OutlinedActionButton(
                     text = stringResource(R.string.backup_restore),
                     icon = Phosphor.CloudArrowDown,
                     modifier = Modifier.fillMaxWidth(),
@@ -223,6 +245,9 @@ private fun report(
         when (result) {
             is BackupStore.Result.Written ->
                 context.getString(R.string.backup_written, result.name)
+
+            is BackupStore.Result.SettingsRestored ->
+                context.getString(R.string.backup_settings_restored, result.count)
 
             is BackupStore.Result.Restored ->
                 if (result.feeds > 0) {

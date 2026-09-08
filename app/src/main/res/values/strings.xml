@@ -231,7 +231,9 @@
     <string name="backup_choose">Choose where backups go</string>
     <string name="backup_change">Choose a different folder</string>
     <string name="backup_now">Back up now</string>
-    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_restore">Restore sources from a backup</string>
+    <string name="backup_restore_settings">Restore your settings</string>
+    <string name="backup_settings_restored">Restored %1$d settings</string>
     <string name="backup_none">No folder chosen yet</string>
     <string name="backup_never">Not backed up yet</string>
     <string name="backup_last">Last backed up %1$s</string>
@@ -240,7 +242,7 @@
     <string name="backup_restored_none">Everything in that backup is already here</string>
     <string name="backup_lost">Whisper can no longer write to that folder. Choose it again.</string>
     <string name="backup_failed">That did not work</string>
-    <string name="backup_what">Only your list of sources and their categories is saved — no articles, and nothing about what you have read. It is an OPML file, so any other reader can open it.</string>
+    <string name="backup_what">Two files are saved: your sources and their categories as OPML, which any other reader can open, and your settings alongside it. No articles, and nothing about what you have read. Restoring sources adds them without removing anything; restoring settings replaces what you have, so it is a separate choice.</string>
     <string name="pref_account">Account</string>
     <string name="pref_account_summary">Optional. Keep your subscriptions and read state in step across devices.</string>
     <string name="account_explanation">Whisper works completely without an account — everything stays on this phone. Connecting one keeps your subscriptions and what you have read in step with another device, through a service you choose or run yourself.</string>

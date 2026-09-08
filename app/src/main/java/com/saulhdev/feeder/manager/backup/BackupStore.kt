@@ -21,6 +21,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.documentfile.provider.DocumentFile
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.models.OPMLParser
@@ -55,12 +57,14 @@ import kotlinx.coroutines.withContext
 class BackupStore(
     private val context: Context,
     private val sources: SourcesRepository,
+    private val dataStore: DataStore<Preferences>,
 ) {
 
     /** What happened, in terms the settings screen can say out loud. */
     sealed interface Result {
         data class Written(val name: String, val at: Long) : Result
         data class Restored(val feeds: Int) : Result
+        data class SettingsRestored(val count: Int) : Result
         data object NoDestination : Result
         data class Failed(val cause: Throwable?) : Result
     }
@@ -93,6 +97,15 @@ class BackupStore(
                 writeOutputStream(out, byTag)
             } ?: return@withContext Result.Failed(null)
 
+            // Beside it, not inside it: the OPML is an interchange format and
+            // has to stay one. See SettingsBackup.
+            tree.findFile(SettingsBackup.FILE_NAME)?.delete()
+            tree.createFile("application/json", SettingsBackup.FILE_NAME)?.let { settingsFile ->
+                context.contentResolver.openOutputStream(settingsFile.uri)?.use { out ->
+                    out.write(SettingsBackup.export(dataStore).toByteArray())
+                }
+            }
+
             Log.i(TAG, "Wrote backup to ${file.uri}")
             Result.Written(FILE_NAME, System.currentTimeMillis())
         } catch (t: Throwable) {
@@ -122,6 +135,27 @@ class BackupStore(
             Result.Restored(after - before)
         } catch (t: Throwable) {
             Log.e(TAG, "Restore failed", t)
+            Result.Failed(t)
+        }
+    }
+
+    /**
+     * Puts the settings back from a settings file.
+     *
+     * Separate from restoring the feeds, and separately chosen, because the two
+     * are different in kind. Adding somebody's subscriptions to a new phone is
+     * additive and safe; overwriting every preference on a phone already set up
+     * the way they like it is not, and one button doing both would eventually
+     * do the second to somebody who wanted the first.
+     */
+    suspend fun restoreSettings(fileUri: Uri): Result = withContext(Dispatchers.IO) {
+        try {
+            val json = context.contentResolver.openInputStream(fileUri)
+                ?.bufferedReader()?.use { it.readText() }
+                ?: return@withContext Result.Failed(null)
+            Result.SettingsRestored(SettingsBackup.import(dataStore, json))
+        } catch (t: Throwable) {
+            Log.e(TAG, "Settings restore failed", t)
             Result.Failed(t)
         }
     }

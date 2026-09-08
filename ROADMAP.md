@@ -1007,6 +1007,28 @@ picker. In order:
    subscription list changes a few times a month, and rewriting an identical
    file to somebody's cloud storage every hour would be rude to their storage
    and their battery for nothing.
+5. **The settings, in a second file beside it.** Built. `whisper-settings.json`
+   — every preference with its type, because DataStore is typed and a JSON
+   number does not say whether it was an Int, a Long or a Float, and a value
+   read back as the wrong one throws a long way from where it was written.
+
+   **Not inside the OPML.** The whole value of writing an OPML is that Feedly,
+   FreshRSS and Thunderbird can read it; smuggling this app's furniture into
+   its head would make a portable file into a private one. Two files in one
+   folder costs nothing and keeps the interchange format honest.
+
+   Two preferences are held back deliberately. The backup folder is a Uri
+   permission granted to *one* install by the document picker — on another
+   phone it names a grant that does not exist, and restoring it would leave the
+   screen claiming a destination it cannot write to. The last-run timestamp
+   goes with it for the same reason.
+
+   Restore is a **separate button** from restoring sources, and that is the
+   point rather than an oversight. Adding somebody's subscriptions to a new
+   phone is additive and safe; overwriting every setting on a phone already
+   arranged the way they like it is not. Unknown keys are skipped rather than
+   written, so an older build reads what it understands from a newer backup and
+   leaves no junk behind.
 
 Because it is a file rather than a live connection, there is no reconciliation
 to design, no conflict to resolve and no id mapping — the three things making

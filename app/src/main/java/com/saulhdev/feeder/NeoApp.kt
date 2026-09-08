@@ -85,7 +85,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
         single { SyncAccount(this@NeoApp) }
-        single { BackupStore(this@NeoApp, get()) }
+        single { BackupStore(this@NeoApp, get(), get()) }
         single { LocalRssService(this@NeoApp, get()) }
         single {
             RssServiceDispatcher(
