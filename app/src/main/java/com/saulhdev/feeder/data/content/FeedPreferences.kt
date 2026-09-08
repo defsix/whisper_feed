@@ -53,6 +53,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
+import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
 import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
@@ -407,6 +408,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = TOUR_SEEN,
         dataStore = dataStore,
         defaultValue = false,
+    )
+
+    /** The starter list, still reachable after onboarding. */
+    var starterSources = StringPref(
+        titleId = R.string.pref_starter_sources,
+        summaryId = R.string.pref_starter_sources_summary,
+        icon = Phosphor.Plus,
+        key = STARTER_SOURCES,
+        dataStore = dataStore,
+        route = NavRoute.StarterSources
     )
 
     /** How to put Whisper on a launcher's left-most page. */
@@ -790,6 +801,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
+        val STARTER_SOURCES = stringPreferencesKey("pref_starter_sources")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

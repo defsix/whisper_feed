@@ -1104,9 +1104,47 @@ promising six stops that will not arrive.
 
 Replayable from Settings, next to "What Whisper has learned".
 
-Still to do: the Lawnchair pane, offered late and only when Lawnchair is
-installed and Whisper is not yet its provider — and §14's restore offer, which
-now has an onboarding to be offered during.
+**The starter sources.** A fourth step after the panes: nine feeds across
+World, Technology, Science and one regional, ticked by default and every name
+visible before anything is agreed to. Offered rather than applied, because the
+pane two screens earlier says no algorithm decides what you see and
+subscribing somebody silently would make that a lie.
+
+Nothing marks them as built in. Once subscribed they are ordinary sources,
+removed exactly like any other — a "starter" flag would exist only to stop
+somebody deleting a feed they did not choose.
+
+Four world sources rather than two, deliberately: breaking-news clustering
+needs three carrying the same story before it groups anything, so a shorter
+list would leave the feature switched on and never firing, which looks like it
+does not work. They are tagged, which fills the category chip row on day one —
+the tour's second stop points at it, and untagged that step gets skipped.
+
+The regional feed is ticked only where the phone's region matches. Still
+listed everywhere, because hiding it would be worse, but a reader in Berlin
+should not be handed an Australian national broadcaster by default.
+
+Bundled rather than fetched: a list downloaded on first launch means the app
+phoning home before the reader has done anything, which is not a promise worth
+breaking to save an app update. The same list is reachable afterwards from
+Settings, minus whatever is already subscribed.
+
+**The launcher page.** Built as a settings screen rather than an onboarding
+pane, which is the same reasoning taken one step further: the steps are
+genuinely obscure — Lawnchair keeps a hardcoded whitelist and the way past it
+is a hidden command typed into the app drawer — and the people who need them
+are holding the phone, not reading the README. But leading a first run with
+setup for a launcher most readers do not have tells them they downloaded the
+wrong app. So: in Settings, where somebody who wants it will look.
+
+"Connected" is said only when true. There is no way to ask a launcher what it
+has selected, so the only honest signal is a bind to `OverlayService` — proof
+of success, never proof of failure. After a process restart it reads false
+until the launcher next asks for the page, and saying "not connected" then
+would send somebody back through four steps they had already done.
+
+Still to do: §14's restore offer, which now has an onboarding to be offered
+during.
 ---
 
 ## Replacing Discover: what is actually possible

@@ -404,4 +404,19 @@
     <string name="launcher_permission_body">Without this, the page appears but tapping an article does nothing. On a sideloaded build the switch is greyed out until you allow it: Settings → Apps → Whisper → ⋮ → Allow restricted settings.</string>
     <string name="launcher_permission_granted">Granted. Articles will open when you tap them.</string>
     <string name="launcher_permission_open">Grant the permission</string>
+
+    <!-- Starter sources -->
+    <string name="starter_category_world">World</string>
+    <string name="starter_category_technology">Technology</string>
+    <string name="starter_category_science">Science</string>
+    <string name="starter_category_australia">Australia</string>
+    <string name="starter_title">A few feeds to start with</string>
+    <string name="starter_body">Take off anything you do not want. These become ordinary sources — add more or remove any of them whenever you like.</string>
+    <string name="starter_add">Add %1$d feeds</string>
+    <string name="starter_add_one">Add 1 feed</string>
+    <string name="starter_none">Skip — I\'ll add my own</string>
+    <string name="starter_added">%1$d sources added</string>
+    <string name="starter_all_added">You are already subscribed to all of these.</string>
+    <string name="pref_starter_sources">Suggested sources</string>
+    <string name="pref_starter_sources_summary">A short list to add to what you already follow</string>
 </resources>

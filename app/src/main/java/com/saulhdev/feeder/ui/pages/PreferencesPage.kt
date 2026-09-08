@@ -85,6 +85,7 @@ fun PreferencesPage(
         prefs.learned,
         prefs.showTour,
         prefs.launcherSetup,
+        prefs.starterSources,
         prefs.readVisibility,
         prefs.volumeKeyScroll,
     )

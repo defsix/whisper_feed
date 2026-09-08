@@ -43,6 +43,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +58,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.mutableStateMapOf
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.data.StarterSource
+import com.saulhdev.feeder.data.StarterSources
+import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.sync.SyncRestClient
+import com.saulhdev.feeder.ui.components.starterSources
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /**
  * The first screen anybody sees.
@@ -66,7 +79,24 @@ import kotlinx.coroutines.launch
  * because a picture of a button somebody has not got to yet teaches nothing.
  */
 @Composable
-fun OnboardingPage(onDone: () -> Unit) {
+fun OnboardingPage(
+    sourcesRepo: SourcesRepository = koinInject(),
+    syncClient: SyncRestClient = koinInject(),
+    onDone: () -> Unit,
+) {
+    // The starter list is a step of its own rather than a fourth pane. It
+    // needs to scroll, and a scrolling list inside a horizontal pager fights
+    // the pager for every drag — which on the reader's first minute with the
+    // app would read as the app being broken rather than as a gesture clash.
+    var picking by remember { mutableStateOf(false) }
+    if (picking) {
+        StarterSourcesStep(
+            sourcesRepo = sourcesRepo,
+            syncClient = syncClient,
+            onDone = onDone,
+        )
+        return
+    }
     val panes = listOf(
         OnboardingPane(
             titleId = R.string.onboarding_welcome_title,
@@ -189,7 +219,7 @@ fun OnboardingPage(onDone: () -> Unit) {
             val last = pagerState.currentPage == panes.lastIndex
             Button(
                 onClick = {
-                    if (last) onDone()
+                    if (last) picking = true
                     else scope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
@@ -221,3 +251,90 @@ private data class OnboardingPane(
     val bodyId: Int,
     val showMark: Boolean = false,
 )
+
+/**
+ * The starter feeds, offered.
+ *
+ * Everything is ticked when the screen opens except a regional feed that does
+ * not match where the phone says it is — so the default is a working feed
+ * rather than an empty one, and the reader can see every name they are
+ * agreeing to before agreeing to it.
+ */
+@Composable
+private fun StarterSourcesStep(
+    sourcesRepo: SourcesRepository,
+    syncClient: SyncRestClient,
+    onDone: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val selected = remember { mutableStateMapOf<String, Boolean>() }
+    val defaults = remember { StarterSources.defaultSelection() }
+    remember { defaults.forEach { selected[it] = true } }
+    val chosen = StarterSources.ALL.filter { selected[it.url] == true }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val subscribe = {
+        val picked: List<StarterSource> = chosen
+        // Left before the network finishes. Subscribing is the part the reader
+        // asked for; waiting for nine feeds to fetch would hold them on an
+        // onboarding screen watching a spinner, and the feed fills in behind
+        // them either way.
+        scope.launch(Dispatchers.IO) {
+            StarterSources.subscribe(sourcesRepo, picked) { context.getString(it) }
+            syncClient.syncAllFeeds()
+        }
+        onDone()
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars)
+                .padding(horizontal = 20.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.starter_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.starter_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                starterSources(
+                    sources = StarterSources.ALL,
+                    selected = selected.filterValues { it }.keys,
+                    onToggle = { source ->
+                        selected[source.url] = selected[source.url] != true
+                    },
+                )
+            }
+
+            Button(
+                onClick = subscribe,
+                enabled = chosen.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    if (chosen.size == 1) stringResource(R.string.starter_add_one)
+                    else stringResource(R.string.starter_add, chosen.size)
+                )
+            }
+            TextButton(
+                onClick = onDone,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text(stringResource(R.string.starter_none))
+            }
+        }
+    }
+}
