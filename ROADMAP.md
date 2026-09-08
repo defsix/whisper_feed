@@ -432,17 +432,34 @@ reader never asked for is worse than one that never tries.
 
 **Pinning and sticky are what remain.**
 
-**Sticky until scrolled past.** A user setting, off by default. The promoted
-cluster holds the top of the viewport until the user scrolls past it, then
-releases and behaves like any other card. In Compose this is a sticky header
-in the `LazyColumn` rather than a separate overlay, so it costs little — but
-it interacts with the rhythm in §4 and with pinning above, and those three
-need one ordering rule between them, not three competing ones. Decide that
-rule when the layouts land.
+**Sticky until scrolled past — built.** A setting, off by default.
 
-Settings this adds: highlight breaking news (on/off), keep it at the top until
-scrolled past (on/off). Both belong with the personalisation switches in §5,
-not in a category of their own.
+The one ordering rule those three needed turned out to be dull, which is the
+point: **whatever the ordering already put first, if it is being held on
+purpose.** Pinning sorts an article first; the breaking-news term weights a
+cluster lead heavily enough that it lands first. Both arrive at the top
+through machinery that already existed, and sticky only asks whether the
+article now at the top got there for a reason worth holding. Nothing
+competes, and only one thing can be held, because only one article can be
+first — the reader's own pin winning, since it sorts above everything.
+
+`stickyHeader` alone gives the wrong behaviour: a header stays pinned while
+its section is on screen, and with one header over the whole list that means
+for ever. Sticky would become permanent, and the reader could not get rid of a
+story by scrolling, which is the first thing they will try. Two sections
+instead — the held article heads one holding the next five articles, then an
+empty, zero-height header takes the sticky slot and pushes it off. What the
+reader sees is the card sliding away once a few articles have gone by, with no
+animation written.
+
+Mosaic does not take part: a staggered grid has no sticky slot, and the lead
+already crosses both columns there, which is that layout's way of saying the
+same thing.
+
+Both settings sit with the personalisation switches, not in a category of
+their own: "Highlight breaking news" and "Hold it there while you scroll", the
+second directly under the first because it only modifies what the first
+promotes.
 
 ### 7. Sync and backup (Milestone 6)
 

@@ -307,6 +307,7 @@ fun FeedScaffold(
                 val emphasis = rememberFeedEmphasis(articles)
                 val dimRead = rememberDimRead()
                 val clusters = rememberStoryClusters(articles)
+                val held = rememberHeldArticle(articles, clusters)
                 MarkReadWhileScrolling(
                     articles = articles,
                     isGrid = isGrid,
@@ -356,29 +357,29 @@ fun FeedScaffold(
                         }
                     }
                 } else {
+                    val article: @Composable (Int, FeedItem) -> Unit = { index, item ->
+                        FeedArticleItem(
+                            item = item,
+                            index = index,
+                            onClick = { onArticleClick(item) },
+                            onBookmark = { onBookmark(item, it) },
+                            onShare = { onShare(item) },
+                            onMoreLikeThis = { onMoreLikeThis(item) },
+                            onLessLikeThis = { onLessLikeThis(item) },
+                            onHideSource = { onHideSource(item) },
+                            layout = layout,
+                            emphasis = emphasis.getOrNull(index) ?: FeedEmphasis.Medium,
+                            dimRead = dimRead,
+                            cluster = clusters[item.id],
+                            onPin = { onPin(item, it) },
+                        )
+                    }
                     LazyColumn(
                         state = listState,
                         contentPadding = padding,
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
-                            FeedArticleItem(
-                                item = item,
-                                index = index,
-                                onClick = { onArticleClick(item) },
-                                onBookmark = { onBookmark(item, it) },
-                                onShare = { onShare(item) },
-                                onMoreLikeThis = { onMoreLikeThis(item) },
-                                onLessLikeThis = { onLessLikeThis(item) },
-                                onHideSource = { onHideSource(item) },
-                                layout = layout,
-                                emphasis = emphasis.getOrNull(index)
-                                    ?: FeedEmphasis.Medium,
-                                dimRead = dimRead,
-                                cluster = clusters[item.id],
-                                onPin = { onPin(item, it) },
-                            )
-                        }
+                        heldFeed(articles, held, article)
                     }
                 }
             }

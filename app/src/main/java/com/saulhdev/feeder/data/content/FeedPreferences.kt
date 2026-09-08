@@ -34,6 +34,7 @@ import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
 import com.saulhdev.feeder.utils.getFeedLayouts
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
+import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
 import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Browser
@@ -311,6 +312,23 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         summaryId = R.string.pref_breaking_news_summary,
         icon = Phosphor.Megaphone,
         key = BREAKING_NEWS,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
+    /**
+     * Keep a pinned or breaking article at the top until it is scrolled past.
+     *
+     * Off by default, and paired with the setting above rather than hidden
+     * elsewhere: it only does anything to an article something else has
+     * already promoted, so it reads as a modifier of that rather than a
+     * feature of its own.
+     */
+    var stickyTop = BooleanPref(
+        titleId = R.string.pref_sticky_top,
+        summaryId = R.string.pref_sticky_top_summary,
+        icon = Phosphor.Asterisk,
+        key = STICKY_TOP,
         dataStore = dataStore,
         defaultValue = false
     )
@@ -668,6 +686,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
+        val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 
         /**
          * Set once by the app so a preference row can reach the view model.

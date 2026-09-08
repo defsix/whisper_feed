@@ -117,6 +117,8 @@ import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
 import com.saulhdev.feeder.ui.overlay.MarkReadWhileScrolling
 import com.saulhdev.feeder.ui.overlay.rememberDimRead
+import com.saulhdev.feeder.ui.overlay.heldFeed
+import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
@@ -550,15 +552,13 @@ fun ArticleListPage(
                                             },
                                         )
                                     } else {
+                                        val held = rememberHeldArticle(state.articles, clusters)
                                         PullToRefreshLazyColumn(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             listState = listState,
                                             content = {
-                                                itemsIndexed(
-                                                    state.articles,
-                                                    key = { _, item -> item.id },
-                                                ) { index, item ->
+                                                heldFeed(state.articles, held) { index, item ->
                                                     article(
                                                         index,
                                                         item,

@@ -215,6 +215,8 @@
     <string name="pref_breaking_news">Highlight breaking news</string>
     <string name="pref_breaking_news_summary">When several of your News sources cover the same story within a few hours, give it the largest card. Uses sources filed under a News category only.</string>
     <string name="why_breaking">Several sources are covering this story</string>
+    <string name="pref_sticky_top">Hold it there while you scroll</string>
+    <string name="pref_sticky_top_summary">A pinned article, or a breaking story, stays at the top of the screen until you have scrolled a few articles past it.</string>
     <string name="pref_learned">What Whisper has learned</string>
     <string name="pref_learned_summary">Every score the feed reads from your own behaviour, and the way to undo any of it.</string>
     <string name="learned_explanation">Nothing here is guessed. These are counts of what you have pressed and opened, and the effect each one has on how prominently a source appears. None of it leaves your phone.</string>

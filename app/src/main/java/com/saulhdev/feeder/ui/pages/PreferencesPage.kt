@@ -79,6 +79,7 @@ fun PreferencesPage(
         prefs.fullTextForAllFeeds,
         prefs.removeDuplicates,
         prefs.breakingNews,
+        prefs.stickyTop,
         prefs.markReadOnScroll,
         prefs.markAllRead,
         prefs.learned,
