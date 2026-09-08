@@ -613,7 +613,7 @@ the app working when the server is down. An account changes *which feeds* and
 - **No background sync yet.** The account screen syncs on demand; hooking it
   into the existing `FeedSyncer` schedule comes with the id mapping.
 
-#### Google Drive — wanted, and it is backup rather than sync
+#### Google Drive — a place to put the OPML, not a second sync
 
 Previously recorded here as not being pursued, on two objections. One was
 wrong and the other is avoidable, so it is back.
@@ -640,26 +640,43 @@ recommendation service profiling them — but this app tells people nothing
 leaves their phone, so the screen that offers this has to be equally plain that
 turning it on is the exception.
 
-**Most of it exists.** OPML export and bookmark export both work today; this is
-largely putting their output somewhere automatic rather than behind a file
-picker. Scope, in order:
+**Scope is deliberately small: this is the existing export, sent somewhere
+automatic.** Not continuous synchronisation — that is §7's job and the two
+should not be confused. This is "my subscriptions are safe", nothing more, and
+keeping it that narrow is what makes it a week rather than a milestone.
+
+OPML export and bookmark export both work today and already produce exactly
+the right bytes; all that is missing is a destination that is not a file
+picker. In order:
 
 1. **`appDataFolder`, not the visible Drive.** A private folder the app owns,
    invisible in the reader's file list, removed when the app is uninstalled.
    Nothing of theirs to tidy up, and no chance of a stray file being edited.
-2. **The bundle**: OPML for sources and categories, the bookmark export, read
-   state, and preferences. One versioned file rather than four, so a restore
-   cannot half-apply.
+2. **The OPML, and the bookmarks.** Sources and their categories are the thing
+   worth protecting — they are what took years to assemble and what cannot be
+   reconstructed. Read state and preferences can follow later if they are
+   missed; they are not what anyone means by "I lost my feeds".
 3. **Restore on a fresh install** — the case the whole feature is for. Offered
    during onboarding, once, when a backup is found.
 4. **Automatic, on a schedule, on Wi-Fi.** A backup nobody remembers to take is
    not a backup.
 
-**Where it goes:** after §7, and it should reuse §7's `RssService` seam rather
-than growing a parallel path — Drive is a *provider* in the same sense, with
-`sync()` meaning "reconcile with the backup" instead of "reconcile with a
-server". If that turns out to strain the abstraction, that is worth knowing
-before a third one is added.
+Because it is a file rather than a live connection, there is no reconciliation
+to design, no conflict to resolve and no id mapping — the three things making
+§7 the larger piece. Uploading a copy of a file that already exists is most of
+the work.
+
+**Where it goes:** it does *not* need to wait for §7, and it should not be
+built on §7's `RssService` seam either — an earlier draft of this note said it
+should, on the reasoning that Drive is a provider in the same sense. It is not.
+That interface is about reconciling with a service that has opinions about
+read state; this uploads a file. Forcing it through would mean implementing
+`sync()` as "write the OPML" and leaving every other method empty, which is a
+worse description of what is happening than a plain backup class.
+
+Being independent of §7 also makes it the better thing to ship first: it is
+smaller, it needs nothing that is unfinished, and it protects the thing people
+would actually grieve.
 
 ### 8. Ship it
 
