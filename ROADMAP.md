@@ -632,7 +632,42 @@ NAS for `/feed.xml`. Block the private ranges and `localhost`, check the
 destination again after every redirect, and allow only `http` and `https`.
 The proposal's list is right; only the reasoning changes.
 
-#### Scale is the actual engineering problem
+#### Pick folders, not a file — this is the design, not an option
+
+The proposal treats folder preservation as a checkbox near the end. It is the
+whole feature.
+
+Importing an entire bookmark collection has a yield problem: bookmarks are a
+junk drawer, not a reading list. Amazon products, Stack Overflow answers, a
+router admin page, forty half-read docs pages. Most of it publishes no feed,
+and a good share of what does is a site someone bookmarked once for one thing.
+Reviewing four hundred results to keep thirty is not obviously less work than
+adding thirty by hand.
+
+**A folder is not a junk drawer.** Someone who keeps a News folder and a Tech
+folder has already done the curation, by hand, over years — and did it because
+they read those sites. Scanning only the chosen folders takes the yield from
+"a fraction of what is found is wanted" to "nearly all of it".
+
+It also changes what has to be built. Forty sites is not eleven hundred: it is
+under a minute, and it needs no background job, no Wi-Fi-only default and no
+resumable queue. Those become a later concern for whoever does want the whole
+file, not a prerequisite.
+
+And the folder names are the categories. Whisper already has categories, so a
+News folder becomes the News category — which is exactly what the breaking-news
+detection in §6 reads, since it only considers sources filed under news. The
+import hands that feature its input for free.
+
+So the first screen is not "choose a file" but, after choosing one, a folder
+tree with checkboxes and a count beside each:
+
+    ☑ News          14 bookmarks
+    ☑ Tech          22 bookmarks
+    ☐ Shopping      88 bookmarks
+    ☐ Work         310 bookmarks
+
+#### Scale is the actual engineering problem, once the whole file is in scope
 
 The spec's worked example is 1,482 bookmarks and 1,126 unique URLs. Costed
 honestly on a phone:
@@ -682,20 +717,22 @@ should stop having its own), bookmark import, bulk paste, and broken-feed
 recovery — the proposal's §49 instinct is right and the reason to follow it is
 that four half-implementations is how this goes wrong.
 
-Then: parse Netscape `bookmarks.html`, drop non-http schemes, normalise, group
-by domain, scan with bounded concurrency, validate that what came back parses
-as a feed and has items, deduplicate several bookmarks onto one feed, and show
-a reviewable list with the four states that matter — found, several found, none
-found, unreachable. Folders become categories behind a checkbox, since Whisper
-already has categories and the mapping is free.
+Then: parse Netscape `bookmarks.html`, show its folder tree and scan only what
+is ticked. Drop non-http schemes, normalise, group by domain, scan with bounded
+concurrency, validate that what came back parses as a feed and has items,
+deduplicate several bookmarks onto one feed, and show a reviewable list with
+the four states that matter — found, several found, none found, unreachable.
+Each folder becomes a category on the feeds that came out of it.
 
 Not deleting anything is the rule here as everywhere: a bookmark with no feed
 is reported, never silently dropped.
 
-**Where it goes:** after §7. It wants the categories and the duplicate handling
-that exist, and it is a large amount of network code to add while the reader
-itself is still being tuned. Broken-feed recovery is the exception and could
-come much sooner.
+**Where it goes:** the engine first, in the Add Feed screen and in broken-feed
+recovery, where it is small and immediately useful and gets exercised daily.
+Folder-scoped import lands on top of a proven engine and is an afternoon's
+plumbing rather than a gamble. Whole-file import — with the job queue, the
+data-use warnings and the domain grouping that scale needs — only if anyone
+asks for it.
 
 ---
 
