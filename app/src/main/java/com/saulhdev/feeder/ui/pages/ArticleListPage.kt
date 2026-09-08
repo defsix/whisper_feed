@@ -190,7 +190,7 @@ fun ArticleListPage(
     val undoableReads by viewModel.undoableReads.collectAsState()
     LaunchedEffect(undoableReads.size) {
         val count = undoableReads.size
-        if (count == 0) return@LaunchedEffect
+        if (count < UNDO_MIN_COUNT) return@LaunchedEffect
         // A batch arrives one article at a time while scrolling, so wait for
         // the run to finish rather than replacing the snackbar on every mark.
         delay(UNDO_SETTLE_MS)
@@ -621,7 +621,26 @@ fun ArticleListPage(
  * How long a run of automatic read marks has to stop before the undo is
  * offered.
  *
- * Scrolling produces them one at a time, and a snackbar that reappears with a
- * new number on every card is worse than none.
+ * It was 1.2 seconds, which is not a pause — it is what happens between two
+ * flicks of a thumb, or while looking at a headline. So the offer arrived
+ * every few seconds throughout a scroll, covering the article being read to
+ * report a number nobody had asked for. Half a minute of genuine stillness
+ * means the reading has stopped, which is the only moment the offer is worth
+ * the interruption.
+ *
+ * The cost is honest and accepted: leaving the feed inside that window means
+ * the offer never appears and the marks stand. A reader who did not want them
+ * still has "What Whisper has learned" and the read-visibility setting; a
+ * reader who is scrolling has their screen back, which is the trade being
+ * made.
  */
-private const val UNDO_SETTLE_MS = 1200L
+private const val UNDO_SETTLE_MS = 30_000L
+
+/**
+ * How many automatic marks are worth mentioning at all.
+ *
+ * Scrolling past two articles is not an event. The offer exists for the case
+ * where a lot went by unnoticed, and below a handful there is nothing to have
+ * failed to notice.
+ */
+private const val UNDO_MIN_COUNT = 5

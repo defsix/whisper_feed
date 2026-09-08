@@ -76,6 +76,12 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**The read-count offer interrupted every scroll.**~~ The undo for
+  automatic read marks waited 1.2 seconds after the last one before offering
+  itself, which is not a pause — it is what happens between two flicks of a
+  thumb. So it arrived every few seconds, covering the article being read to
+  report a number nobody asked for. Half a minute of stillness now, and only
+  above five marks: scrolling past two articles is not an event.
 - ~~**The feed was empty after a restart.**~~ Not a display fault and nothing
   was being deleted — cleanup was reporting `deleting=0` throughout. The app
   was drowning in its own sync. A device log showed the heap pinned at 244MB
