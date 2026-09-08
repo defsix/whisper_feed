@@ -198,6 +198,10 @@ fun FeedScaffold(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
                     onClose = { onSearchingChange(false) },
+                    // This window's own insets are not to be trusted; topInset
+                    // is measured by the overlay's listener. Same reasoning as
+                    // the app bar below.
+                    windowInsets = WindowInsets(0),
                     modifier = Modifier.padding(top = topInset),
                 )
             } else TopAppBar(

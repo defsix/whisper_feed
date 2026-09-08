@@ -76,6 +76,15 @@ layout; the four layouts are what the user chooses between. Both exist now.
 Found on device, so they take precedence over anything below when they are in
 the way.
 
+- ~~**The search bar's two buttons did nothing.**~~ Reported by a tester with
+  both circled. They were not broken: the bar was drawn *under* the status
+  bar, so the back arrow and the clear button sat where the system takes the
+  taps. `FeedSearchBar` replaces a `TopAppBar`, which insets itself, and the
+  app's call site swapped one for the other without adding the inset back. It
+  now insets by default, so the same mistake cannot be made again; the
+  launcher overlay, which measures its own, passes zero. The clear icon was
+  also `SubtractSquare` — a minus in a box, which at 22dp reads as a copy
+  button, and was reported as one. It is a cross now.
 - ~~**An empty feed said nothing at all.**~~ No message, no spinner, no
   artwork — the header, the glance row, the chips, and then a void. Every
   cause looked identical, so an empty feed could not be diagnosed even from a

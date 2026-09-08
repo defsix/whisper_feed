@@ -164,6 +164,9 @@ class ArticleRepository(db: NeoFeedDb) {
             .map { rows -> rows.associate { it.feedId to it.reads } }
             .flowOn(cc)
 
+    /** Every article in the database, read or not, enabled source or not. */
+    suspend fun countAll(): Int = withContext(cc) { articlesDao.countAll() }
+
     fun countUnread(): Flow<Int> = articlesDao.countUnread().flowOn(cc)
 
     fun countReadSince(since: Long): Flow<Int> = articlesDao.countReadSince(since).flowOn(cc)

@@ -151,6 +151,16 @@ interface FeedArticleDao {
     )
     fun readsPerSource(since: Long): Flow<List<SourceReadCount>>
 
+    /**
+     * Every row in the table, with no join and no condition.
+     *
+     * Deliberately unfiltered: this exists to tell "the database is empty"
+     * apart from "the database is full and something is hiding it", and a
+     * count that shared the feed query's conditions could not do that.
+     */
+    @Query("SELECT COUNT(*) FROM Article")
+    suspend fun countAll(): Int
+
     @Query(
         """
         SELECT COUNT(*) FROM Article

@@ -28,6 +28,7 @@ import androidx.core.content.FileProvider
 import com.saulhdev.feeder.BuildConfig
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
@@ -53,6 +54,9 @@ import java.util.Locale
 object Diagnostics : KoinComponent {
 
     private const val LOG_LINE_LIMIT = 2000
+
+    /** Enough to see the shape of a feed list without printing forty lines. */
+    private const val MAX_SOURCES_LISTED = 20
 
     suspend fun collect(context: Context): String = buildString {
         val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
@@ -96,6 +100,34 @@ object Diagnostics : KoinComponent {
             appendLine("Source tags:       ${tags.filter { it.isNotBlank() }}")
             appendLine("Untagged sources:  ${tags.any { it.isBlank() }}")
         }.onFailure { appendLine("Sources unavailable: $it") }
+        appendLine()
+
+        // The counts, which are what an empty feed actually turns on. Without
+        // them a report of "the feed is empty" cannot distinguish an empty
+        // database from a full one being filtered to nothing, and those have
+        // nothing in common but the symptom.
+        appendLine("== Counts ==")
+        runCatching {
+            val sources = get<SourcesRepository>().getAllSources()
+            appendLine("Sources:           ${sources.size}")
+            appendLine("Enabled:           ${sources.count { it.isEnabled }}")
+            sources.take(MAX_SOURCES_LISTED).forEach {
+                appendLine(
+                    "  ${if (it.isEnabled) "on " else "off"} " +
+                            "${it.title.take(28).padEnd(28)} last sync ${it.lastSync}"
+                )
+            }
+            if (sources.size > MAX_SOURCES_LISTED) {
+                appendLine("  … and ${sources.size - MAX_SOURCES_LISTED} more")
+            }
+        }.onFailure { appendLine("Source counts unavailable: $it") }
+
+        runCatching {
+            val repo = get<ArticleRepository>()
+            appendLine("Articles stored:   ${repo.countAll()}")
+            appendLine("Unread:            ${repo.countUnread().first()}")
+            appendLine("Bookmarked:        ${repo.getBookmarkedFeedItems().first().size}")
+        }.onFailure { appendLine("Article counts unavailable: $it") }
         appendLine()
 
         appendLine("== Log (last $LOG_LINE_LIMIT lines, this app only) ==")
