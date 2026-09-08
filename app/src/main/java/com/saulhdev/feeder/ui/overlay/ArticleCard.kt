@@ -45,9 +45,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -137,6 +139,8 @@ fun ArticleHeroCard(
                 model = item.article.imageUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                placeholder = painterResource(articlePlaceholder()),
+                error = painterResource(articlePlaceholder()),
                 modifier = Modifier.fillMaxSize(),
             )
             Box(
@@ -229,6 +233,8 @@ fun ArticleCard(
                 AsyncImage(
                     model = image,
                     contentDescription = null,
+                    placeholder = painterResource(articlePlaceholder()),
+                    error = painterResource(articlePlaceholder()),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -346,6 +352,8 @@ fun ArticleCompactRow(
                 AsyncImage(
                     model = image,
                     contentDescription = null,
+                    placeholder = painterResource(articlePlaceholder()),
+                    error = painterResource(articlePlaceholder()),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(96.dp)
@@ -482,6 +490,7 @@ fun ArticleMosaicTile(
                     model = image,
                     contentDescription = null,
                     onError = { imageFailed = true },
+                    placeholder = painterResource(articlePlaceholder()),
                     // Cropped to a set ratio at the two fixed sizes, so the
                     // tile's height is the layout's decision rather than the
                     // picture's.
@@ -650,3 +659,19 @@ private fun ArticleDivider() {
  */
 private fun FeedItem.relativeAge(context: android.content.Context): String =
     formatArticleAge(context, article.primarySortTime.toEpochMilliseconds())
+
+/**
+ * The stand-in for an article image, in the theme's own colourway.
+ *
+ * Chosen from the rendered surface rather than from the theme *setting*: the
+ * setting has three values and one of them is pure black, and what the
+ * placeholder has to sit against is whatever actually got painted.
+ *
+ * It is `nodpi` and one file per colourway rather than five density buckets —
+ * it is a full-width decorative field, so there is no crispness to preserve at
+ * a particular density, only bytes to waste on four extra copies.
+ */
+@Composable
+fun articlePlaceholder(): Int =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) R.drawable.placeholder_article_dark
+    else R.drawable.placeholder_article_light

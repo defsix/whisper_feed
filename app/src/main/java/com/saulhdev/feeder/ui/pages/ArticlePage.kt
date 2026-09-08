@@ -37,6 +37,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.RoundButton
 import com.saulhdev.feeder.ui.components.SaveButton
+import com.saulhdev.feeder.ui.overlay.articlePlaceholder
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.WithBidiDeterminedLayoutDirection
 import com.saulhdev.feeder.ui.icons.Phosphor
@@ -148,6 +149,10 @@ fun ArticlePage(
 
         else -> null
     }
+
+    // Read here rather than at the call sites: those are inside LazyListScope,
+    // which is not a composable context.
+    val placeholder = articlePlaceholder()
 
     ViewWithActionBar(
         title = title,
@@ -269,7 +274,7 @@ fun ArticlePage(
                             htmlFormattedText(
                                 inputStream = it,
                                 baseUrl = state?.article?.link ?: "",
-                                imagePlaceholder = R.drawable.placeholder_image_article_day,
+                                imagePlaceholder = placeholder,
                                 onLinkClick = context::launchView
                             )
                         }
@@ -284,7 +289,7 @@ fun ArticlePage(
                             htmlFormattedText(
                                 inputStream = it,
                                 baseUrl = state?.article?.link ?: "",
-                                imagePlaceholder = R.drawable.placeholder_image_article_day,
+                                imagePlaceholder = placeholder,
                                 onLinkClick = context::launchView
                             )
                         }

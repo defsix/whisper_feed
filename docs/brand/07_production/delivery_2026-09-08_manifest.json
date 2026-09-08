@@ -1,0 +1,90 @@
+{
+  "placeholder_article_light.png": {
+    "size": [
+      1280,
+      720
+    ],
+    "mode": "RGBA",
+    "bytes": 52780
+  },
+  "placeholder_article_dark.png": {
+    "size": [
+      1280,
+      720
+    ],
+    "mode": "RGBA",
+    "bytes": 52863
+  },
+  "lockup_horizontal_notag_light.png": {
+    "size": [
+      1200,
+      321
+    ],
+    "mode": "RGBA",
+    "bytes": 173103
+  },
+  "lockup_horizontal_notag_dark.png": {
+    "size": [
+      1200,
+      323
+    ],
+    "mode": "RGBA",
+    "bytes": 173090
+  },
+  "onboarding_bg_dark.png": {
+    "size": [
+      1080,
+      2400
+    ],
+    "mode": "RGB",
+    "bytes": 117785
+  },
+  "onboarding_bg_light.png": {
+    "size": [
+      1080,
+      2400
+    ],
+    "mode": "RGB",
+    "bytes": 128880
+  },
+  "empty_feed_light.png": {
+    "size": [
+      600,
+      600
+    ],
+    "mode": "RGBA",
+    "bytes": 3709
+  },
+  "empty_feed_dark.png": {
+    "size": [
+      600,
+      600
+    ],
+    "mode": "RGBA",
+    "bytes": 3677
+  },
+  "empty_bookmarks_light.png": {
+    "size": [
+      600,
+      600
+    ],
+    "mode": "RGBA",
+    "bytes": 3407
+  },
+  "empty_bookmarks_dark.png": {
+    "size": [
+      600,
+      600
+    ],
+    "mode": "RGBA",
+    "bytes": 3792
+  },
+  "symbol.svg": {
+    "type": "SVG vector paths",
+    "bytes": 1594
+  },
+  "wordmark.svg": {
+    "type": "SVG vector paths",
+    "bytes": 5735
+  }
+}
