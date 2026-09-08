@@ -110,7 +110,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
+import androidx.compose.foundation.gestures.animateScrollBy
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
+import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
@@ -178,6 +180,19 @@ fun ArticleListPage(
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val showFAB by remember { derivedStateOf { listState.firstVisibleItemIndex > 4 } }
+
+    // Volume keys, when the reader has turned them on. Whichever container the
+    // layout is using is the one that moves; asking both would fight.
+    val isGridLayout = feedLayoutIsGrid(layout)
+    LaunchedEffect(isGridLayout) {
+        VolumeScroll.events.collect { direction ->
+            val viewport = if (isGridLayout) gridState.layoutInfo.viewportSize.height
+            else listState.layoutInfo.viewportSize.height
+            val distance = viewport * VolumeScroll.PAGE_FRACTION * direction
+            if (isGridLayout) gridState.animateScrollBy(distance)
+            else listState.animateScrollBy(distance)
+        }
+    }
 
     BackHandler(scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
         scope.launch {

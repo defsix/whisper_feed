@@ -38,6 +38,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Browser
 import com.saulhdev.feeder.ui.icons.phosphor.Bug
+import com.saulhdev.feeder.ui.icons.phosphor.CaretDown
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
@@ -250,6 +251,22 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         summaryId = R.string.pref_full_text_all_feeds_summary,
         icon = Phosphor.CloudArrowDown,
         key = FULL_TEXT_ALL_FEEDS,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
+    /**
+     * Volume keys page the feed instead of changing the volume.
+     *
+     * Off by default — an app quietly taking over the volume keys is a
+     * surprise, and this one only pays off for people who read one-handed.
+     * See VolumeScroll for why this rather than a motion gesture.
+     */
+    var volumeKeyScroll = BooleanPref(
+        titleId = R.string.pref_volume_key_scroll,
+        summaryId = R.string.pref_volume_key_scroll_summary,
+        icon = Phosphor.CaretDown,
+        key = VOLUME_KEY_SCROLL,
         dataStore = dataStore,
         defaultValue = false
     )
@@ -545,6 +562,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         /** Hand the article's URL to the device's default browser. */
         const val OPEN_MODE_BROWSER = "browser"
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
+        val VOLUME_KEY_SCROLL = booleanPreferencesKey("pref_volume_key_scroll")
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")

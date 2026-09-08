@@ -36,13 +36,12 @@ import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.RoundButton
+import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.WithBidiDeterminedLayoutDirection
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowSquareOut
 import com.saulhdev.feeder.ui.icons.phosphor.BookOpenUser
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraightFill
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.ui.navigation.Routes
 import com.saulhdev.feeder.ui.theme.LinkTextStyle
@@ -163,13 +162,14 @@ fun ArticlePage(
             ) {
                 context.launchView(currentUrl)
             }
-            RoundButton(
-                icon = if (state?.article?.bookmarked ?: false) Phosphor.HeartStraightFill
-                else Phosphor.HeartStraight,
-                description = stringResource(id = R.string.share),
-            ) {
-                viewModel.bookmarkArticle(articleId, !(state?.article?.bookmarked ?: false))
-            }
+            // The reader kept upstream's heart while the feed moved to the
+            // Whisper save mark, so the same action had two different icons
+            // depending on which screen it was pressed from — and this one was
+            // labelled "Share" for screen readers, which it has never done.
+            SaveButton(
+                saved = state?.article?.bookmarked ?: false,
+                onSavedChange = { viewModel.bookmarkArticle(articleId, it) },
+            )
             OverflowMenu {
                 DropdownMenuItem(
                     leadingIcon = {

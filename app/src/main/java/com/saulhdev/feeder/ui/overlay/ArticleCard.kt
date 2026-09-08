@@ -37,6 +37,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -451,7 +455,12 @@ fun ArticleMosaicTile(
     val context = LocalContext.current
     val large = size == FeedEmphasis.Large
     val image = item.article.imageUrl
-    val hasImage = !image.isNullOrBlank()
+    // A URL is a promise, not a picture. Until it resolves — and if it 404s,
+    // for ever — there is nothing there, and the tile was still drawing the
+    // scrim and the two buttons over the nothing: a grey band and a gap above
+    // the headline. Treat a failed image as no image.
+    var imageFailed by remember(image) { mutableStateOf(false) }
+    val hasImage = !image.isNullOrBlank() && !imageFailed
 
     Column(
         modifier = modifier
@@ -472,21 +481,27 @@ fun ArticleMosaicTile(
                 AsyncImage(
                     model = image,
                     contentDescription = null,
+                    onError = { imageFailed = true },
                     // Cropped to a set ratio at the two fixed sizes, so the
                     // tile's height is the layout's decision rather than the
-                    // picture's. Medium is the one that still follows it.
-                    contentScale = if (size == FeedEmphasis.Medium) ContentScale.FillWidth
-                    else ContentScale.Crop,
-                    modifier = when (size) {
-                        FeedEmphasis.Small  -> Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-
-                        FeedEmphasis.Medium -> Modifier.fillMaxWidth()
-                        FeedEmphasis.Large  -> Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(2f / 1f)
-                    },
+                    // picture's.
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Medium used to take its height from the image, which
+                        // meant no height at all until the image arrived: the
+                        // tile composed short, then jumped, and the column
+                        // beside it reflowed every time one loaded. A ratio
+                        // that is reserved up front costs one crop and gives
+                        // the grid a stable shape from the first frame.
+                        .aspectRatio(
+                            when (size) {
+                                FeedEmphasis.Small  -> 16f / 9f
+                                FeedEmphasis.Medium -> 4f / 3f
+                                FeedEmphasis.Large  -> 2f / 1f
+                            }
+                        )
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )
                 // A short scrim under the controls only. A photograph can be
                 // white in the corner, and a white icon on it disappears.

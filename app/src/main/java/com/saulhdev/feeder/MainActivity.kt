@@ -41,6 +41,10 @@ import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.utils.THEME_DARK
 import com.saulhdev.feeder.utils.THEME_LIGHT
+import android.view.KeyEvent
+import androidx.lifecycle.lifecycleScope
+import com.saulhdev.feeder.utils.VolumeScroll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
@@ -51,11 +55,21 @@ class MainActivity : ComponentActivity() {
     private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
 
+    /**
+     * Cached rather than read per press: reading the preference goes through
+     * DataStore with runBlocking, and a key handler runs on the main thread.
+     */
+    @Volatile
+    private var volumeKeyScroll = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate, or the window splash never installs.
         installSplashScreen()
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        lifecycleScope.launch {
+            prefs.volumeKeyScroll.get().collect { volumeKeyScroll = it }
+        }
         // A deep link — from the launcher overlay, or a notification — carries
         // data; a tap on the app icon does not. Read here rather than in
         // composition, where a later onNewIntent could change the answer
@@ -206,6 +220,35 @@ class MainActivity : ComponentActivity() {
         } else {
             workManager.cancelUniqueWork("feeder_periodic_3")
         }
+    }
+
+    /**
+     * Volume keys page the feed, when the reader has asked for it.
+     *
+     * Both down and up are consumed so the system's volume panel does not
+     * appear over the article — handling only the down event still lets the
+     * up event through, and the slider slides in a moment later.
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (volumeKeyScroll) when (keyCode) {
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                VolumeScroll.scroll(1)
+                return true
+            }
+
+            KeyEvent.KEYCODE_VOLUME_UP   -> {
+                VolumeScroll.scroll(-1)
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (volumeKeyScroll &&
+            (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)
+        ) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     companion object {

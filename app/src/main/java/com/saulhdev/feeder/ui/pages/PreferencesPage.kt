@@ -68,6 +68,7 @@ fun PreferencesPage(
         prefs.articleOpenMode,
         prefs.fullTextForAllFeeds,
         prefs.removeDuplicates,
+        prefs.volumeKeyScroll,
     )
     val filterPrefs = listOf(
         prefs.blockedWords,

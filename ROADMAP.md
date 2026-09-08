@@ -203,6 +203,26 @@ columns — so the two promote the same articles and differ only in how the
 promotion looks. The old positional rule gave the hero to whatever happened to
 be eighth.
 
+**Scrolling past as a read mark — viable, and it should be an option.** Every
+traditional reader does this and `readAt` already exists, so the mechanics are
+small: both containers expose `layoutInfo.visibleItemsInfo`, so an item that
+has gone off the top can be marked in a batch on a debounce. Two things make
+it worth care rather than an afternoon:
+
+- **It must be off by default.** This is a Discover-shaped surface, not an
+  inbox — people scroll it idly and come back to something they glimpsed. A
+  reader who has not asked for it and finds forty articles greyed out has lost
+  them, and there is no undo for a bulk mark that happened invisibly.
+- **It interacts with the weighting.** Read articles carry a −1.5 term, so
+  scroll-to-read makes everything already seen shrink on the next pass. That
+  is arguably the correct behaviour and it is certainly a strong one, and it
+  should be seen on a real feed before it is a default anything.
+
+Cheapest honest version: a setting with three positions — never / when it
+leaves the top of the screen / when the whole article has been past — plus a
+"mark all as read" and an undo window on the batch. Belongs with the other
+personalisation switches.
+
 Still open here: a visible "why is this big" affordance, the reset control, and
 the reading-habit term below.
 
