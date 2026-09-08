@@ -17,7 +17,7 @@ in the code.
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done bar reorder** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out. Reorder deliberately deferred; see §2 |
-| 5 | Personalisation | **Not started** |
+| 5 | Personalisation | **Started** — article weighting drives the Mosaic tile sizes and is the first thing to read the More/Less scores back. Ordering, reading habits and the reset control still to build |
 | 6 | Google Drive sync | **Not started** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
@@ -200,6 +200,34 @@ anything. The constants are in one object and want tuning against a real feed.
 Still open here: the same weight should drive the Cards rhythm (currently
 positional), a visible "why is this big" affordance, and the reset control.
 
+**Reading habits as a weight term — and it does not need accounts.** The plan
+was to gate this on sign-in and count usage server-side. It does not have to
+wait: `readAt` is already on every article, so per-source read counts, opens
+per week and time-since-last-read can all be derived on device today, from data
+that is already there. What an account adds is *carrying those counts to
+another phone* — which is §7's job, not a prerequisite for the feature. Build
+it locally, sync it later.
+
+The term itself is a small one on purpose. A source read often gets a nudge, not
+a promotion: enough to break a tie between two similar articles, never enough
+to outrank a fresh story from somewhere else.
+
+**The diversity constraint is not optional, and it is the hard half.** Left
+alone, "favour what they read" converges on one site: it gets shown more, so it
+is read more, so it is weighted higher. The counter has to be structural rather
+than a smaller coefficient, because any positive coefficient runs away
+eventually. Two rules, both cheap:
+
+- **No source may hold more than one of the top slots.** Whatever the weights
+  say, the large tiles and the hero slot go to distinct sources.
+- **A cap on consecutive items from one source** in the ordered list, with the
+  overflow displaced rather than dropped — it moves down, it never disappears.
+
+Both are display rules, which keeps the property the weighting already has: a
+low score changes how big something is and where it sits, never whether it is
+there at all. Nothing in Whisper should be able to hide an article the user
+subscribed to.
+
 Worth restating: `docs/REFERENCES.md` §4 found **no open-source prior art** for
 transparent, resettable preference learning in a feed reader. This is
 build-it-ourselves rather than assembly, and should be budgeted that way.
@@ -235,6 +263,21 @@ Whichever is used, the cluster is what gets promoted, not the article: one
 representative gets the hero slot, and the others become a "N sources" line
 under it. That also answers a question the current rhythm cannot — which of
 five near-identical articles to show.
+
+**This is not a second mechanism beside the weighting in §5 — it is the
+weighting's largest term.** Both answer the same question, "how much of the
+screen has this earned", and building them as two systems would mean two
+things competing for the hero slot with no rule between them. A cluster of
+distinct sources publishing inside an hour is simply worth a lot of weight,
+which is what makes it beat a merely-fresh article for the same slot. It also
+inherits the diversity rules for free.
+
+Scope the burst to where it means something: a spike across five news sources
+is a story, the same spike across five review sites is a product launch and a
+release-day rush from one topic is neither. Restrict it to sources the user has
+categorised as news, at least for the first pass. The categories already exist
+and are already the user's own judgement, so the app is reading a decision the
+user made rather than guessing at one.
 
 Guard against the obvious failure: one prolific feed posting six times about
 its own topic is not breaking news. Require the cluster to span **distinct
@@ -313,6 +356,55 @@ Small, and none of it blocks anything.
   is where a hand goes looking. It waits on §7: there is no account to show
   until the Google Reader client exists, and a silhouette that opens nothing
   would be worse than the space it fills.
+
+---
+
+### 11. Finding sources the user does not have
+
+Discover's most-liked trick is putting a site in front of you that you never
+subscribed to. The assumption was that a pure RSS reader cannot do this,
+because there is no recommendation service behind it. That is half right: what
+it cannot do is *rank the whole web*. What it can do is notice things it is
+already holding.
+
+Three mechanisms, all local, none needing an account, a server, or a model.
+Listed cheapest first — the first is the strong one and the other two are
+garnish.
+
+**1. Outbound links in articles that were actually read.** Every article
+already fetched carries links, and the reader's own `readAt` says which
+articles were read rather than merely delivered. Count the outbound domains
+across read articles over a few weeks, discard ones already subscribed, and
+for a domain that recurs, do the autodiscovery pass §1 already implements
+against its home page. If it publishes a feed, that is a suggestion with a
+reason attached: *"You have followed six links to The Verge this month."*
+No inference about taste, no profile, no third party. The reason is legible
+and always true, and if the user disagrees they can see exactly what produced
+it — which is the thing §5's `docs/REFERENCES.md` note says nobody else does.
+
+**2. Feeds the sources themselves point at.** Blogrolls, `<link
+rel="related">`, OPML files published on a site's own links page. A small
+number of sites still do this and it costs one fetch of a page already being
+fetched. Low yield, near-zero cost.
+
+**3. Curated OPML collections.** Public topic lists that a user opts into and
+imports. Honest, but it is a directory rather than a discovery, and it puts
+whoever curates the list in charge of what gets seen. Worth it only if the
+list is chosen explicitly by the user, never fetched in the background.
+
+What is deliberately *not* here: sending the subscription list anywhere to be
+matched against other users' lists. That is the mechanism that makes Discover
+work and it is the one thing this reader should not do — the whole premise is
+that nobody else learns what is read.
+
+Constraints when this is built: a suggestion is a suggestion. It appears in one
+place the user can go to and dismiss from, never injected into the feed itself
+as an unsubscribed article — the moment articles from sites the user did not
+choose start appearing in the feed, the reader stops being theirs. And every
+suggestion states its evidence.
+
+This sits after §7 in any sensible order: it depends on read history being
+worth something, which depends on the reader having been used for a while.
 
 ---
 
