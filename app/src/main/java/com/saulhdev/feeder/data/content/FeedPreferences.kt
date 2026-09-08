@@ -40,11 +40,11 @@ import com.saulhdev.feeder.ui.icons.phosphor.Browser
 import com.saulhdev.feeder.ui.icons.phosphor.Bug
 import com.saulhdev.feeder.ui.icons.phosphor.CaretDown
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
+import com.saulhdev.feeder.ui.icons.phosphor.CheckCircle
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.utils.READ_KEEP
-import com.saulhdev.feeder.utils.getMarkReadOnScroll
 import com.saulhdev.feeder.utils.getReadVisibility
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
@@ -281,14 +281,40 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * not an inbox, and a reader who has not asked for this and finds forty
      * articles marked has no way to tell that is what happened.
      */
-    var markReadOnScroll = StringSelectionPref(
+    /**
+     * Clears the unread count in one go.
+     *
+     * The undo is not here: it is offered on the feed, which is where the
+     * change is visible and where a reader who did not mean it will be
+     * looking. A dialog here would ask them to confirm something they cannot
+     * see, which is the weaker of the two safety nets.
+     */
+    var markAllRead = StringPref(
+        titleId = R.string.pref_mark_all_read,
+        summaryId = R.string.pref_mark_all_read_summary,
+        icon = Phosphor.CheckCircle,
+        key = MARK_ALL_READ,
+        dataStore = dataStore,
+        onClick = { markEverythingRead?.invoke() }
+    )
+
+    var markReadOnScroll = FloatPref(
         titleId = R.string.pref_mark_read_on_scroll,
         summaryId = R.string.pref_mark_read_on_scroll_summary,
         icon = Phosphor.Clock,
         key = MARK_READ_ON_SCROLL,
         dataStore = dataStore,
-        defaultValue = "0",
-        entries = getMarkReadOnScroll(context)
+        defaultValue = 0f,
+        minValue = 0f,
+        maxValue = 10f,
+        steps = 20,
+        // A list of five fixed options was both arbitrary and ungrammatical
+        // at one of them. The honest shape for a number nobody knows the right
+        // value of is the number itself.
+        specialOutputs = {
+            if (it < 0.25f) context.getString(R.string.mark_read_never)
+            else context.getString(R.string.mark_read_seconds, it)
+        }
     )
 
     var readVisibility = StringSelectionPref(
@@ -603,7 +629,17 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val REMOVE_DUPLICATES = booleanPreferencesKey("pref_remove_duplicates")
         val VOLUME_KEY_SCROLL = booleanPreferencesKey("pref_volume_key_scroll")
         val READ_VISIBILITY = stringPreferencesKey("pref_read_visibility")
-        val MARK_READ_ON_SCROLL = stringPreferencesKey("pref_mark_read_on_scroll")
+        val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
+        val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
+
+        /**
+         * Set once by the app so a preference row can reach the view model.
+         *
+         * A preference is a data object with no dependencies; the alternative
+         * was giving every preference a repository it does not want, to serve
+         * the one row that acts rather than stores.
+         */
+        var markEverythingRead: (() -> Unit)? = null
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")

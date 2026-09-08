@@ -50,6 +50,9 @@ import com.saulhdev.feeder.ui.components.PreferenceGroup
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.dialog.BaseDialog
 import com.saulhdev.feeder.ui.components.dialog.StringSelectionPrefDialogUI
+import androidx.compose.runtime.DisposableEffect
+import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
+import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -59,6 +62,13 @@ fun PreferencesPage(
 ) {
     val context = LocalContext.current
     val title = stringResource(id = R.string.title_settings)
+    // The row acts on the feed, which lives in a view model this screen does
+    // not otherwise touch; see FeedPreferences.markEverythingRead.
+    val articles: ArticleListViewModel = koinNeoViewModel()
+    DisposableEffect(articles) {
+        FeedPreferences.markEverythingRead = { articles.markAllRead() }
+        onDispose { FeedPreferences.markEverythingRead = null }
+    }
 
     val servicePrefs = listOf(
         prefs.itemsPerFeed,
@@ -69,6 +79,7 @@ fun PreferencesPage(
         prefs.fullTextForAllFeeds,
         prefs.removeDuplicates,
         prefs.markReadOnScroll,
+        prefs.markAllRead,
         prefs.readVisibility,
         prefs.volumeKeyScroll,
     )

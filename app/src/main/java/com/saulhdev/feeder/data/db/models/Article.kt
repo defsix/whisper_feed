@@ -200,3 +200,13 @@ data class ArticleIdWithLink(
     val uuid: String,
     val link: String
 )
+/**
+ * How many of one source's articles have been read in a window.
+ *
+ * Not an entity and not a view — a projection Room fills in from a GROUP BY,
+ * which is the whole shape of the answer and nothing more.
+ */
+data class SourceReadCount(
+    val feedId: Long,
+    val reads: Int,
+)

@@ -56,7 +56,25 @@ class SourceEditViewModel : NeoViewModel() {
         Feed()
     )
 
-    suspend fun updateFeed(state: SourceEditViewState) {
+    /**
+     * Saves the edits and returns.
+     *
+     * Not suspend, and not run on the caller's scope. Saving used to be
+     * awaited by the Save button before it dismissed the screen, and the wait
+     * is not the database write — it is what follows: enqueuing a WorkManager
+     * job writes to WorkManager's own database, and a filter change deletes
+     * every article for the source first. Pressing Save did nothing visible
+     * for a second or two, which reads as a button that has not worked.
+     *
+     * It also ran on `rememberCoroutineScope()`, so navigating away could
+     * cancel the save halfway through — the screen leaving is exactly when
+     * this must not stop.
+     */
+    fun updateFeed(state: SourceEditViewState) {
+        viewModelScope.launch { applyUpdate(state) }
+    }
+
+    private suspend fun applyUpdate(state: SourceEditViewState) {
         val feedId = _feedId.replayCache.firstOrNull() ?: -1L
         val currentFeed = repository.loadFeedById(feedId) ?: return
         val filtersChanged = currentFeed.sourceType == "mastodon" &&

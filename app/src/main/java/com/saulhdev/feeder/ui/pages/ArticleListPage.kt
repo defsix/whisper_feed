@@ -107,6 +107,7 @@ import com.saulhdev.feeder.ui.navigation.LocalNavController
 import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
@@ -176,6 +177,29 @@ fun ArticleListPage(
         )
         if (result == SnackbarResult.ActionPerformed) viewModel.undoHideSource()
         else viewModel.forgetHiddenSource()
+    }
+
+    // Articles marked read without the reader pressing anything — by scrolling
+    // past them, or by marking the lot from Settings — are offered back. An
+    // article they opened is not: they know they opened it.
+    val undoableReads by viewModel.undoableReads.collectAsState()
+    LaunchedEffect(undoableReads.size) {
+        val count = undoableReads.size
+        if (count == 0) return@LaunchedEffect
+        // A batch arrives one article at a time while scrolling, so wait for
+        // the run to finish rather than replacing the snackbar on every mark.
+        delay(UNDO_SETTLE_MS)
+        if (viewModel.undoableReads.value.size != count) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.resources.getQuantityString(
+                R.plurals.articles_marked_read, count, count
+            ),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoReads()
+        else viewModel.forgetUndoableReads()
     }
 
     var showBookmarks by remember { mutableStateOf(false) }
@@ -458,7 +482,7 @@ fun ArticleListPage(
                                         isGrid = feedLayoutIsGrid(layout),
                                         listState = listState,
                                         gridState = gridState,
-                                        onRead = { viewModel.markRead(it.id) },
+                                        onRead = { viewModel.markReadOnScroll(it.id) },
                                     )
                                     val article: @Composable (Int, FeedItem, FeedEmphasis) -> Unit =
                                         { index, item, emphasis ->
@@ -566,3 +590,12 @@ fun ArticleListPage(
         }
     )
 }
+
+/**
+ * How long a run of automatic read marks has to stop before the undo is
+ * offered.
+ *
+ * Scrolling produces them one at a time, and a snackbar that reappears with a
+ * new number on every card is worse than none.
+ */
+private const val UNDO_SETTLE_MS = 1200L

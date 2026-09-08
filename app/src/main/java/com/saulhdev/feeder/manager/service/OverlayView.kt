@@ -420,7 +420,7 @@ class OverlayView(val context: Context) :
                             context.safeShareIntent(it.link, it.contentTitle)
                         }
                     },
-                    onArticleSeen = { viewModel.markRead(it.id) },
+                    onArticleSeen = { viewModel.markReadOnScroll(it.id) },
                     onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
                     onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
                     onHideSource = { viewModel.hideSource(it) },

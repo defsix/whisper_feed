@@ -10,4 +10,8 @@
         <item quantity="one">%,d second ago</item>
         <item quantity="few">%,d seconds ago</item>
     </plurals>
+    <plurals name="articles_marked_read">
+        <item quantity="one">%1$d article marked as read</item>
+        <item quantity="other">%1$d articles marked as read</item>
+    </plurals>
 </resources>

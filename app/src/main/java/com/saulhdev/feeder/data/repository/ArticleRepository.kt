@@ -135,6 +135,35 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.markRead(articleId, System.currentTimeMillis())
     }
 
+    /**
+     * Marks every unread article read, returning what it changed.
+     *
+     * The ids come back so the action can be undone: after the write every
+     * article carries the same timestamp, and nothing distinguishes the ones
+     * this marked from the ones that were already read.
+     *
+     * Chunked because SQLite binds a limited number of host parameters per
+     * statement — a few hundred unread articles is an ordinary feed, and one
+     * IN clause holding all of them fails rather than truncating.
+     */
+    suspend fun markAllRead(): List<String> = withContext(jcc) {
+        val ids = articlesDao.unreadIds()
+        val now = System.currentTimeMillis()
+        ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.markReadBatch(it, now) }
+        ids
+    }
+
+    /** Puts back what [markAllRead], or a run of scroll marks, took. */
+    suspend fun unmarkRead(ids: List<String>) = withContext(jcc) {
+        ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.unmarkRead(it) }
+    }
+
+    /** Reads per source since [since], for the reading-habit weight term. */
+    fun readsPerSource(since: Long): Flow<Map<Long, Int>> =
+        articlesDao.readsPerSource(since)
+            .map { rows -> rows.associate { it.feedId to it.reads } }
+            .flowOn(cc)
+
     fun countUnread(): Flow<Int> = articlesDao.countUnread().flowOn(cc)
 
     fun countReadSince(since: Long): Flow<Int> = articlesDao.countReadSince(since).flowOn(cc)
@@ -171,3 +200,11 @@ class ArticleRepository(db: NeoFeedDb) {
     fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()
         .flowOn(cc)
 }
+
+/**
+ * How many ids to put in one `IN` clause.
+ *
+ * SQLite's default limit is 999 host parameters; well under it, because the
+ * cost of an extra statement is nothing next to a query that throws.
+ */
+private const val SQLITE_ARG_LIMIT = 500

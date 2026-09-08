@@ -29,6 +29,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
+import com.saulhdev.feeder.data.db.models.SourceReadCount
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
 import kotlinx.coroutines.flow.Flow
@@ -111,6 +112,44 @@ interface FeedArticleDao {
         """
     )
     suspend fun markRead(id: String, readAt: Long): Int
+
+    /**
+     * The unread articles currently in the feed, so a bulk mark can be undone.
+     *
+     * Collected before the write rather than derived after it: once everything
+     * is marked with the same timestamp there is no way to tell what this
+     * action changed from what was already read.
+     */
+    @Query(
+        """
+        SELECT Article.uuid FROM Article
+        JOIN Feeds ON Article.feedId = Feeds.id
+        WHERE Feeds.isEnabled = 1 AND Article.readAt = 0
+        """
+    )
+    suspend fun unreadIds(): List<String>
+
+    @Query("UPDATE Article SET readAt = :readAt WHERE uuid IN (:ids)")
+    suspend fun markReadBatch(ids: List<String>, readAt: Long)
+
+    @Query("UPDATE Article SET readAt = 0 WHERE uuid IN (:ids)")
+    suspend fun unmarkRead(ids: List<String>)
+
+    /**
+     * How many articles from each source have been read since [since].
+     *
+     * The raw material for the reading-habit term in the weighting: a source
+     * someone keeps opening is one they want more of. Grouped in SQL because
+     * the alternative is loading every article to count them in Kotlin.
+     */
+    @Query(
+        """
+        SELECT feedId AS feedId, COUNT(*) AS reads FROM Article
+        WHERE readAt >= :since
+        GROUP BY feedId
+        """
+    )
+    fun readsPerSource(since: Long): Flow<List<SourceReadCount>>
 
     @Query(
         """

@@ -26,6 +26,7 @@ import com.saulhdev.feeder.data.entity.SORT_TITLE
 import com.saulhdev.feeder.data.entity.SortFilterModel
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.ui.overlay.ArticleWeight.MAX_CONSECUTIVE_FROM_SOURCE
 import com.saulhdev.feeder.utils.READ_HIDE
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
@@ -200,11 +201,58 @@ class ArticleListViewModel(
         }
     }
 
+    /**
+     * Articles marked read without the reader pressing anything, and still
+     * recallable.
+     *
+     * Opening an article is its own undo — the article is right there. A batch
+     * is not: forty marked while scrolling, or a whole feed marked at once, is
+     * gone before there is anything to look at. So those two accumulate here
+     * and the feed offers them back.
+     */
+    private val _undoableReads = MutableStateFlow<List<String>>(emptyList())
+    val undoableReads: StateFlow<List<String>> = _undoableReads.asStateFlow()
+
     /** Records that an article was opened, for the unread and read-today counts. */
     fun markRead(id: String) {
         viewModelScope.launch {
             articleRepo.markRead(id)
         }
+    }
+
+    /**
+     * Records that an article was read by being looked at rather than opened.
+     *
+     * Kept apart from [markRead] because only this one is worth offering back:
+     * a reader who opened an article knows they did.
+     */
+    fun markReadOnScroll(id: String) {
+        viewModelScope.launch {
+            articleRepo.markRead(id)
+            _undoableReads.value = _undoableReads.value + id
+        }
+    }
+
+    /** Marks everything currently unread, offering the whole batch back. */
+    fun markAllRead() {
+        viewModelScope.launch {
+            val marked = articleRepo.markAllRead()
+            if (marked.isNotEmpty()) _undoableReads.value = _undoableReads.value + marked
+        }
+    }
+
+    /** Puts back every article marked since the offer was last dismissed. */
+    fun undoReads() {
+        viewModelScope.launch {
+            val ids = _undoableReads.value
+            _undoableReads.value = emptyList()
+            if (ids.isNotEmpty()) articleRepo.unmarkRead(ids)
+        }
+    }
+
+    /** The reader let the offer go. What was marked stays marked. */
+    fun forgetUndoableReads() {
+        _undoableReads.value = emptyList()
     }
 
     fun bookmarkArticle(id: String, boolean: Boolean) {
@@ -314,8 +362,54 @@ class ArticleListViewModel(
             SORT_SOURCE -> compareBy(FeedItem::displayTitle)
             else        -> compareBy(FeedItem::timeMillis)
         }
-        return if (sfm.sortAsc) filtered.sortedWith(comparator)
+        val sorted = if (sfm.sortAsc) filtered.sortedWith(comparator)
         else filtered.sortedWith(comparator.reversed())
+
+        // Sorting by source is a request to see one source's articles
+        // together, so spreading them would be undoing what was asked.
+        return if (sfm.sort == SORT_SOURCE) sorted else spreadSources(sorted)
+    }
+
+    /**
+     * Breaks up runs from a single source, without losing any of them.
+     *
+     * A feed sorted by time gives a source that posts six times in an hour six
+     * consecutive slots, and a chronological feed of a busy wire service reads
+     * as that wire service's feed. The overflow is displaced further down
+     * rather than dropped: those are still six articles the reader subscribed
+     * to, they just stop being the whole of the screen.
+     *
+     * One pass, and stable — the order within a source never changes, so an
+     * article can only ever move later, never earlier and never past one of
+     * its own.
+     */
+    private fun spreadSources(articles: List<FeedItem>): List<FeedItem> {
+        if (articles.size < MAX_CONSECUTIVE_FROM_SOURCE + 1) return articles
+
+        val result = ArrayList<FeedItem>(articles.size)
+        val deferred = ArrayDeque<FeedItem>()
+        var lastSource: String? = null
+        var run = 0
+
+        fun take(item: FeedItem) {
+            if (item.sourceId == lastSource) run++ else { lastSource = item.sourceId; run = 1 }
+            result += item
+        }
+
+        articles.forEach { item ->
+            // Anything held back that would break the current run goes first:
+            // the whole point is to fill the gap rather than to leave one.
+            val released = deferred.firstOrNull { it.sourceId != lastSource || run < MAX_CONSECUTIVE_FROM_SOURCE }
+            if (released != null && item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) {
+                deferred.remove(released)
+                take(released)
+            }
+            if (item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) deferred += item
+            else take(item)
+        }
+        // Whatever is still held back goes on the end, in the order it arrived.
+        deferred.forEach(result::add)
+        return result
     }
 }
 

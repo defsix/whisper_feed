@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.READ_DIM
 import org.koin.compose.koinInject
 
@@ -67,6 +68,40 @@ object ArticleWeight {
     const val LARGE_GAP = 6
 
     /**
+     * The most a reading habit can add.
+     *
+     * Deliberately smaller than a single freshness step. "Favour what they
+     * read" converges on one site if you let it — shown more, so read more, so
+     * weighted higher — and the counter to that is a cap plus the structural
+     * rules below, not a smaller number alone. This is enough to break a tie
+     * between two similar articles and never enough to outrank a fresh story
+     * from somewhere else.
+     */
+    const val HABIT_MAX = 0.4f
+
+    /** How far back reading habits are counted. */
+    const val HABIT_WINDOW_DAYS = 30L
+
+    /**
+     * How many items must pass before a source may take a second large slot.
+     *
+     * The first of the two structural diversity rules. A coefficient can be
+     * tuned down but it still compounds; this cannot. Whatever the weights
+     * say, one source does not own the screen.
+     */
+    const val SAME_SOURCE_LARGE_GAP = 24
+
+    /**
+     * The longest run of articles from one source before the rest are
+     * displaced further down.
+     *
+     * Displaced, never dropped: a source posting six times in an hour is still
+     * six articles the reader subscribed to, and they stay in the feed. They
+     * just stop being the whole of it.
+     */
+    const val MAX_CONSECUTIVE_FROM_SOURCE = 3
+
+    /**
      * How far down the feed to look for an opening anchor.
      *
      * A feed of nothing but yesterday's articles scores nothing above
@@ -90,6 +125,7 @@ fun articleWeight(
     item: FeedItem,
     affinity: Map<String, Int>,
     nowMs: Long,
+    habit: Map<Long, Float> = emptyMap(),
 ): Float {
     if (item.article.imageUrl.isNullOrBlank()) return ArticleWeight.NO_IMAGE
 
@@ -125,6 +161,11 @@ fun articleWeight(
     // headline in a lot of empty space.
     weight += if (item.article.description.isNotBlank()) 0.3f else -0.3f
 
+    // What the reader actually reads, as opposed to what they said. Taps on
+    // "more like this" are rare and deliberate; opening an article is neither,
+    // which is why this is capped so much lower than affinity.
+    weight += (habit[item.feed.id] ?: 0f) * ArticleWeight.HABIT_MAX
+
     // Already read: it has had its turn.
     if (item.article.readAt != 0L) weight -= 1.5f
 
@@ -146,23 +187,33 @@ fun feedEmphasisFor(
     items: List<FeedItem>,
     affinity: Map<String, Int>,
     nowMs: Long,
+    habit: Map<Long, Float> = emptyMap(),
 ): List<FeedEmphasis> {
-    val weights = items.map { articleWeight(it, affinity, nowMs) }
+    val weights = items.map { articleWeight(it, affinity, nowMs, habit) }
     val sizes = MutableList(items.size) { FeedEmphasis.Small }
 
     var lastLarge = -ArticleWeight.LARGE_GAP - 1
+    // The second structural rule: a source that has just had the big slot does
+    // not get another one straight away, however well its next article scores.
+    // Without it, a morning sync from a favourite source takes every large slot
+    // on the screen and the feed reads as one publication.
+    val lastLargeBySource = HashMap<String, Int>()
     weights.forEachIndexed { index, weight ->
+        val source = items[index].sourceId
+        val sourceGap = index - (lastLargeBySource[source] ?: Int.MIN_VALUE / 2)
         sizes[index] = when {
             weight >= ArticleWeight.LARGE_AT &&
-                    index - lastLarge > ArticleWeight.LARGE_GAP -> {
+                    index - lastLarge > ArticleWeight.LARGE_GAP &&
+                    sourceGap > ArticleWeight.SAME_SOURCE_LARGE_GAP -> {
                 lastLarge = index
+                lastLargeBySource[source] = index
                 FeedEmphasis.Large
             }
 
-            // A large-weight article that lands inside the gap still deserves
-            // more than the smallest tile.
-            weight >= ArticleWeight.MEDIUM_AT                   -> FeedEmphasis.Medium
-            else                                                -> FeedEmphasis.Small
+            // A large-weight article that lands inside either gap still
+            // deserves more than the smallest tile.
+            weight >= ArticleWeight.MEDIUM_AT                       -> FeedEmphasis.Medium
+            else                                                    -> FeedEmphasis.Small
         }
     }
 
@@ -202,10 +253,37 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val prefs: FeedPreferences = koinInject()
     val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
     val affinity = remember(raw) { parseAffinity(raw) }
+    val habit = rememberReadingHabits()
     // The clock is sampled per list rather than per frame: an article does not
     // need to shrink while it is being looked at.
-    return remember(articles, affinity) {
-        feedEmphasisFor(articles, affinity, System.currentTimeMillis())
+    return remember(articles, affinity, habit) {
+        feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit)
+    }
+}
+
+/**
+ * How much each source is actually read, normalised against the most-read one.
+ *
+ * Entirely local, and it needs no account: `readAt` has been on every article
+ * since the day read state existed, so the history is already here. An account
+ * would only carry these counts to a second phone, which is the sync
+ * milestone's job rather than a prerequisite for this.
+ *
+ * Normalised rather than absolute so the term means the same thing to someone
+ * who reads four articles a week and someone who reads four hundred.
+ */
+@Composable
+fun rememberReadingHabits(): Map<Long, Float> {
+    val repo: ArticleRepository = koinInject()
+    val since = remember {
+        System.currentTimeMillis() -
+                ArticleWeight.HABIT_WINDOW_DAYS * 24 * 60 * 60 * 1000
+    }
+    val counts by remember(since) { repo.readsPerSource(since) }
+        .collectAsState(initial = emptyMap())
+    return remember(counts) {
+        val most = counts.values.maxOrNull()?.takeIf { it > 0 } ?: return@remember emptyMap()
+        counts.mapValues { (_, reads) -> reads.toFloat() / most }
     }
 }
 

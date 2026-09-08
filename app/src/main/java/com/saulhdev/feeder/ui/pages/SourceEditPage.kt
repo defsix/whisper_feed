@@ -40,7 +40,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.saulhdev.feeder.R
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.entity.SourceEditViewState
@@ -105,7 +103,6 @@ fun SourceEditPage(
     var hasLoaded by remember { mutableStateOf(false) }
     var hasEdited by remember { mutableStateOf(false) }
     val showDialog = remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(feedId) {
         viewModel.setFeedId(feedId)
@@ -161,10 +158,21 @@ fun SourceEditPage(
                         modifier = Modifier.weight(1f),
                         positive = true,
                     ) {
-                        scope.launch {
-                            viewModel.updateFeed(editState.value)
-                            onDismiss()
-                        }
+                        // A category typed but not committed with the + button
+                        // is still a category the reader asked for. Losing it
+                        // because they pressed Save instead of Done is the
+                        // kind of thing nobody reports and everybody notices.
+                        val pending = newTag.trim()
+                        val toSave =
+                            if (pending.isEmpty()) editState.value
+                            else {
+                                val tags = editState.value.tag
+                                    .split(",").map(String::trim).filter(String::isNotEmpty)
+                                    .toSet() + pending
+                                editState.value.copy(tag = tags.joinToString(","))
+                            }
+                        viewModel.updateFeed(toSave)
+                        onDismiss()
                     }
                 }
             }
