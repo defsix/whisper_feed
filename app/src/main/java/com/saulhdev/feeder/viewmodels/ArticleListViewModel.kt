@@ -25,6 +25,7 @@ import com.saulhdev.feeder.data.entity.SORT_SOURCE
 import com.saulhdev.feeder.data.entity.SORT_TITLE
 import com.saulhdev.feeder.data.entity.SortFilterModel
 import com.saulhdev.feeder.data.repository.ArticleRepository
+import com.saulhdev.feeder.data.repository.FEED_WINDOW
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.ui.overlay.ArticleWeight.MAX_CONSECUTIVE_FROM_SOURCE
 import com.saulhdev.feeder.utils.READ_HIDE
@@ -111,12 +112,24 @@ class ArticleListViewModel(
         combine(
             prefs.categoryFilter.get(),
             _searchQuery.map { it.isNotBlank() },
-        ) { categories, searching -> if (searching) emptySet() else categories }
+        ) { categories, searching ->
+            // The searching flag travels with the categories rather than being
+            // read again inside flatMapLatest. distinctUntilChanged below
+            // compares whatever comes through here, and with only the
+            // categories in it, starting a search while no chip was selected
+            // would produce the same empty set twice — so the query would not
+            // restart and the wider limit would never take effect.
+            (if (searching) emptySet() else categories) to searching
+        }
             .distinctUntilChanged()
-            .flatMapLatest { categories ->
+            .flatMapLatest { (categories, searching) ->
+                // A search covers everything that has been downloaded, which is
+                // what the feature promises; capping it to the window would
+                // make that quietly untrue for older articles.
+                val limit = if (searching) Int.MAX_VALUE else FEED_WINDOW
                 val source =
-                    if (categories.any()) articleRepo.getFeedItemsByTags(categories)
-                    else articleRepo.getEnabledFeedItems()
+                    if (categories.any()) articleRepo.getFeedItemsByTags(categories, limit)
+                    else articleRepo.getEnabledFeedItems(limit)
                 var isFirst = true
                 source.debounce {
                     if (isFirst) {

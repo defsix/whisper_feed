@@ -81,7 +81,7 @@ the way.
   was drowning in its own sync. A device log showed the heap pinned at 244MB
   of 256MB, **520 blocking collections**, the main thread stalled for over a
   second at a time and 131 frames skipped, so the feed could not draw. Two
-  causes, compounding:
+  causes in the sync, compounding, plus a third in the query:
 
   `maxFeedItemCount` was passed into `syncFeed` and used only for the cleanup
   afterwards, never to trim what was built — so a feed offering 135 entries
@@ -90,6 +90,14 @@ the way.
   with forty-five sources every one of those payloads was live in memory
   simultaneously. Now trimmed before anything is built, and four feeds at a
   time, which makes the peak the largest feed rather than the whole list.
+
+  The feed query had no limit either: every article of every enabled source,
+  whole rows including the full article text, rebuilt on every emission. It is
+  a **window** now rather than a page — the weighting, the clustering and the
+  two diversity rules all reason about the whole list, so handing them a page
+  at a time would change what they mean rather than making them cheaper.
+  Search widens it, because a search that quietly stopped covering older
+  articles would no longer be the feature it claims to be.
 - ~~**The search bar's two buttons did nothing.**~~ Reported by a tester with
   both circled. They were not broken: the bar was drawn *under* the status
   bar, so the back arrow and the clear button sat where the system takes the

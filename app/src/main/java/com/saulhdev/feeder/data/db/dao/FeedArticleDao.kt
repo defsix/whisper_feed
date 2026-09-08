@@ -203,9 +203,20 @@ interface FeedArticleDao {
     JOIN Feeds ON Article.feedId = Feeds.id
     WHERE Feeds.isEnabled = 1
     ORDER BY Article.primarySortTime DESC
+    LIMIT :limit
     """
     )
-    fun getAllEnabledFeedItems(): Flow<List<FeedItem>>
+    /**
+     * The feed, newest first, capped.
+     *
+     * It had no cap at all: every article of every enabled source, whole rows
+     * including the full article text, rebuilt on every emission. Forty-five
+     * sources is a few thousand of those held in memory to show the twenty on
+     * screen. The cap is a window rather than a page — see FEED_WINDOW — and
+     * search passes a larger one, because a search that only covered the
+     * newest few hundred would quietly stop being true.
+     */
+    fun getAllEnabledFeedItems(limit: Int): Flow<List<FeedItem>>
 
     @Transaction
     @Query(
@@ -225,9 +236,10 @@ interface FeedArticleDao {
     JOIN Feeds ON Article.feedId = Feeds.id
     WHERE Article.feedId IN (:feedIds) AND Feeds.isEnabled = 1
     ORDER BY Article.primarySortTime DESC
+    LIMIT :limit
     """
     )
-    fun getFeedItemsByFeedIdsFlow(feedIds: List<Long>): Flow<List<FeedItem>>
+    fun getFeedItemsByFeedIdsFlow(feedIds: List<Long>, limit: Int): Flow<List<FeedItem>>
 
 
 

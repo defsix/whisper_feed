@@ -85,7 +85,8 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.loadArticleById(id = articleId)
             .flowOn(cc)
 
-    fun getEnabledFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllEnabledFeedItems()
+    fun getEnabledFeedItems(limit: Int = FEED_WINDOW): Flow<List<FeedItem>> =
+        articlesDao.getAllEnabledFeedItems(limit)
         .flowOn(cc)
 
     /**
@@ -105,7 +106,7 @@ class ArticleRepository(db: NeoFeedDb) {
      * identical set of ids.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    fun getFeedItemsByTags(tags: Set<String>): Flow<List<FeedItem>> =
+    fun getFeedItemsByTags(tags: Set<String>, limit: Int = FEED_WINDOW): Flow<List<FeedItem>> =
         feedsDao.getEnabledFeeds()
             .map { feeds ->
                 feeds.filter { feed -> feed.tags.any { it in tags } }.map(Feed::id)
@@ -113,7 +114,7 @@ class ArticleRepository(db: NeoFeedDb) {
             .distinctUntilChanged()
             .flatMapLatest { ids ->
                 if (ids.isEmpty()) flowOf(emptyList())
-                else articlesDao.getFeedItemsByFeedIdsFlow(ids)
+                else articlesDao.getFeedItemsByFeedIdsFlow(ids, limit)
             }
             .flowOn(cc)
 
@@ -221,3 +222,20 @@ class ArticleRepository(db: NeoFeedDb) {
  * cost of an extra statement is nothing next to a query that throws.
  */
 private const val SQLITE_ARG_LIMIT = 500
+
+/**
+ * How many articles the feed holds at once.
+ *
+ * A window, not a page. The distinction matters: the weighting, the
+ * breaking-news clustering and the two diversity rules all reason about the
+ * *whole* list — clustering has to see every article to find a story across
+ * sources, and spreading a run of one publisher needs the ordering entire. A
+ * pager that handed those a page at a time would change what they mean rather
+ * than making them cheaper.
+ *
+ * So the list stays whole and is simply bounded. Five hundred is far past
+ * anywhere anyone scrolls, and it makes the working set a property of this
+ * constant instead of a property of how many feeds somebody happens to have
+ * subscribed to.
+ */
+const val FEED_WINDOW = 500
