@@ -131,6 +131,7 @@ fun PreferencesPage(
     val sourcePrefs = listOf(
         prefs.sources,
         prefs.starterSources,
+        prefs.importBookmarks,
         prefs.suggestions,
     )
     val syncPrefs = listOf(

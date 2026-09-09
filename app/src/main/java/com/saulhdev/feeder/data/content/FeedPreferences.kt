@@ -467,6 +467,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.Sources
     )
 
+    /** The websites the reader already keeps, turned into feeds. */
+    var importBookmarks = StringPref(
+        titleId = R.string.pref_import_bookmarks,
+        summaryId = R.string.pref_import_bookmarks_summary,
+        icon = Phosphor.CloudArrowDown,
+        key = IMPORT_BOOKMARKS,
+        dataStore = dataStore,
+        route = NavRoute.BookmarkImport
+    )
+
     /** Sites the reader's own reading keeps pointing at. */
     var suggestions = StringPref(
         titleId = R.string.pref_suggestions,
@@ -917,6 +927,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SOURCES_SORT = stringPreferencesKey("pref_sources_sort")
         val SOURCES_SORT_ASC = booleanPreferencesKey("pref_sources_sort_asc")
         val SUGGESTIONS = stringPreferencesKey("pref_suggestions")
+        val IMPORT_BOOKMARKS = stringPreferencesKey("pref_import_bookmarks")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

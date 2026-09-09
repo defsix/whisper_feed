@@ -877,6 +877,26 @@ fresh.
 
 ### 13. Bookmarks in, feeds out
 
+**Built, as the folder-scoped version this section argued for.** Choose a
+browser's bookmark export, tick the folders worth scanning, and Whisper looks
+up the feeds itself: grouped by site before anything is fetched, probed at the
+origin rather than at each bookmarked path, six at a time. Each result says
+whether the site declared its feed or Whisper guessed a common address — two
+states, because a middle band adds a word and changes no decision. The folder
+name becomes the category, which is what makes §6's clustering fire at all.
+
+Nothing is uploaded. The file is parsed on the phone and the phone does the
+fetching, which is a stronger answer than any policy.
+
+The private-address block is a network interceptor rather than a check on the
+address typed, and that is the load-bearing detail: OkHttp follows redirects
+itself, so a public host redirecting to `192.168.1.1` would otherwise walk
+straight past a check made at the start. Every hop is checked.
+
+Still to build from this section: the whole-file scan with its resumable job,
+the local discovery cache, and broken-feed recovery — which is the best idea
+here and now needs only the `FeedDiscovery` this shipped with.
+
 **Feasible, and cheaper than it looks — most of the engine is already built.**
 `FeedParser.alternateFeedLinksAtUrl` already reads `<link rel="alternate">` out
 of a page's head and filters on the RSS, Atom and JSON types.

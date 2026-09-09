@@ -440,6 +440,20 @@
     <string name="starter_added">%1$d sources added</string>
     <string name="starter_all_added">You are already subscribed to all of these.</string>
     <string name="pref_sources_summary">The feeds you follow, and their categories</string>
+    <string name="pref_import_bookmarks">Import from bookmarks</string>
+    <string name="pref_import_bookmarks_summary">Give Whisper your bookmark folders and it finds the feeds</string>
+    <string name="import_explanation">Export your bookmarks from any browser and choose the file here. Whisper reads it on this phone and looks up the feeds itself \u2014 nothing is uploaded anywhere.</string>
+    <string name="import_nothing_found">No bookmarks could be read from that file. Browsers export a .html file; that is the one to choose.</string>
+    <string name="import_choose_file">Choose a bookmarks file</string>
+    <string name="import_choose_folders">Pick the folders you actually read from. A folder you named is a reading list; a whole bookmark file is a junk drawer, and most of it publishes nothing. The folder name becomes the category.</string>
+    <string name="import_scan">Look for feeds</string>
+    <string name="import_preparing">Working out which sites to look at\u2026</string>
+    <string name="import_scanning">Looking at site %1$d of %2$d</string>
+    <string name="import_no_feeds">None of those sites publishes a feed Whisper could find.</string>
+    <string name="import_declared">The site lists this feed</string>
+    <string name="import_guessed">Found by guessing a common address</string>
+    <string name="import_add">Add %1$d</string>
+    <string name="import_start_over">Start over</string>
     <string name="pref_suggestions">Suggested for you</string>
     <string name="pref_suggestions_summary">Sites the articles you read keep linking to</string>
     <string name="suggestions_explanation">Worked out on this phone, from links in articles you actually read. Nothing about your reading is sent anywhere, and these never appear in your feed unless you add them.</string>
@@ -458,5 +472,13 @@
     <plurals name="suggestion_reason">
         <item quantity="one">%1$d article you read linked here</item>
         <item quantity="other">%1$d articles you read linked here</item>
+    </plurals>
+    <plurals name="import_folder_sites">
+        <item quantity="one">%1$d site</item>
+        <item quantity="other">%1$d sites</item>
+    </plurals>
+    <plurals name="import_found">
+        <item quantity="one">Found %1$d feed. Untick anything you do not want.</item>
+        <item quantity="other">Found %1$d feeds. Untick anything you do not want.</item>
     </plurals>
 </resources>

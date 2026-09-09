@@ -16,6 +16,7 @@ import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.manager.glance.GlanceStateHolder
 import com.saulhdev.feeder.manager.glance.WeatherRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.bookmarks.FeedDiscovery
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.mastodon.MastodonApi
 import com.saulhdev.feeder.manager.mastodon.MastodonAuth
@@ -39,6 +40,7 @@ import com.saulhdev.feeder.viewmodels.AccountViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
+import com.saulhdev.feeder.viewmodels.BookmarkImportViewModel
 import com.saulhdev.feeder.viewmodels.SuggestionsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,6 +78,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         viewModelOf(::ArticleViewModel)
         viewModelOf(::SortFilterViewModel)
         viewModelOf(::SuggestionsViewModel)
+        viewModelOf(::BookmarkImportViewModel)
         viewModelOf(::MastodonAuthViewModel)
     }
 
@@ -90,6 +93,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         singleOf(::MastodonStorage)
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
+        singleOf(::FeedDiscovery)
         single { SyncAccount(this@NeoApp) }
         single { BackupStore(this@NeoApp, get(), get()) }
         single { LocalRssService(this@NeoApp, get()) }

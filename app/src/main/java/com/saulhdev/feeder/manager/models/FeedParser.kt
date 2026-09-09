@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
 import okhttp3.Credentials
+import com.saulhdev.feeder.manager.bookmarks.BlockPrivateNetworks
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -50,6 +51,10 @@ private const val YOUTUBE_CHANNEL_ID_ATTR = "data-channel-external-id"
 class FeedParser {
     private val client = OkHttpClient.Builder()
         .asFeedReader()
+        // Every hop, including the ones OkHttp follows on its own. A feed URL
+        // can come from a bookmarks file or a page's own head, so no address
+        // reached from here has been vouched for by anybody.
+        .addNetworkInterceptor(BlockPrivateNetworks())
         .connectTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
