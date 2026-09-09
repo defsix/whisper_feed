@@ -331,6 +331,21 @@ interface FeedArticleDao {
     )
     suspend fun markUnread(unreadRemoteIds: List<String>): Int
 
+    /**
+     * Articles the reader actually read, most recent first.
+     *
+     * `readAt` rather than delivery: what was put in front of somebody says
+     * nothing, and the whole of the discovery pass rests on the difference.
+     */
+    @Query(
+        """
+    SELECT * FROM Article
+    WHERE readAt >= :since AND readAt != 0
+    ORDER BY readAt DESC LIMIT :limit
+    """
+    )
+    suspend fun readArticlesSince(since: Long, limit: Int): List<Article>
+
     /** How many articles a server has claimed, for the sync log. */
     @Query("SELECT COUNT(*) FROM Article WHERE remoteId IS NOT NULL")
     suspend fun countWithRemoteId(): Int

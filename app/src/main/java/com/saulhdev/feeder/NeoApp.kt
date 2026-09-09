@@ -16,6 +16,7 @@ import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.manager.glance.GlanceStateHolder
 import com.saulhdev.feeder.manager.glance.WeatherRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.mastodon.MastodonApi
 import com.saulhdev.feeder.manager.mastodon.MastodonAuth
 import com.saulhdev.feeder.manager.mastodon.MastodonStorage
@@ -38,6 +39,7 @@ import com.saulhdev.feeder.viewmodels.AccountViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
+import com.saulhdev.feeder.viewmodels.SuggestionsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +75,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         viewModelOf(::SourceListViewModel)
         viewModelOf(::ArticleViewModel)
         viewModelOf(::SortFilterViewModel)
+        viewModelOf(::SuggestionsViewModel)
         viewModelOf(::MastodonAuthViewModel)
     }
 
@@ -124,6 +127,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
     fun onAppStarted() {
         registerActivityLifecycleCallbacks(activityHandler)
         stampOnboardingForExistingInstalls()
+        DiscoveryWorker.schedule(this)
     }
 
     /**

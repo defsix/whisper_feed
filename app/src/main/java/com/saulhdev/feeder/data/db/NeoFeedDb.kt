@@ -31,6 +31,8 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.saulhdev.feeder.data.db.dao.FeedArticleDao
+import com.saulhdev.feeder.data.db.dao.SuggestionDao
+import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.data.db.dao.FeedSourceDao
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
@@ -45,8 +47,9 @@ const val ID_ALL: Long = -1L
     entities = [
         Feed::class,
         Article::class,
+        Suggestion::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -78,6 +81,7 @@ const val ID_ALL: Long = -1L
 abstract class NeoFeedDb : RoomDatabase() {
     abstract fun feedSourceDao(): FeedSourceDao
     abstract fun feedArticleDao(): FeedArticleDao
+    abstract fun suggestionDao(): SuggestionDao
 
     companion object {
         @Volatile
@@ -221,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_15_16,
     MIGRATION_14_15,
     MIGRATION_1_2,
     MIGRATION_2_3,
@@ -232,6 +237,28 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_15_16 : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Empty on every existing install: a suggestion is evidence about what
+        // somebody read, and there is no evidence until a pass has run.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS Suggestion (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                host TEXT NOT NULL,
+                feedUrl TEXT NOT NULL,
+                title TEXT NOT NULL,
+                mentions INTEGER NOT NULL,
+                foundAt INTEGER NOT NULL,
+                dismissedAt INTEGER NOT NULL
+            )
+            """
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_Suggestion_host ON Suggestion (host)")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_14_15 : Migration(14, 15) {

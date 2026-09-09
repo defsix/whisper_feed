@@ -118,6 +118,7 @@ import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
 import com.saulhdev.feeder.ui.overlay.MarkReadWhileScrolling
 import com.saulhdev.feeder.ui.overlay.rememberDimRead
+import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.heldFeed
 import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
@@ -220,6 +221,10 @@ fun ArticleListPage(
     // already shown both.
     val onboardingSeen by prefs.onboardingSeen.get().collectAsState(initial = true)
     val tourSeen by prefs.tourSeen.get().collectAsState(initial = true)
+    // Movement the reader has not switched off. Everything below asks this
+    // rather than assuming; somebody who has set the animation scale to zero
+    // has said what they want.
+    val animate = !reducedMotion()
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val showFAB by remember { derivedStateOf { listState.firstVisibleItemIndex > 4 } }
@@ -569,12 +574,29 @@ fun ArticleListPage(
                                                         else StaggeredGridItemSpan.SingleLane
                                                     },
                                                 ) { index, item ->
-                                                    article(
-                                                        index,
-                                                        item,
-                                                        emphasis.getOrNull(index)
-                                                            ?: FeedEmphasis.Medium,
-                                                    )
+                                                    // Articles arriving from a
+                                                    // sync used to appear by
+                                                    // replacement: the list
+                                                    // simply became a
+                                                    // different list under the
+                                                    // reader's thumb. Keyed
+                                                    // items can be moved
+                                                    // instead of swapped, and
+                                                    // seeing a card move is
+                                                    // what tells you it is the
+                                                    // same card.
+                                                    Box(
+                                                        modifier = if (animate) {
+                                                            Modifier.animateItem()
+                                                        } else Modifier
+                                                    ) {
+                                                        article(
+                                                            index,
+                                                            item,
+                                                            emphasis.getOrNull(index)
+                                                                ?: FeedEmphasis.Medium,
+                                                        )
+                                                    }
                                                 }
                                             },
                                         )

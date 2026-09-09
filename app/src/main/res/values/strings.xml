@@ -440,6 +440,11 @@
     <string name="starter_added">%1$d sources added</string>
     <string name="starter_all_added">You are already subscribed to all of these.</string>
     <string name="pref_sources_summary">The feeds you follow, and their categories</string>
+    <string name="pref_suggestions">Suggested for you</string>
+    <string name="pref_suggestions_summary">Sites the articles you read keep linking to</string>
+    <string name="suggestions_explanation">Worked out on this phone, from links in articles you actually read. Nothing about your reading is sent anywhere, and these never appear in your feed unless you add them.</string>
+    <string name="suggestions_none">Nothing yet. Whisper looks once a week at the articles you have read and notices which sites they keep linking to. Give it a few weeks of reading.</string>
+    <string name="suggestion_dismiss">Not interested</string>
     <string name="pref_starter_sources">Suggested sources</string>
     <string name="pref_starter_sources_summary">A short list to add to what you already follow</string>
 
@@ -450,4 +455,8 @@
     <string name="starter_returning_body">If you have a backup folder, this is the moment to use it — your sources and settings come back exactly as they were.</string>
     <string name="starter_restore">Restore from a backup</string>
     <string name="starter_restoring">Restoring…</string>
+    <plurals name="suggestion_reason">
+        <item quantity="one">%1$d article you read linked here</item>
+        <item quantity="other">%1$d articles you read linked here</item>
+    </plurals>
 </resources>

@@ -54,6 +54,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.ui.icons.phosphor.Sort
+import com.saulhdev.feeder.ui.icons.phosphor.Sparkle
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
@@ -464,6 +465,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = SOURCES_ROUTE,
         dataStore = dataStore,
         route = NavRoute.Sources
+    )
+
+    /** Sites the reader's own reading keeps pointing at. */
+    var suggestions = StringPref(
+        titleId = R.string.pref_suggestions,
+        summaryId = R.string.pref_suggestions_summary,
+        icon = Phosphor.Sparkle,
+        key = SUGGESTIONS,
+        dataStore = dataStore,
+        route = NavRoute.Suggestions
     )
 
     /** The starter list, still reachable after onboarding. */
@@ -905,6 +916,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SOURCES_ROUTE = stringPreferencesKey("pref_sources_route")
         val SOURCES_SORT = stringPreferencesKey("pref_sources_sort")
         val SOURCES_SORT_ASC = booleanPreferencesKey("pref_sources_sort_asc")
+        val SUGGESTIONS = stringPreferencesKey("pref_suggestions")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

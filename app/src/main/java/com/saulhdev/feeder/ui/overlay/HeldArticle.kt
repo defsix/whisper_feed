@@ -18,6 +18,7 @@
 package com.saulhdev.feeder.ui.overlay
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListScope
@@ -107,7 +108,8 @@ fun LazyListScope.heldFeed(
 ) {
     if (held == null || articles.firstOrNull()?.id != held.id) {
         itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
-            article(index, item)
+            // Keyed, so a sync moves cards rather than replacing the list.
+            Box(modifier = Modifier.animateItem()) { article(index, item) }
         }
         return
     }
@@ -117,7 +119,7 @@ fun LazyListScope.heldFeed(
     val rest = articles.drop(1)
     val holding = rest.take(Held.RELEASE_AFTER)
     itemsIndexed(holding, key = { _, item -> item.id }) { index, item ->
-        article(index + 1, item)
+        Box(modifier = Modifier.animateItem()) { article(index + 1, item) }
     }
 
     // The release. Taking the sticky slot is the whole job, so it has nothing
@@ -126,6 +128,6 @@ fun LazyListScope.heldFeed(
 
     val remainder = rest.drop(Held.RELEASE_AFTER)
     itemsIndexed(remainder, key = { _, item -> item.id }) { index, item ->
-        article(index + 1 + holding.size, item)
+        Box(modifier = Modifier.animateItem()) { article(index + 1 + holding.size, item) }
     }
 }

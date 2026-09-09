@@ -54,7 +54,9 @@ import com.saulhdev.feeder.ui.pages.GlanceLocationPage
 import com.saulhdev.feeder.ui.pages.PreferencesPage
 import com.saulhdev.feeder.ui.pages.CategoryListPage
 import com.saulhdev.feeder.ui.pages.LauncherPage
+import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.pages.StarterSourcesPage
+import com.saulhdev.feeder.ui.pages.SuggestionsPage
 import com.saulhdev.feeder.ui.pages.SourceAddPage
 import com.saulhdev.feeder.ui.pages.SourceListPage
 import com.saulhdev.feeder.ui.views.ComposeWebView
@@ -74,14 +76,27 @@ fun NavigationManager(
     CompositionLocalProvider(
         LocalNavController provides navController
     ) {
+        // Screens slide, unless the reader has told the system they would
+        // rather things did not. A whole screen sweeping in is the largest
+        // movement the app makes, so it is the first one that should stop.
+        val animate = !reducedMotion()
+
         NavHost(
             modifier = modifier,
             navController = navController,
             startDestination = NavRoute.Main(),
-            enterTransition = { fadeIn() + slideInHorizontally { it } },
-            exitTransition = { fadeOut() + slideOutHorizontally { -it / 2 } },
-            popEnterTransition = { fadeIn() + slideInHorizontally { -it } },
-            popExitTransition = { fadeOut() + slideOutHorizontally { it / 2 } },
+            enterTransition = {
+                if (animate) fadeIn() + slideInHorizontally { it } else fadeIn()
+            },
+            exitTransition = {
+                if (animate) fadeOut() + slideOutHorizontally { -it / 2 } else fadeOut()
+            },
+            popEnterTransition = {
+                if (animate) fadeIn() + slideInHorizontally { -it } else fadeIn()
+            },
+            popExitTransition = {
+                if (animate) fadeOut() + slideOutHorizontally { it / 2 } else fadeOut()
+            },
         ) {
 
             composable<NavRoute.Main>(
@@ -110,6 +125,7 @@ fun NavigationManager(
             composable<NavRoute.Backup> { BackupPage() }
             composable<NavRoute.Launcher> { LauncherPage() }
             composable<NavRoute.StarterSources> { StarterSourcesPage() }
+            composable<NavRoute.Suggestions> { SuggestionsPage() }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
             composable<NavRoute.MastodonAdd> { MastodonAddPage() }
             composable<NavRoute.MastodonCallback>(
@@ -193,6 +209,9 @@ open class NavRoute {
 
     @Serializable
     data object StarterSources : NavRoute()
+
+    @Serializable
+    data object Suggestions : NavRoute()
 
     @Serializable
     data object BlockedWords : NavRoute()

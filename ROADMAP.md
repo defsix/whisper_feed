@@ -64,7 +64,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
 | 6 | Sync | **Done bar removals, and unverified** — backup (§14) and the Google Reader protocol (§7): client, account, sign-in, subscription reconcile, the id mapping, read state both ways, background sync. Removals are deliberately not applied. **None of §7 has met a live server** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
-| 8 | Reader / offline / polish | **Done bar motion** — reader, offline caching, sync/filter/frame-path performance, an accessibility pass and a battery pass. Motion polish is the remainder |
+| 8 | Reader / offline / polish | **Done** — reader, offline caching, sync/filter/frame-path performance, accessibility, battery, and motion: feed items move rather than being replaced, and every animation in the app stops when the reader has told the system to stop animating |
 | — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
 
 The card **rhythm** (hero / card / compact) is what Cards does *within* one
@@ -771,6 +771,25 @@ already holding.
 Three mechanisms, all local, none needing an account, a server, or a model.
 Listed cheapest first — the first is the strong one and the other two are
 garnish.
+
+**Built, as mechanism 1 only.** The other two remain as written below.
+
+A weekly pass reads the bodies of articles with a `readAt` — read, not merely
+delivered — counts the domains they link to, and runs the same autodiscovery
+that adding a feed by hand uses against anything that recurs. Three separate
+articles is the threshold: one is a citation, and three is high enough that a
+single link-heavy roundup cannot manufacture a suggestion on its own. A domain
+is counted once per article however many times it appears, for the same reason.
+
+Share buttons, link shorteners and image hosts are excluded outright — every
+article links to those, so counting them would hand everybody the same four
+suggestions.
+
+Suggestions live on a screen the reader goes to, never in the feed, and each
+one carries its evidence in the row: *"six articles you read linked here"*.
+Refusing one is remembered rather than deleted, so the next pass does not ask
+again. Weekly, on unmetered network and a battery that is not low, because
+nobody asked for a home page to be fetched at that particular moment.
 
 **1. Outbound links in articles that were actually read.** Every article
 already fetched carries links, and the reader's own `readAt` says which

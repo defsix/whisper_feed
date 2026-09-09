@@ -77,6 +77,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.ui.theme.reducedMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -96,7 +97,7 @@ fun TourOverlay(
     val targets = LocalTourTargets.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val animate = remember(context) { !context.animationsAreOff() }
+    val animate = !reducedMotion()
 
     var current by remember { mutableStateOf(-1) }
     var rect by remember { mutableStateOf<Rect?>(null) }
@@ -357,15 +358,6 @@ private fun Dots(position: Pair<Int, Int>) {
         }
     }
 }
-
-/**
- * Whether the reader has asked the system for less movement.
- *
- * An animated scrim is exactly the kind of thing that setting exists to stop,
- * and honouring it here costs one read.
- */
-private fun Context.animationsAreOff(): Boolean =
-    Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
 private const val SETTLE_MS = 250L
 
