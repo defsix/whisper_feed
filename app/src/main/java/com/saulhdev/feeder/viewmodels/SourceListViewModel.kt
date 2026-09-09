@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,7 +26,7 @@ import kotlinx.coroutines.plus
 
 class SourceListViewModel(
     private val feedsRepo: SourcesRepository,
-    articleRepo: ArticleRepository,
+    private val articleRepo: ArticleRepository,
     private val prefs: FeedPreferences,
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
@@ -64,11 +67,9 @@ class SourceListViewModel(
     val state = combine(
         feedsRepo.getAllSourcesFlow(),
         feedsRepo.getAllTagsFlow(),
-        // TODO move the getter eventually to SourcesRepository
-        articleRepo.getBookmarkedFeedItems(),
         _query,
         combine(sort, ascending) { sort, ascending -> sort to ascending },
-    ) { allSources, allTags, bookmarked, query, order ->
+    ) { allSources, allTags, query, order ->
         val (sort, ascending) = order
         val comparator =
             if (ascending) sort.comparator else sort.comparator.reversed()
@@ -78,26 +79,33 @@ class SourceListViewModel(
             allSources = allSources,
             enabledSources = enabledSources,
             disabledSources = disabledSources,
-            // Every tag mapped to the sources carrying it, plus "" for the
-            // untagged ones — OPML export reads this map and a source in no
-            // bucket is a source that does not get exported.
-            //
-            // Matched against the split tag list rather than with
-            // `tag.contains`, which made "New" match a source tagged "News",
-            // and made the "" bucket match *every* source: an export therefore
-            // wrote each feed twice, once under its own category and once
-            // under none.
-            tagsSourcesMap = allTags.associateWith { tag ->
-                allSources.filter { tag in it.tags }
-            } + ("" to allSources.filter { it.tags.isEmpty() }),
-            bookmarked = bookmarked,
+            tagsSourcesMap = groupByTag(allSources, allTags),
             allTags = allTags,
         )
-    }.stateIn(
-        ioScope,
-        SharingStarted.Eagerly,
-        SourceListState()
-    )
+    }
+        // A sync writes to every feed row twice — once to mark it syncing and
+        // once to record when it finished — and each of those invalidates the
+        // query behind this. Without conflation the list is rebuilt, sorted
+        // and regrouped for every one of those writes, which is why adding a
+        // source felt slow: the add triggers a sync, and the sync then talks
+        // over the update the reader was waiting for.
+        .conflate()
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            ioScope,
+            SharingStarted.Eagerly,
+            SourceListState()
+        )
+
+    /**
+     * The saved articles, fetched when something actually needs them.
+     *
+     * This used to be a fifth flow in the combine above, which meant a join
+     * across Article and Feeds re-ran on every article a sync inserted — to
+     * keep a list ready for a button pressed once in a blue moon, if ever.
+     */
+    suspend fun bookmarksForExport(): List<FeedItem> =
+        articleRepo.getBookmarkedFeedItems().first()
 
     fun setQuery(value: String) {
         _query.value = value
@@ -248,7 +256,6 @@ data class SourceListState(
     val enabledSources: List<Feed> = emptyList(),
     val disabledSources: List<Feed> = emptyList(),
     val tagsSourcesMap: Map<String, List<Feed>> = emptyMap(),
-    val bookmarked: List<FeedItem> = emptyList(),
     val allTags: List<String> = emptyList(),
 )
 
@@ -300,6 +307,32 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
         fun byName(name: String?): SourceSort =
             entries.firstOrNull { it.name == name } ?: Title
     }
+}
+
+/**
+ * Every tag mapped to the sources carrying it, plus "" for the untagged.
+ *
+ * One pass over the sources rather than one pass per tag. `Feed.tags`
+ * splits a comma-separated string every time it is read, so the old shape
+ * — filtering the whole list once for each tag — split every source's tags
+ * once per tag that exists. Ten categories and a hundred sources meant a
+ * thousand string splits, on every one of those sync writes.
+ *
+ * OPML export reads this map, and a source in no bucket is a source that
+ * does not get exported.
+ */
+internal fun groupByTag(sources: List<Feed>, tags: List<String>): Map<String, List<Feed>> {
+    val byTag = tags.associateWithTo(HashMap()) { mutableListOf<Feed>() }
+    val untagged = mutableListOf<Feed>()
+    sources.forEach { source ->
+        // Matched against the split list rather than with `tag.contains`,
+        // which made "New" match a source tagged "News" — and made the ""
+        // bucket match every source, so an export wrote each feed twice.
+        val own = source.tags
+        if (own.isEmpty()) untagged += source
+        else own.forEach { byTag[it]?.add(source) }
+    }
+    return byTag + ("" to untagged)
 }
 
 /**

@@ -202,10 +202,13 @@ fun SourceListPage(
     ) { uri ->
         if (uri != null) {
             coroutineScope.launch {
+                // Fetched now rather than kept in the screen's state: it is
+                // a join across two tables that a sync invalidates constantly,
+                // and nothing looks at it until this moment.
                 context.contentResolver.exportBookmarks(
                     context,
                     uri,
-                    state.bookmarked
+                    viewModel.bookmarksForExport()
                 )
             }
         }

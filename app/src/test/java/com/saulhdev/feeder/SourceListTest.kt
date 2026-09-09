@@ -2,6 +2,7 @@ package com.saulhdev.feeder
 
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.viewmodels.SourceSort
+import com.saulhdev.feeder.viewmodels.groupByTag
 import com.saulhdev.feeder.viewmodels.matches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -129,5 +130,48 @@ class SourceListTest {
         assertEquals(SourceSort.Title, SourceSort.byName("LastSync"))
         assertEquals(SourceSort.Title, SourceSort.byName(null))
         assertEquals(SourceSort.Title, SourceSort.byName(""))
+    }
+
+    @Test
+    fun `grouping by tag puts a multi-category source in every one of them`() {
+        val feeds = listOf(
+            feed(id = 1, title = "both", tag = "News,Tech"),
+            feed(id = 2, title = "tech", tag = "Tech"),
+        )
+        val map = groupByTag(feeds, listOf("News", "Tech"))
+        assertEquals(listOf("both"), map["News"]?.map(Feed::title))
+        assertEquals(listOf("both", "tech"), map["Tech"]?.map(Feed::title))
+    }
+
+    @Test
+    fun `a category is not matched by a prefix of another`() {
+        // "New" used to match a source tagged "News", because the tag was one
+        // comma-separated string and the check was contains().
+        val map = groupByTag(listOf(feed(title = "n", tag = "News")), listOf("New", "News"))
+        assertEquals(emptyList<String>(), map["New"]?.map(Feed::title))
+        assertEquals(listOf("n"), map["News"]?.map(Feed::title))
+    }
+
+    @Test
+    fun `the untagged bucket holds only the untagged`() {
+        // It once matched every source, so an OPML export wrote each feed
+        // twice: once under its category and once under none.
+        val feeds = listOf(
+            feed(id = 1, title = "filed", tag = "News"),
+            feed(id = 2, title = "loose", tag = ""),
+        )
+        val map = groupByTag(feeds, listOf("News"))
+        assertEquals(listOf("loose"), map[""]?.map(Feed::title))
+    }
+
+    @Test
+    fun `every source lands somewhere, so an export cannot silently drop one`() {
+        val feeds = listOf(
+            feed(id = 1, title = "a", tag = "News"),
+            feed(id = 2, title = "b", tag = ""),
+            feed(id = 3, title = "c", tag = "Tech,News"),
+        )
+        val map = groupByTag(feeds, listOf("News", "Tech"))
+        assertEquals(feeds.map(Feed::title).toSet(), map.values.flatten().map(Feed::title).toSet())
     }
 }
