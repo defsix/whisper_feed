@@ -29,8 +29,12 @@ android {
         applicationId = "io.zero76.whisper"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1900
-        versionName = "1.9.0"
+        // Whisper's own first release, not Neo Feed's ninth. The package
+        // io.zero76.whisper has never been published, so there is no version
+        // history to preserve and nothing to keep monotonic against — 1.9.0
+        // would have claimed eight earlier releases that do not exist.
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

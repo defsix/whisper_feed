@@ -72,6 +72,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -241,9 +242,17 @@ fun ArticleListPage(
         }
     }
 
+    // Whether something is covering the feed. A screen reader does not care
+    // what is drawn on top of what: without this the feed behind the welcome
+    // panes and the tour stayed in the accessibility tree, so a swipe went
+    // straight past the tooltip into the articles underneath — the overlay was
+    // modal for everybody except the people it matters most to.
+    val covered = !onboardingSeen || (!tourSeen && state.articles.isNotEmpty() && !searching)
+
     ProvideTourTargets {
     Box(modifier = Modifier.fillMaxSize()) {
     NavigableListDetailPaneScaffold(
+        modifier = if (covered) Modifier.clearAndSetSemantics { } else Modifier,
         navigator = paneNavigator,
         listPane = {
             AnimatedPane {

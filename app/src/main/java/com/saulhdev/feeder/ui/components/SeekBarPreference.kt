@@ -21,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.data.content.FloatPref
@@ -66,9 +68,6 @@ fun SeekBarPreference(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Slider(
-                    modifier = Modifier
-                        .requiredHeight(24.dp)
-                        .weight(SLIDER_WIDTH),
                     value = currentValue,
                     valueRange = pref.minValue..pref.maxValue,
                     steps = pref.steps,
@@ -78,6 +77,13 @@ fun SeekBarPreference(
                         onValueChange(currentValue)
                     },
                     enabled = isEnabled,
+                    // "6 seconds", not "60 percent". A slider announces a
+                    // percentage of its range by default, which for a range
+                    // measured in seconds is a number with no meaning.
+                    modifier = Modifier
+                        .requiredHeight(24.dp)
+                        .weight(SLIDER_WIDTH)
+                        .semantics { stateDescription = pref.specialOutputs(currentValue) },
                     // No tick marks. Material draws one per step, which was
                     // never a deliberate difference between these two sliders
                     // — the opacity one has a hundred steps, so its ticks are

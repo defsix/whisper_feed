@@ -1,34 +1,19 @@
-/*
- * This file is part of Neo Feed
- * Copyright (c) 2022   Neo Feed Team
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.saulhdev.feeder.ui.components
 
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.BooleanPref
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun SwitchPreference(
@@ -40,6 +25,16 @@ fun SwitchPreference(
     onCheckedChange: ((Boolean) -> Unit) = {},
 ) {
     val (checked, check) = remember(pref) { mutableStateOf(pref.getValue()) }
+    val scope = rememberCoroutineScope()
+
+    val set: (Boolean) -> Unit = { value ->
+        onCheckedChange(value)
+        check(value)
+        // Off the main thread: setValue is a blocking DataStore write and this
+        // is called straight from a tap.
+        scope.launch(Dispatchers.IO) { pref.setValue(value) }
+    }
+
     BasePreference(
         modifier = modifier,
         titleId = pref.titleId,
@@ -49,25 +44,25 @@ fun SwitchPreference(
         startWidget = {
             PreferenceIcon(
                 icon = pref.icon,
-                contentDescription = stringResource(id = pref.titleId),
+                contentDescription = null,
             )
         },
         isEnabled = isEnabled,
-        onClick = {
-            onCheckedChange(!checked)
-            pref.setValue(!checked)
-            check(!checked)
-        },
+        onClick = { set(!checked) },
+        // One target, not two. The row was clickable and the switch inside it
+        // was independently clickable, so a screen reader found two controls
+        // for one setting: a "button" with no state and a bare "switch" with
+        // no name. The row is the switch now, and it says which way it is set.
+        role = Role.Switch,
+        stateDescription = stringResource(
+            if (checked) R.string.state_on else R.string.state_off
+        ),
         endWidget = {
             Switch(
-                modifier = Modifier
-                    .height(24.dp),
+                modifier = Modifier.height(24.dp),
                 checked = checked,
-                onCheckedChange = {
-                    onCheckedChange(it)
-                    pref.setValue(it)
-                    check(it)
-                },
+                // Not independently focusable; the row carries the action.
+                onCheckedChange = null,
                 enabled = isEnabled,
             )
         }

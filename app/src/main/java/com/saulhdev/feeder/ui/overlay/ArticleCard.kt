@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
@@ -148,12 +149,16 @@ fun ArticleHeroCard(
     coverage: Int? = null,
 ) {
     val context = LocalContext.current
+    // Cards merge their texts for a screen reader, so the headline is
+    // already read out; what was missing was any hint that the thing read
+    // out can be opened at all.
+    val openLabel = stringResource(R.string.action_open_article)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -255,11 +260,15 @@ fun ArticleCard(
     coverage: Int? = null,
 ) {
     val context = LocalContext.current
+    // Cards merge their texts for a screen reader, so the headline is
+    // already read out; what was missing was any hint that the thing read
+    // out can be opened at all.
+    val openLabel = stringResource(R.string.action_open_article)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
         val image = item.article.imageUrl
         // Edge to edge, square corners, outside the text's margin — the way the
@@ -363,11 +372,15 @@ fun ArticleCompactRow(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    // Cards merge their texts for a screen reader, so the headline is
+    // already read out; what was missing was any hint that the thing read
+    // out can be opened at all.
+    val openLabel = stringResource(R.string.action_open_article)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -455,11 +468,15 @@ fun ArticleTextRow(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    // Cards merge their texts for a screen reader, so the headline is
+    // already read out; what was missing was any hint that the thing read
+    // out can be opened at all.
+    val openLabel = stringResource(R.string.action_open_article)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
@@ -518,6 +535,10 @@ fun ArticleMosaicTile(
     coverage: Int? = null,
 ) {
     val context = LocalContext.current
+    // Cards merge their texts for a screen reader, so the headline is
+    // already read out; what was missing was any hint that the thing read
+    // out can be opened at all.
+    val openLabel = stringResource(R.string.action_open_article)
     val large = size == FeedEmphasis.Large
     val image = item.article.imageUrl
     // A URL is a promise, not a picture. Until it resolves — and if it 404s,
@@ -533,7 +554,7 @@ fun ArticleMosaicTile(
             .padding(6.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
         if (hasImage) {
             // The two buttons sit on the picture rather than under the text.

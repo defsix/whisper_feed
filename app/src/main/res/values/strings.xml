@@ -329,6 +329,9 @@
     <string name="sorting_chronological">Chronological</string>
     <string name="sorting_title">Title</string>
     <string name="sorting_source">Source</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="action_open_article">Open article</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
     <string name="select_all">Select all</string>
