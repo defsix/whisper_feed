@@ -105,12 +105,26 @@ fun rememberHeldArticle(
 fun LazyListScope.heldFeed(
     articles: List<FeedItem>,
     held: FeedItem?,
+    /**
+     * Whether cards may move rather than appear.
+     *
+     * Passed rather than read here because this is a LazyListScope extension
+     * and the setting is a composable read — and passed at all because it was
+     * being honoured on one of the four feed paths and ignored on the other
+     * three. Somebody who has turned animations off has said what they want,
+     * and the answer should not depend on which layout they chose or which
+     * surface they are looking at.
+     */
+    animate: Boolean = true,
     article: @Composable (index: Int, item: FeedItem) -> Unit,
 ) {
+
     if (held == null || articles.firstOrNull()?.id != held.id) {
         itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
             // Keyed, so a sync moves cards rather than replacing the list.
-            Box(modifier = Modifier.animateItem()) { article(index, item) }
+            Box(modifier = if (animate) Modifier.animateItem() else Modifier) {
+                article(index, item)
+            }
         }
         return
     }
@@ -120,7 +134,9 @@ fun LazyListScope.heldFeed(
     val rest = articles.drop(1)
     val holding = rest.take(Held.RELEASE_AFTER)
     itemsIndexed(holding, key = { _, item -> item.id }) { index, item ->
-        Box(modifier = Modifier.animateItem()) { article(index + 1, item) }
+        Box(modifier = if (animate) Modifier.animateItem() else Modifier) {
+            article(index + 1, item)
+        }
     }
 
     // The release. Taking the sticky slot is the whole job, so it has nothing
@@ -129,6 +145,8 @@ fun LazyListScope.heldFeed(
 
     val remainder = rest.drop(Held.RELEASE_AFTER)
     itemsIndexed(remainder, key = { _, item -> item.id }) { index, item ->
-        Box(modifier = Modifier.animateItem()) { article(index + 1 + holding.size, item) }
+        Box(modifier = if (animate) Modifier.animateItem() else Modifier) {
+            article(index + 1 + holding.size, item)
+        }
     }
 }

@@ -50,7 +50,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -78,6 +77,9 @@ import androidx.compose.ui.res.painterResource
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.manager.glance.GlanceState
+import com.saulhdev.feeder.ui.components.PullToRefreshLazyColumn
+import com.saulhdev.feeder.ui.components.PullToRefreshStaggeredGrid
+import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.components.HeaderToggleAction
 import com.saulhdev.feeder.ui.components.HeaderAction
@@ -316,11 +318,10 @@ fun FeedScaffold(
                 }
             }
 
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-                modifier = Modifier.fillMaxSize(),
-            ) {
+            // A plain Box: pull-to-refresh belongs to the list containers
+            // below, which are the app's, so nesting a second one here would
+            // put two refresh gestures on top of each other.
+            Box(modifier = Modifier.fillMaxSize()) {
                 val padding = PaddingValues(
                     top = 4.dp,
                     bottom = bottomInset + 16.dp,
@@ -331,6 +332,11 @@ fun FeedScaffold(
                 // Which article gets the big shape is one decision for every
                 // layout, so it is made once here rather than per container.
                 val emphasis = rememberFeedEmphasis(articles)
+                // Asked of the system rather than assumed, and asked on both
+                // surfaces: somebody who has set the animation scale to zero
+                // has said what they want, and the panel is no more exempt
+                // from that than the app is.
+                val animate = !reducedMotion()
                 val dimRead = rememberDimRead()
                 val clusters = rememberStoryClusters(articles)
                 val held = rememberHeldArticle(articles, clusters)
@@ -361,14 +367,18 @@ fun FeedScaffold(
                         }
                     )
                 } else if (feedLayoutIsGrid(layout)) {
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(2),
-                        state = gridState,
+                    // The app's own container, rather than a second one built
+                    // here. Two wrappers around the same Material indicator is
+                    // how the two surfaces drifted apart in the first place —
+                    // and one of them had a two-second timer on the spinner
+                    // that the other did not.
+                    PullToRefreshStaggeredGrid(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { onRefresh() },
+                        gridState = gridState,
                         contentPadding = padding,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp),
-                    ) {
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        content = {
                         item(
                             key = FEED_HEADER_KEY,
                             span = StaggeredGridItemSpan.FullLine,
@@ -385,24 +395,34 @@ fun FeedScaffold(
                                 else StaggeredGridItemSpan.SingleLane
                             },
                         ) { index, item ->
-                            FeedArticleItem(
-                                item = item,
-                                index = index,
-                                onClick = { onArticleClick(item) },
-                                onBookmark = { onBookmark(item, it) },
-                                onShare = { onShare(item) },
-                                onMoreLikeThis = { onMoreLikeThis(item) },
-                                onLessLikeThis = { onLessLikeThis(item) },
-                                onHideSource = { onHideSource(item) },
-                                layout = layout,
-                                emphasis = emphasis.getOrNull(index)
-                                    ?: FeedEmphasis.Medium,
-                                dimRead = dimRead,
-                                cluster = clusters[item.id],
-                                onPin = { onPin(item, it) },
-                            )
+                            // Keyed and animated, as the column beside it and
+                            // the app's own grid already were: a sync should
+                            // move a card rather than replace the list under
+                            // the reader's thumb.
+                            Box(
+                                modifier = if (animate) Modifier.animateItem()
+                                else Modifier
+                            ) {
+                                FeedArticleItem(
+                                    item = item,
+                                    index = index,
+                                    onClick = { onArticleClick(item) },
+                                    onBookmark = { onBookmark(item, it) },
+                                    onShare = { onShare(item) },
+                                    onMoreLikeThis = { onMoreLikeThis(item) },
+                                    onLessLikeThis = { onLessLikeThis(item) },
+                                    onHideSource = { onHideSource(item) },
+                                    layout = layout,
+                                    emphasis = emphasis.getOrNull(index)
+                                        ?: FeedEmphasis.Medium,
+                                    dimRead = dimRead,
+                                    cluster = clusters[item.id],
+                                    onPin = { onPin(item, it) },
+                                )
+                            }
                         }
-                    }
+                        },
+                    )
                 } else {
                     val article: @Composable (Int, FeedItem) -> Unit = { index, item ->
                         FeedArticleItem(
@@ -421,14 +441,16 @@ fun FeedScaffold(
                             onPin = { onPin(item, it) },
                         )
                     }
-                    LazyColumn(
-                        state = listState,
+                    PullToRefreshLazyColumn(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { onRefresh() },
+                        listState = listState,
                         contentPadding = padding,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        item(key = FEED_HEADER_KEY) { header() }
-                        heldFeed(articles, held, article)
-                    }
+                        content = {
+                            item(key = FEED_HEADER_KEY) { header() }
+                            heldFeed(articles, held, animate, article)
+                        },
+                    )
                 }
             }
         }

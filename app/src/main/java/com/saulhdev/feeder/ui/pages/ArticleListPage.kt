@@ -630,7 +630,7 @@ fun ArticleListPage(
                                             listState = listState,
                                             content = {
                                                 item(key = FEED_HEADER_KEY) { header() }
-                                                heldFeed(state.articles, held) { index, item ->
+                                                heldFeed(state.articles, held, animate) { index, item ->
                                                     article(
                                                         index,
                                                         item,
