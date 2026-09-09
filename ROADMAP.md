@@ -275,8 +275,35 @@ user meets first.
 Everything above is about one feed at a time. Once someone imports an OPML with
 a hundred sources, one at a time is the wrong unit.
 
-- **Multi-select in the source list**, with mass actions: add a tag, remove a
-  tag, replace tags, enable, disable, delete.
+- ~~**Multi-select in the source list**, with mass actions: add a tag, remove a
+  tag, replace tags, enable, disable, delete.~~ — done. Long-press any source to
+  start a selection; the search field is replaced by a bar carrying select-all,
+  clear, enable, disable, add/remove/replace category, and delete. Categories
+  are picked as chips rather than typed, so a bulk edit cannot invent "tech"
+  alongside "Tech". Every action clears the selection afterwards, because twelve
+  sources left highlighted after acting on them invites acting on them twice,
+  and a bulk delete is undoable from the same snackbar a single delete uses.
+
+  Still missing from the selection bar, in the order they are worth doing:
+
+  - **Select all should mean all shown.** The search filter stays live while a
+    selection is running — the list underneath is still filtered — but the bar
+    hides the field, so Select all quietly takes every source in the database
+    including the ones filtered off screen. Selecting things the user cannot see
+    is the wrong default for an action whose next tap may be Delete. It should
+    take the filtered list, with the count on the bar saying which.
+  - **Fetch full articles, in bulk.** `fullTextByDefault` is per-feed and only
+    reachable by opening each source's editor. It is the one setting someone
+    actually wants to apply to twenty feeds at once — every summary-only
+    newspaper in the list.
+  - **Refresh these now.** Syncing one selection is a smaller, more useful
+    action than pulling the whole list, particularly straight after a bulk
+    enable.
+  - **Export the selection.** OPML export is currently all-or-nothing. Handing
+    someone the eight feeds from one category is a share, not a backup, and it
+    is the same writer with a different input list.
+  - **Require link / require image, in bulk** — the same argument as full text,
+    one notch less common.
 - **Category management as its own screen** — rename a category everywhere it is
   used, merge two, delete one and choose what happens to its feeds. Categories
   are currently a free-text field on each source, so a typo creates a category
@@ -887,6 +914,12 @@ name becomes the category, which is what makes §6's clustering fire at all.
 
 Nothing is uploaded. The file is parsed on the phone and the phone does the
 fetching, which is a stronger answer than any policy.
+
+**Not yet tested against a real export.** Everything here is covered by unit
+tests over fixture HTML — nested folders, unclosed tags, the loose-bookmarks
+case — but no live Chrome or Firefox export with real folders has been run
+through it on a device. That pass is outstanding and is the gate on calling
+this section finished.
 
 The private-address block is a network interceptor rather than a check on the
 address typed, and that is the load-bearing detail: OkHttp follows redirects
