@@ -52,7 +52,7 @@ class SourceListTest {
     @Test
     fun `sorting by name is case-insensitive`() {
         val feeds = listOf(feed(title = "zdnet"), feed(title = "Ars"), feed(title = "BBC"))
-        val sorted = feeds.sortedWith(SourceSort.Title.comparator).map(Feed::title)
+        val sorted = feeds.sortedWith(SourceSort.Title.comparator(emptyMap())).map(Feed::title)
         assertEquals(listOf("Ars", "BBC", "zdnet"), sorted)
     }
 
@@ -62,7 +62,7 @@ class SourceListTest {
             feed(title = "b", tag = "World,Alpha"),
             feed(title = "a", tag = "Tech"),
         )
-        val sorted = feeds.sortedWith(SourceSort.Category.comparator).map(Feed::title)
+        val sorted = feeds.sortedWith(SourceSort.Category.comparator(emptyMap())).map(Feed::title)
         assertEquals(listOf("a", "b"), sorted)
     }
 
@@ -78,7 +78,7 @@ class SourceListTest {
             feed(id = 7, title = "newest"),
             feed(id = 4, title = "middle"),
         )
-        val sorted = feeds.sortedWith(SourceSort.Added.comparator).map(Feed::title)
+        val sorted = feeds.sortedWith(SourceSort.Added.comparator(emptyMap())).map(Feed::title)
         assertEquals(listOf("first", "middle", "newest"), sorted)
     }
 
@@ -95,19 +95,57 @@ class SourceListTest {
             feed(id = 2, title = "zdnet", tag = "World"),
             feed(id = 3, title = "BBC", tag = "News"),
         )
+        val latest = mapOf(1L to 300L, 2L to 100L, 3L to 200L)
         SourceSort.entries.forEach { option ->
-            val up = feeds.sortedWith(option.comparator).map(Feed::title)
-            val down = feeds.sortedWith(option.comparator.reversed()).map(Feed::title)
+            val up = feeds.sortedWith(option.comparator(latest)).map(Feed::title)
+            val down = feeds.sortedWith(option.comparator(latest).reversed()).map(Feed::title)
             assertEquals(option.name, up, down.reversed())
         }
     }
 
     @Test
-    fun `three orders, and none of them names a direction`() {
-        // The direction is the arrow beside the chosen row, not part of its
-        // label: a row reading "Recently added" cannot honestly show an
-        // ascending arrow.
-        assertEquals(3, SourceSort.entries.size)
+    fun `latest post sorts the quietest feed first`() {
+        // The useful end of this order: a feed that has published nothing for
+        // months is the one worth looking at.
+        val feeds = listOf(
+            feed(id = 1, title = "busy"),
+            feed(id = 2, title = "quiet"),
+            feed(id = 3, title = "middling"),
+        )
+        val latest = mapOf(1L to 9_000L, 2L to 1_000L, 3L to 5_000L)
+        val sorted = feeds.sortedWith(SourceSort.LatestPost.comparator(latest)).map(Feed::title)
+        assertEquals(listOf("quiet", "middling", "busy"), sorted)
+    }
+
+    @Test
+    fun `a feed with no articles at all sorts before every other`() {
+        // It is the quietest of the lot, and usually broken, so the top of an
+        // ascending list is exactly where it belongs. It must not be dropped
+        // or throw for having no entry in the map.
+        val feeds = listOf(feed(id = 1, title = "has posts"), feed(id = 2, title = "empty"))
+        val latest = mapOf(1L to 5_000L)
+        val sorted = feeds.sortedWith(SourceSort.LatestPost.comparator(latest)).map(Feed::title)
+        assertEquals(listOf("empty", "has posts"), sorted)
+    }
+
+    @Test
+    fun `latest post is not last sync`() {
+        // The order this replaced sorted on Feeds.lastSync, which records when
+        // Whisper last fetched a feed rather than when the feed last published
+        // — so a feed checked every hour that has published nothing since
+        // March had the most recent value in the list. Nothing here reads
+        // lastSync, and this test exists to keep it that way.
+        val busyFetchQuietFeed = feed(id = 1, title = "quiet", lastSync = 9_999L)
+        val rarelyFetchedLivelyFeed = feed(id = 2, title = "lively", lastSync = 1L)
+        val latest = mapOf(1L to 100L, 2L to 8_000L)
+        val sorted = listOf(busyFetchQuietFeed, rarelyFetchedLivelyFeed)
+            .sortedWith(SourceSort.LatestPost.comparator(latest)).map(Feed::title)
+        assertEquals(listOf("quiet", "lively"), sorted)
+    }
+
+    @Test
+    fun `four orders, and none of them names a direction`() {
+        assertEquals(4, SourceSort.entries.size)
     }
 
     @Test

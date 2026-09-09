@@ -69,10 +69,11 @@ class SourceListViewModel(
         feedsRepo.getAllTagsFlow(),
         _query,
         combine(sort, ascending) { sort, ascending -> sort to ascending },
-    ) { allSources, allTags, query, order ->
+        articleRepo.latestArticlePerFeed(),
+    ) { allSources, allTags, query, order, latestPosts ->
         val (sort, ascending) = order
-        val comparator =
-            if (ascending) sort.comparator else sort.comparator.reversed()
+        val base = sort.comparator(latestPosts)
+        val comparator = if (ascending) base else base.reversed()
         val matching = allSources.filter { it.matches(query) }.sortedWith(comparator)
         val (enabledSources, disabledSources) = matching.partition { it.isEnabled }
         SourceListState(
@@ -262,20 +263,25 @@ data class SourceListState(
 /**
  * How the source list is ordered.
  *
- * Three fields, each sorted either way, rather than four entries where two
- * were the same field in two directions under different names — "Least
- * recently updated" and "Recently added" both named a direction in their
- * label, which left no way to ask for the other one and made the menu look
- * like it offered four orders when it offered two and a half.
+ * Each comparator here is the *ascending* one; the view model reverses it when
+ * the reader taps the order they are already on.
  *
- * Each comparator here is the *ascending* one. The view model reverses it.
+ * The comparator is a function rather than a value because one of these needs
+ * something that is not on a Feed: when its newest article arrived. That lives
+ * in the Article table, so it is handed in.
  */
-enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Feed>) {
-    Title(R.string.sort_by_title, compareBy(String.CASE_INSENSITIVE_ORDER, Feed::title)),
-    Category(
-        R.string.sort_by_category,
-        compareBy(String.CASE_INSENSITIVE_ORDER) { it.tags.firstOrNull().orEmpty() },
-    ),
+enum class SourceSort(@StringRes val labelId: Int) {
+    Title(R.string.sort_by_title) {
+        override fun comparator(latestPosts: Map<Long, Long>) =
+            compareBy(String.CASE_INSENSITIVE_ORDER, Feed::title)
+    },
+
+    Category(R.string.sort_by_category) {
+        override fun comparator(latestPosts: Map<Long, Long>) =
+            compareBy(String.CASE_INSENSITIVE_ORDER) { feed: Feed ->
+                feed.tags.firstOrNull().orEmpty()
+            }
+    },
 
     /**
      * Oldest first ascending, newest first descending.
@@ -286,11 +292,34 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
      * Two honest caveats. An OPML import arrives in file order, so a hundred
      * sources imported at once are "added" in whatever order the file listed
      * them rather than all at the same moment. And undoing a removal
-     * re-inserts under a fresh id, so a restored source counts as newly added
-     * — the old id is gone and nothing else refers to it.
+     * re-inserts under a fresh id, so a restored source counts as newly added.
      */
-    Added(R.string.sort_by_added, compareBy(Feed::id)),
+    Added(R.string.sort_by_added) {
+        override fun comparator(latestPosts: Map<Long, Long>) = compareBy(Feed::id)
+    },
+
+    /**
+     * When the feed itself last published, which is the question people
+     * actually mean by "least recently updated".
+     *
+     * This replaces a sort on `Feeds.lastSync`, and the difference matters:
+     * lastSync is when *Whisper* last fetched the feed, so a feed checked
+     * faithfully every hour that has published nothing since March had the
+     * most recent lastSync in the list. It answered "which feeds am I failing
+     * to reach" when what was wanted was "which feeds have gone quiet".
+     *
+     * Ascending puts the quietest first, which is the useful end.
+     *
+     * A feed with no articles at all sorts as zero — before everything —
+     * which is right: it is the quietest of the lot, and usually broken.
+     */
+    LatestPost(R.string.sort_by_latest_post) {
+        override fun comparator(latestPosts: Map<Long, Long>) =
+            compareBy { feed: Feed -> latestPosts[feed.id] ?: 0L }
+    },
     ;
+
+    abstract fun comparator(latestPosts: Map<Long, Long>): Comparator<Feed>
 
     companion object {
         /**
@@ -298,11 +327,10 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
          *
          * Stored by name rather than by ordinal, and resolved rather than
          * indexed, because a preference outlives the code that wrote it. An
-         * order removed in a later version — "LastSync" was, in this one —
-         * leaves that name sitting in somebody's DataStore, and an ordinal
-         * would quietly resolve it to whichever order happens to sit at that
-         * position now. A name that no longer exists resolves to nothing, and
-         * nothing means Title.
+         * order removed in a later version leaves that name sitting in
+         * somebody's DataStore, and an ordinal would quietly resolve it to
+         * whichever order happens to sit at that position now. A name that no
+         * longer exists resolves to nothing, and nothing means Title.
          */
         fun byName(name: String?): SourceSort =
             entries.firstOrNull { it.name == name } ?: Title

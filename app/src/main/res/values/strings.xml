@@ -29,6 +29,7 @@
     <string name="sort_by_title">Name</string>
     <string name="sort_by_category">Category</string>
     <string name="sort_by_added">Added</string>
+    <string name="sort_by_latest_post">Latest post</string>
     <string name="sources_add_tag">Add category</string>
     <string name="sources_remove_tag">Remove category</string>
     <string name="sources_replace_tags">Replace categories</string>

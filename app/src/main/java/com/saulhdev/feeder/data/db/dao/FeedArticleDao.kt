@@ -270,4 +270,31 @@ interface FeedArticleDao {
 
         return toUpdateItems + inserted
     }
+
+    /**
+     * The most recent article in each feed, as epoch milliseconds.
+     *
+     * Deliberately not `Feeds.lastSync`, which records when Whisper last
+     * *fetched* a feed and says nothing about whether anything was there. A
+     * feed checked faithfully every hour for a year that has published nothing
+     * since March has a very recent lastSync and is the exact feed somebody
+     * sorting this way is looking for.
+     *
+     * primarySortTime rather than pubDateV2: an item with no publication date
+     * of its own falls back to when it arrived, so this is never zero for a
+     * feed that has articles.
+     */
+    @Query(
+        """
+    SELECT feedId AS feedId, MAX(primarySortTime) AS latest
+    FROM Article GROUP BY feedId
+    """
+    )
+    fun latestArticlePerFeed(): Flow<List<FeedLatestArticle>>
 }
+
+/** One row of [FeedArticleDao.latestArticlePerFeed]. */
+data class FeedLatestArticle(
+    val feedId: Long,
+    val latest: Long,
+)

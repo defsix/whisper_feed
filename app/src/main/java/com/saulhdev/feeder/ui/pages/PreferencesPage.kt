@@ -144,6 +144,9 @@ fun PreferencesPage(
         prefs.about,
         prefs.reportProblem,
         prefs.exportDiagnostics,
+        // Last row of the last group. It was defined and in no list at all, so
+        // the switch existed and could not be reached from anywhere.
+        prefs.debugging,
     )
 
     // Turning the global switch on should start downloading now, not at the

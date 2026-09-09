@@ -212,6 +212,12 @@ class ArticleRepository(db: NeoFeedDb) {
             .flowOn(cc)
 
     fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()
+
+    /** When each feed last had an article, for the source list's sort. */
+    fun latestArticlePerFeed(): Flow<Map<Long, Long>> =
+        articlesDao.latestArticlePerFeed()
+            .map { rows -> rows.associate { it.feedId to it.latest } }
+            .flowOn(cc)
         .flowOn(cc)
 }
 
