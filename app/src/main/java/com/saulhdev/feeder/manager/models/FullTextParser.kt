@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -25,8 +27,24 @@ import java.util.concurrent.TimeUnit
 
 fun scheduleFullTextParse() {
     Log.i("FeederFullText", "Scheduling a full text parse work")
+
+    // This fetches and parses the body of every article the reader has, which
+    // is the heaviest thing the app does — and it carried no constraints at
+    // all. With no network requirement it would start on a phone with no
+    // connection, fail article by article, and be retried; with no battery
+    // requirement it would do that on a flat one.
+    val prefs: FeedPreferences by inject(FeedPreferences::class.java)
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(
+            if (prefs.syncOnlyOnWifi.getValue()) NetworkType.UNMETERED
+            else NetworkType.CONNECTED
+        )
+        .setRequiresBatteryNotLow(true)
+        .build()
+
     val workRequest = OneTimeWorkRequestBuilder<FullTextWorker>()
         .addTag("FullTextWorker")
+        .setConstraints(constraints)
         .keepResultsForAtLeast(1, TimeUnit.MINUTES)
     val workManager: WorkManager by inject(WorkManager::class.java)
     workManager.enqueueUniqueWork(

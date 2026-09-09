@@ -64,7 +64,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
 | 6 | Sync | **Part** — backup is done (§14): folder picker, OPML, settings file, daily unmetered job, first-run restore. Google Reader protocol (§7) is partly built — client, account, service abstraction and sign-in screen work; read-state mapping, removals and background sync outstanding |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
-| 8 | Reader / offline / polish | **Part** — reader and offline caching work; sync, filter and frame-path performance done. Missing: accessibility pass, battery profiling, motion polish |
+| 8 | Reader / offline / polish | **Done bar motion** — reader, offline caching, sync/filter/frame-path performance, an accessibility pass and a battery pass. Motion polish is the remainder |
 | — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
 
 The card **rhythm** (hero / card / compact) is what Cards does *within* one
@@ -708,9 +708,18 @@ any of this, and it should be built before the rest of it.
   alone rather than deleted. Deleting somebody's subscriptions because of a
   partial response or the wrong account is unrecoverable, and those are exactly
   the failure modes a first version meets.
-- **No background sync yet.** The account screen syncs on demand. The id
-  mapping it was waiting on now exists, so this is the next piece: hooking the
-  account sync into the existing `FeedSyncer` schedule.
+- ~~**No background sync.**~~ Built. `FeedSyncer` dispatches through the
+  active service now, so a scheduled run reconciles subscriptions, maps ids and
+  applies read state rather than only fetching RSS. It used to call `syncFeeds`
+  directly in every case, which meant an account was reconciled only while its
+  settings screen was open — subscriptions added on another device never
+  arrived, and read state never moved unless somebody went looking for it. The
+  scheduled sync was local-only without saying so.
+
+  A single feed or one tag stays local: neither the protocol nor this worker
+  has a notion of syncing part of an account. A signed-out account reports
+  success rather than failure, so WorkManager does not back off and retry
+  something that needs the reader rather than another attempt.
 
 ### 8. Ship it
 

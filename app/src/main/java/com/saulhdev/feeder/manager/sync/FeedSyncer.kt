@@ -10,6 +10,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import com.saulhdev.feeder.manager.sync.service.LocalRssService
+import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
+import com.saulhdev.feeder.manager.sync.service.SyncOutcome
+import org.koin.java.KoinJavaComponent.inject
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
@@ -28,6 +32,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
 
     private val TAG = "FeedSyncer"
+    private val dispatcher: RssServiceDispatcher by inject(RssServiceDispatcher::class.java)
     private val notificationManager: NotificationManagerCompat =
         NotificationManagerCompat.from(context)
 
@@ -44,13 +49,44 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             val forceNetwork = inputData.getBoolean("force_network", true)
             val minFeedAgeMinutes = inputData.getInt("min_feed_age_minutes", 5)
 
-            success = syncFeeds(
-                context = context,
-                feedId = feedId,
-                feedTag = feedTag,
-                forceNetwork = forceNetwork,
-                minFeedAgeMinutes = minFeedAgeMinutes
-            )
+            // A whole-feed refresh goes through whichever service is in
+            // charge; a single feed or one tag is always local, because
+            // neither the protocol nor this worker has a notion of syncing
+            // part of an account.
+            //
+            // This used to call syncFeeds directly in every case, which meant
+            // an account was reconciled only when its settings screen was
+            // open: subscriptions added on another device did not arrive, and
+            // read state never moved unless somebody went looking for it. The
+            // scheduled sync was local-only without saying so.
+            val wholeFeed = feedId == ID_UNSET && feedTag.isEmpty()
+            val service = dispatcher.current()
+
+            success = if (wholeFeed && service !is LocalRssService) {
+                when (val outcome = service.sync()) {
+                    is SyncOutcome.Success -> true
+                    SyncOutcome.SignedOut -> {
+                        // The token is gone, and retrying will not bring it
+                        // back. Reported as success so WorkManager does not
+                        // back off and retry a thing that needs the reader.
+                        Log.w(TAG, "Account signed out; scheduled sync stopped")
+                        true
+                    }
+
+                    is SyncOutcome.Failed -> {
+                        Log.e(TAG, "Account sync failed", outcome.cause)
+                        false
+                    }
+                }
+            } else {
+                syncFeeds(
+                    context = context,
+                    feedId = feedId,
+                    feedTag = feedTag,
+                    forceNetwork = forceNetwork,
+                    minFeedAgeMinutes = minFeedAgeMinutes
+                )
+            }
         } catch (e: Exception) {
             success = false
             Log.e(TAG, "Failure during sync", e)

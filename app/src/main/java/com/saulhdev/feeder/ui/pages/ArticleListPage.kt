@@ -132,6 +132,7 @@ import com.saulhdev.feeder.ui.components.FeedSearchBar
 import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
 import com.saulhdev.feeder.ui.components.FeedEmptyReason
+import com.saulhdev.feeder.ui.components.BookmarksEmptyState
 import com.saulhdev.feeder.ui.components.FeedEmptyState
 import com.saulhdev.feeder.ui.components.SearchEmptyState
 import com.saulhdev.feeder.ui.onboarding.ProvideTourTargets
@@ -430,6 +431,9 @@ fun ArticleListPage(
                                     contentPadding = PaddingValues(vertical = 4.dp)
                                 ) {
                                     item(key = FEED_HEADER_KEY) { header() }
+                                    if (bookmarked.bookmarkedArticles.isEmpty()) {
+                                        item(key = "bookmarks-empty") { BookmarksEmptyState() }
+                                    }
                                     itemsIndexed(
                                         bookmarked.bookmarkedArticles,
                                         key = { _, item -> item.id },

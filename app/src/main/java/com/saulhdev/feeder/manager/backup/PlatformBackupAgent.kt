@@ -21,6 +21,7 @@ import android.app.backup.BackupAgent
 import android.app.backup.BackupDataInput
 import android.app.backup.BackupDataOutput
 import android.app.backup.FullBackupDataOutput
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.datastore.core.DataStore
@@ -54,7 +55,12 @@ import org.koin.core.context.GlobalContext
 class PlatformBackupAgent : BackupAgent() {
 
     override fun onFullBackup(data: FullBackupDataOutput) {
-        val deviceToDevice = (data.transportFlags and FLAG_DEVICE_TO_DEVICE_TRANSFER) != 0
+        // getTransportFlags arrived in API 28, and this app runs on 26. Below
+        // that there is no device-to-device transfer to tell apart — the
+        // feature did not exist — so every backup is a cloud backup and is
+        // gated by the stricter of the two switches.
+        val deviceToDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                (data.transportFlags and FLAG_DEVICE_TO_DEVICE_TRANSFER) != 0
         val allowed = runCatching { isAllowed(deviceToDevice) }.getOrDefault(false)
 
         if (!allowed) {

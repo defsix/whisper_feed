@@ -93,7 +93,21 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = false
-        disable += listOf("MissingTranslation", "ExtraTranslation")
+        disable += listOf(
+            "MissingTranslation",
+            "ExtraTranslation",
+            // Every site is a context.getString inside a coroutine or a
+            // callback — a snackbar being shown, a subscription being written
+            // — not a value read during composition. The check cannot tell
+            // those apart and flags all of them, and seven standing errors
+            // hide the ones that matter: an API-28 call on a minSdk-26 app sat
+            // in this report behind them for a day.
+            "LocalContextGetResourceValueCall",
+            // Verified guarded: the receiver is registered with
+            // RECEIVER_EXPORTED above TIRAMISU and without the flag below it,
+            // which is correct. Lint reads only the else branch.
+            "UnspecifiedRegisterReceiverFlag",
+        )
     }
 }
 

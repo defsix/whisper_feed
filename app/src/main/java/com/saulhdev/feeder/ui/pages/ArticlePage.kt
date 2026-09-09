@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -127,9 +128,16 @@ fun ArticlePage(
         }
     }
 
+    // From the configuration rather than from Locale.getDefault(), which
+    // Compose cannot observe: change the phone's language and every date on
+    // this screen keeps the old one until something unrelated happens to
+    // recompose it.
+    val locale = LocalConfiguration.current.locales[0]
     val dateTimeFormat: DateTimeFormatter =
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.SHORT)
-            .withLocale(Locale.getDefault())
+        remember(locale) {
+            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.SHORT)
+                .withLocale(locale)
+        }
 
     val authorDate = when {
         state?.article?.author == null && state?.article?.pubDate != null && (state?.article?.pubDate

@@ -202,6 +202,13 @@ class MainActivity : ComponentActivity() {
             } else {
                 constraints.setRequiredNetworkType(NetworkType.CONNECTED)
             }
+            // Nobody with a phone at four percent wants it fetching forty
+            // feeds. This is the scheduled sync, which nobody asked for at
+            // this particular moment — it waits, and runs when the phone can
+            // afford it. Pull-to-refresh is a different request and carries no
+            // such constraint, because that one was asked for.
+            constraints.setRequiresBatteryNotLow(true)
+
             val timeInterval = (prefs.syncFrequency.getValue().toDouble() * 60).toLong()
 
             val workRequestBuilder = PeriodicWorkRequestBuilder<FeedSyncer>(

@@ -221,6 +221,8 @@
     <string name="why_breaking">Several sources are covering this story</string>
     <string name="pref_sticky_top">Hold it there while you scroll</string>
     <string name="pref_sticky_top_summary">A pinned article, or a breaking story, stays at the top of the screen until you have scrolled a few articles past it.</string>
+    <string name="empty_bookmarks">Nothing saved yet</string>
+    <string name="empty_bookmarks_hint">Tap the save mark on any article and it is kept here, readable offline.</string>
     <string name="empty_no_sources">No sources yet</string>
     <string name="empty_no_sources_hint">Add a website or a feed address and Whisper will do the rest. Settings, then Sources.</string>
     <string name="empty_syncing">Fetching your feeds</string>
