@@ -1342,6 +1342,42 @@ Two things found while doing it, both of which would have shipped:
   copyright alone. Both rewritten — the licence now names the whole line, since
   a GPL fork has to credit what it was forked from.
 
+### 17. Scroll parallax on the feed — parked, at the bottom
+
+Prototyped, demonstrated, and deliberately not built. The image inside a card's
+frame moves slower than the card as it travels up the screen; the frame is
+clipped and the picture is taller than it, so nothing reflows and the whole
+cost is a transform per visible image in the draw phase.
+
+It looks fine. It is not being built for 1.0 for three reasons, in order of
+weight:
+
+- **It carries no information.** Every other movement in the app earns its
+  place: items animate so a card reads as having *moved* rather than been
+  replaced, the held article stays put so the reader does not lose their place.
+  This is the only purely decorative motion proposed, and it would sit on the
+  surface people spend all their time on.
+- **Its risk is the shape that keeps catching us.** A transform per frame is
+  cheap in theory, and nothing in this project has been verified on a device by
+  anyone but the author. A scroll effect that stutters on a mid-range phone is
+  worse than no effect, and there is currently no way to find that out before a
+  tester does.
+- **It is slightly against what the app says it is.** "Curate. Read. Breathe."
+  A page that is still until moved suits that better than one with something
+  always sliding.
+
+What settled it was the comparison rather than the effect: the same hour buys
+**broken-feed recovery** — running discovery against a failing feed's site and
+offering the replacement — which needs only the `FeedDiscovery` that §13
+shipped with, fixes a problem every RSS reader has and none of them solve, and
+is something a reader would mention to somebody else. Parallax is not.
+
+Worth revisiting once 1.0 has been on real devices long enough to know what the
+frame budget actually looks like. Until then it stays here, and the working
+demo stands as the record of the decision.
+
+---
+
 ## Replacing Discover: what is actually possible
 
 The short version: **the minus-one page belongs to the launcher, not to
