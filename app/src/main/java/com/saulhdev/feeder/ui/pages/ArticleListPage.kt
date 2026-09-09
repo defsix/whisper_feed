@@ -122,6 +122,7 @@ import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.heldFeed
 import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
+import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
@@ -322,7 +323,12 @@ fun ArticleListPage(
                                     HeaderToggleAction(
                                         icon = if (state.isFilterModified) Phosphor.Filtered
                                         else Phosphor.Filter,
-                                        description = stringResource(id = R.string.sorting_order),
+                                        // "Filters", not "Sorting order": the
+                                        // active state tracks whether the feed
+                                        // is being narrowed, so that is what
+                                        // the control should be called — and
+                                        // it is what the overlay calls it.
+                                        description = stringResource(id = R.string.pref_cat_filters),
                                         active = state.isFilterModified,
                                         onClick = {
                                             scope.launch {
@@ -685,12 +691,3 @@ private const val UNDO_SETTLE_MS = 30_000L
  * failed to notice.
  */
 private const val UNDO_MIN_COUNT = 5
-
-/**
- * The key the glance row and chips travel under.
- *
- * A key rather than a bare item because read-on-scroll reads keys now: it
- * ignores anything that is not an article, and it can only do that if the
- * header has a name to be ignored by.
- */
-private const val FEED_HEADER_KEY = "feed-header"

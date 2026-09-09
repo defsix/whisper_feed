@@ -79,11 +79,9 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.manager.glance.GlanceState
 import com.saulhdev.feeder.ui.icons.Phosphor
-import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
 import com.saulhdev.feeder.ui.components.HeaderToggleAction
 import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
-import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import kotlinx.coroutines.launch
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -98,6 +96,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import com.saulhdev.feeder.ui.pages.SortFilterSheet
 import com.saulhdev.feeder.ui.components.FeedSearchBar
+import com.saulhdev.feeder.ui.icons.phosphor.GearSix
+import com.saulhdev.feeder.ui.icons.phosphor.Filter
+import com.saulhdev.feeder.ui.icons.phosphor.Filtered
 import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
 import com.saulhdev.feeder.ui.components.FeedEmptyReason
 import com.saulhdev.feeder.ui.components.FeedEmptyState
@@ -235,8 +236,12 @@ fun FeedScaffold(
                         description = stringResource(R.string.action_search),
                         onClick = { onSearchingChange(true) },
                     )
+                    // The same two-state icon the app uses. A funnel that
+                    // looks identical whether or not it is narrowing the feed
+                    // says nothing; the filled one says the list you are
+                    // looking at is not the whole list.
                     HeaderToggleAction(
-                        icon = Phosphor.FunnelSimple,
+                        icon = if (isFilterActive) Phosphor.Filtered else Phosphor.Filter,
                         description = stringResource(R.string.pref_cat_filters),
                         active = isFilterActive,
                         onClick = { onFilterSheetOpenChange(true) },
@@ -247,13 +252,17 @@ fun FeedScaffold(
                         active = isShowingBookmarks,
                         onClick = onBookmarksClick,
                     )
-                    // One action, not a menu: reload duplicates pull-to-refresh
-                    // and restart was a development leftover, which left
-                    // Settings as the only real entry. It keeps the three dots
-                    // rather than taking a gear, so the two headers read the
-                    // same way.
+                    // One action, not a menu: reload duplicates
+                    // pull-to-refresh and restart was a development leftover,
+                    // which left Settings as the only real entry.
+                    //
+                    // A gear, not three dots. Three dots promise a menu, and
+                    // this opens Settings directly — and the app's header has
+                    // said so with a gear since the menu went. Two icons for
+                    // one destination is the reader having to learn the app
+                    // twice.
                     HeaderAction(
-                        icon = Phosphor.DotsThreeVertical,
+                        icon = Phosphor.GearSix,
                         description = stringResource(R.string.title_settings),
                         onClick = onSettings,
                     )
@@ -277,23 +286,34 @@ fun FeedScaffold(
                 modifier = Modifier.padding(top = topInset),
             )
 
-            GlanceRow(
-                state = glanceState,
-                // Straight to settings. It used to open the overflow menu, so
-                // "set a location" meant opening a menu and then finding
-                // settings in it.
-                onSetLocation = onSettings,
-            )
+            // The glance row and the chips used to stand here, above the
+            // list and fixed: only the app bar scrolled away, so on a phone a
+            // third of the panel never moved and never showed an article. The
+            // app has scrolled them with the feed for a while; this is the
+            // overlay catching up, because the two surfaces disagreeing about
+            // what a scroll does is worse than either behaviour on its own.
+            val header: @Composable () -> Unit = {
+                Column {
+                    GlanceRow(
+                        state = glanceState,
+                        // Straight to settings. It used to open the overflow
+                        // menu, so "set a location" meant opening a menu and
+                        // then finding settings in it.
+                        onSetLocation = onSettings,
+                    )
 
-            // Hidden while searching: a search deliberately ignores the
-            // selected category, so leaving the chips up — one of them
-            // highlighted — would claim a narrowing that is not happening.
-            if (!isSearching) {
-                CategoryChipRow(
-                    categories = categories,
-                    selected = selectedCategories,
-                    onSelectedChange = onCategoriesChange,
-                )
+                    // Hidden while searching: a search deliberately ignores
+                    // the selected category, so leaving the chips up — one of
+                    // them highlighted — would claim a narrowing that is not
+                    // happening.
+                    if (!isSearching) {
+                        CategoryChipRow(
+                            categories = categories,
+                            selected = selectedCategories,
+                            onSelectedChange = onCategoriesChange,
+                        )
+                    }
+                }
             }
 
             PullToRefreshBox(
@@ -324,6 +344,9 @@ fun FeedScaffold(
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
                 } else if (articles.isEmpty()) {
+                    // Nothing to scroll, so the header has nowhere to scroll
+                    // away to and is drawn plainly.
+                    header()
                     // The launcher surface cannot reach the sources list, so it
                     // reports the two cases it can actually tell apart and
                     // leaves "no sources" to the app, which can say where to
@@ -346,6 +369,10 @@ fun FeedScaffold(
                             .fillMaxSize()
                             .padding(horizontal = 10.dp),
                     ) {
+                        item(
+                            key = FEED_HEADER_KEY,
+                            span = StaggeredGridItemSpan.FullLine,
+                        ) { header() }
                         itemsIndexed(
                             articles,
                             key = { _, item -> item.id },
@@ -399,6 +426,7 @@ fun FeedScaffold(
                         contentPadding = padding,
                         modifier = Modifier.fillMaxSize(),
                     ) {
+                        item(key = FEED_HEADER_KEY) { header() }
                         heldFeed(articles, held, article)
                     }
                 }

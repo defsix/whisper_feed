@@ -10,6 +10,9 @@ import com.saulhdev.feeder.ui.overlay.feedEmphasisFor
 import com.saulhdev.feeder.ui.overlay.parseAffinity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import com.saulhdev.feeder.ui.overlay.FeedEmphasisMemory
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.net.URL
 import kotlin.time.Instant
@@ -185,5 +188,86 @@ class FeedWeightTest {
         assertEquals(mapOf("12" to -2, "7" to 4), parseAffinity(setOf("12:-2", "7:4")))
         // Junk in the set must not take the rest of it down with it.
         assertEquals(mapOf("3" to 1), parseAffinity(setOf("3:1", "nonsense", "", ":9")))
+    }
+}
+
+/**
+ * The memory that stops an article changing size once it has been given one.
+ *
+ * The bug it exists for is easy to mistake for a feature: read an article,
+ * come back, and it is smaller than the ones around it. Reading subtracts from
+ * an article's weight, so the moment the sizes are worked out afresh the one
+ * you just finished drops a band — and the app's feed is the list pane of a
+ * ListDetailPaneScaffold, which on a phone is thrown away and rebuilt every
+ * time you open an article.
+ */
+class FeedEmphasisMemoryTest {
+
+    @Before
+    fun clean() = FeedEmphasisMemory.forget()
+
+    @After
+    fun tidy() = FeedEmphasisMemory.forget()
+
+    @Test
+    fun `the first answer is the one that sticks`() {
+        val a = item()
+        assertEquals(
+            listOf(FeedEmphasis.Large),
+            FeedEmphasisMemory.settle(listOf(a), listOf(FeedEmphasis.Large)),
+        )
+        // Same article, and the weighting has since decided it is small —
+        // because it has been read. It keeps the size it was drawn at.
+        assertEquals(
+            listOf(FeedEmphasis.Large),
+            FeedEmphasisMemory.settle(listOf(a), listOf(FeedEmphasis.Small)),
+        )
+    }
+
+    @Test
+    fun `a size survives the feed being composed from scratch`() {
+        // What actually happens on a phone: the feed is disposed when an
+        // article opens and rebuilt when it closes. The memory is not part of
+        // the composition, so it is still there on the way back.
+        val a = item()
+        FeedEmphasisMemory.settle(listOf(a), listOf(FeedEmphasis.Large))
+        val afterReturning = FeedEmphasisMemory.settle(listOf(a), listOf(FeedEmphasis.Small))
+        assertEquals(listOf(FeedEmphasis.Large), afterReturning)
+    }
+
+    @Test
+    fun `an article never seen before takes the size it is offered`() {
+        val old = item()
+        val new = item()
+        FeedEmphasisMemory.settle(listOf(old), listOf(FeedEmphasis.Small))
+        assertEquals(
+            listOf(FeedEmphasis.Small, FeedEmphasis.Large),
+            FeedEmphasisMemory.settle(listOf(old, new), listOf(FeedEmphasis.Large, FeedEmphasis.Large)),
+        )
+    }
+
+    @Test
+    fun `the answer follows the order of the articles asked about`() {
+        // The caller maps the result back onto its list positionally, so a
+        // reordering sync must not hand an article somebody else's size.
+        val a = item()
+        val b = item()
+        FeedEmphasisMemory.settle(listOf(a, b), listOf(FeedEmphasis.Large, FeedEmphasis.Small))
+        assertEquals(
+            listOf(FeedEmphasis.Small, FeedEmphasis.Large),
+            FeedEmphasisMemory.settle(listOf(b, a), listOf(FeedEmphasis.Medium, FeedEmphasis.Medium)),
+        )
+    }
+
+    @Test
+    fun `a short fresh list does not throw`() {
+        // Defensive, because the two lists are built by different code paths
+        // and an index mismatch here would crash the feed rather than mis-size
+        // one card.
+        val a = item()
+        assertEquals(
+            listOf(FeedEmphasis.Medium),
+            FeedEmphasisMemory.settle(listOf(a), emptyList()),
+        )
     }
 }

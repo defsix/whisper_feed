@@ -129,3 +129,15 @@ enum class FeedEmphasis {
  * grid tile's proportions, which looks like a mistake rather than a choice.
  */
 fun feedLayoutIsGrid(layout: String): Boolean = layout == LAYOUT_MOSAIC
+
+/**
+ * The key the glance row and chips travel under, on both surfaces.
+ *
+ * A key rather than a bare item because read-on-scroll reads keys: it ignores
+ * anything that is not an article, and it can only do that if the header has a
+ * name to be ignored by.
+ *
+ * Shared rather than declared twice because the two surfaces are supposed to
+ * scroll identically, and two private constants is how they stop.
+ */
+const val FEED_HEADER_KEY = "feed-header"

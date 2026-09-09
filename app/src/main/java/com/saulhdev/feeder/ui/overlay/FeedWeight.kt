@@ -283,28 +283,76 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val habit = rememberReadingHabits()
     val clusters = rememberStoryClusters(articles)
 
-    // An article keeps the size it was first given for as long as the feed is
-    // open. Without this the feed reflows under the reader's finger: marking
-    // an article read subtracts from its weight, so scrolling past one with
-    // read-on-scroll enabled shrank it from a card to a row and shunted
-    // everything below it up the screen. Every article did it in turn, so the
-    // whole list jumped continuously while being scrolled.
+    // An article keeps the size it was first given. Without this the feed
+    // reflows under the reader's finger: marking an article read subtracts
+    // from its weight, so scrolling past one with read-on-scroll enabled
+    // shrank it from a card to a row and shunted everything below it up the
+    // screen. Every article did it in turn, so the whole list jumped
+    // continuously while being scrolled.
     //
     // Read state was the visible cause but not the only one. Marking read also
     // rewrites the reading-habit counts and re-runs the clustering, so all
-    // three inputs change identity at once and keying the cache on any of them
-    // would defeat it. It is keyed on nothing instead, and lives exactly as
-    // long as the feed's composition — changing a setting means leaving the
-    // feed, which is when recomputing from scratch is wanted and unnoticeable.
-    val settled = remember { mutableMapOf<String, FeedEmphasis>() }
-
+    // three inputs change identity at once and keying a cache on any of them
+    // would defeat it.
     return remember(articles, affinity, habit, clusters) {
-        val fresh = feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters)
-        articles.forEachIndexed { index, item ->
-            settled.getOrPut(item.id) { fresh[index] }
-        }
-        articles.map { settled[it.id] ?: FeedEmphasis.Medium }
+        FeedEmphasisMemory.settle(
+            articles,
+            feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters),
+        )
     }
+}
+
+/**
+ * The size each article has already been given, kept beyond any one screen.
+ *
+ * This was a `remember` inside [rememberFeedEmphasis], which fixed the overlay
+ * and left the app broken in a way that looked unrelated. The overlay's feed
+ * composes once and stays composed — opening an article launches a separate
+ * activity over the top of it. The app's feed is the list pane of a
+ * ListDetailPaneScaffold, and on a phone opening an article *replaces* it:
+ * come back and the whole feed has been composed afresh, with an empty map,
+ * so every size is recalculated — now with the article you just read weighed
+ * down for having been read. The article you had just finished reading was the
+ * one that shrank, which is why it read as a deliberate behaviour rather than
+ * a bug.
+ *
+ * Held here, outside composition, so both surfaces answer the same way and
+ * neither depends on how long its own screen happens to live.
+ *
+ * Synchronised rather than concurrent: it is touched once per feed
+ * recomposition, from the main thread, on two surfaces that are never both
+ * on screen. The lock is for the case where they are both composed — the app
+ * behind, the panel in front — rather than for contention.
+ */
+internal object FeedEmphasisMemory {
+
+    private val settled = LinkedHashMap<String, FeedEmphasis>()
+
+    /**
+     * Beyond this many remembered sizes, forget the ones not on screen.
+     *
+     * Generous on purpose. The feed window is a few hundred articles, and the
+     * cost of forgetting one is that it changes size the next time it is seen
+     * — so this should only ever be reached by somebody who has scrolled
+     * through several filtered views in one sitting.
+     */
+    private const val MAX_REMEMBERED = 2_000
+
+    @Synchronized
+    fun settle(articles: List<FeedItem>, fresh: List<FeedEmphasis>): List<FeedEmphasis> {
+        articles.forEachIndexed { index, item ->
+            settled.getOrPut(item.id) { fresh.getOrNull(index) ?: FeedEmphasis.Medium }
+        }
+        if (settled.size > MAX_REMEMBERED) {
+            val onScreen = articles.mapTo(HashSet()) { it.id }
+            settled.keys.retainAll { it in onScreen }
+        }
+        return articles.map { settled[it.id] ?: FeedEmphasis.Medium }
+    }
+
+    /** For tests, which must not inherit sizes from one another. */
+    @Synchronized
+    fun forget() = settled.clear()
 }
 
 /**
