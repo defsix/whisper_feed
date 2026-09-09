@@ -1436,6 +1436,89 @@ a subscription somebody has had for years is not worth losing to a URL change.
 
 ---
 
+### 19. The audit's leftovers, in order
+
+Four things the September audit found, judged worth doing properly rather than
+half-doing in the same pass. Ordered by what they buy against what they cost,
+not by how interesting they are.
+
+#### 19a. Strip the logs from the release build — do this before signing
+
+The app writes 71 diagnostic lines to Android's system log, and
+`proguard-android-optimize.txt` does not remove them, so they all survive into
+the shipping APK. None carries a credential — every one was read — but several
+carry feed and article addresses, which is a record of what somebody reads
+sitting in a log they did not know existed.
+
+The exposure is small: since Android 4.1 only the app itself and a computer
+attached over USB can read it. The fix is smaller still — an
+`-assumenosideeffects` rule for `Log.d`, `Log.v` and `Log.i`, four lines, no
+code touched. `Log.w` and `Log.e` stay, because a crash report with no
+preceding warning is a crash report nobody can act on.
+
+Cheapest thing on this list and the only one with a privacy argument, so it
+goes first, and it should land before the first signed build rather than after.
+
+#### 19b. Index the read state — the power-user one
+
+`Article.readAt` has no index, so every question about read state reads every
+row: the unread badge, the "unread only" filter, the read-articles window the
+suggestion engine learns from. The table is already indexed on
+`primarySortTime` and `feedId`, which is why the feed itself is quick — this is
+the one column the queries lean on that was missed.
+
+Invisible at a few thousand articles. Somebody running forty feeds at a hundred
+items each is at four thousand and climbing, and it is exactly the reader who
+notices. One index, one migration to version 18, no behaviour change.
+
+Worth pairing with 19a: same build, both small, neither can break anything a
+test would not catch.
+
+#### 19c. Stop blocking on preference reads — the real work
+
+`PrefDelegate.getValue()` and `setValue()` are both `runBlocking`. Reading a
+setting stops the calling thread until the DataStore answers, and there are
+about fifty such calls. Individually a millisecond or two; the problem is where
+they land — several run while a screen is being composed, which is precisely
+when the frame budget is already spent.
+
+The honest fix is that reading a preference is asynchronous and the callers
+should be too, which means every one of them changes. That is why it was not
+done in the audit pass: a change touching fifty sites, made in a hurry beside
+twenty other changes, is how a regression gets in.
+
+Staged, so each stage is separately verifiable:
+
+1. **Count what actually blocks the main thread.** Turn on StrictMode's disk-read
+   policy in debug and let it name them. Some of the fifty are in workers and
+   cost nothing; guessing which is how effort goes to the wrong half.
+2. **The composition sites.** Every `remember { prefs.x.getValue() }` becomes a
+   flow collected with a real default. This is the visible half — one disk read
+   per preference per screen open.
+3. **The write sites.** `setValue` from a tap is a blocking write on the main
+   thread; each becomes a launch on an IO scope, which the source list's sort
+   selector already does and can be copied from.
+4. **Then reconsider the delegate itself**, with the remaining callers small
+   enough in number to look at one by one.
+
+Biggest user-visible win on this list, and the only one that needs a plan.
+
+#### 19d. Coil 2 to 3 — after 1.0, not before
+
+Recommendation: **not yet**, and not because it is hard.
+
+Coil 2.7.0 is the final 2.x release and still maintained; Coil 3 is where new
+work happens and eventually where fixes will. So this is a "when, not if", and
+the argument is only about timing. Against doing it now: it is a breaking API
+change across every place the app shows a picture, it fixes nothing anyone can
+observe today, and it would land in the same build as the first signed release
+— which is the one build that should carry as little new risk as possible.
+
+The right moment is the first time image handling is opened for its own reasons.
+The custom `ImageLoader` the audit added is the natural seam: it already puts
+the cache limits and the private-network interceptor in one place, so the
+migration has somewhere to land instead of being spread across call sites.
+
 ### 17. Scroll parallax on the feed — parked, at the bottom
 
 Prototyped, demonstrated, and deliberately not built. The image inside a card's
@@ -1538,11 +1621,14 @@ Small, and cheaper now than later.
   from the code and measured where it could be measured — text widths against
   the real font, icon alpha, migration SQL. The on-device checks have all been
   yours. Emulator-based screenshot tests would change that.
-- **Test coverage is 99 unit tests**, across article age, tag splitting, feed
+- **Test coverage is 165 unit tests**, across article age, tag splitting, feed
   layout and weighting, clustering, the settings backup format, the tour's step
-  machine and the starter list. Still untested and still the shape that would
-  benefit: theme resolution, the day/night rule, and the sync and filter
-  performance work. Nothing on a device — see the first item.
+  machine, the starter list, bookmark import, link harvesting, the Google Reader
+  id shapes, the source list's filters and range selection, and the URL scheme
+  checks that stand between a feed's contents and an outgoing intent. Still
+  untested and still the shape that would benefit: theme resolution, the
+  day/night rule, and the sync and filter performance work. Nothing on a device
+  — see the first item.
 - ~~**Dead code**~~ — cleared. Nine unreferenced files and eight drawables
   removed, along with eight unused DAO methods, one of which had an
   `@Relation` without `@Transaction`: the same shape as the OPML crash fixed
