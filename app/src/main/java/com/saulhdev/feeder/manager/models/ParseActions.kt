@@ -57,7 +57,7 @@ suspend fun ContentResolver.exportOpml(uri: Uri, tagsFeedMap: Map<String, List<F
                     )
                 }
             }
-            Log.d("OPML", "Exported OPML in $time ms on ${Thread.currentThread().name}")
+            Log.d("OPML", "Exported OPML in $time ms")
         } catch (e: Throwable) {
             Log.e("OPML", "Failed to export OPML", e)
             val toastMaker: ToastMaker by inject(ToastMaker::class.java)
@@ -83,7 +83,7 @@ suspend fun ContentResolver.importOpml(uri: Uri) = withContext(Dispatchers.IO) {
             }
             requestFeedSync()
         }
-        Log.d("OPML", "Imported OPML in $time ms on ${Thread.currentThread().name}")
+        Log.d("OPML", "Imported OPML in $time ms")
     } catch (e: Throwable) {
         Log.e("OPML", "Failed to import OPML", e)
         val toastMaker: ToastMaker by inject(ToastMaker::class.java)

@@ -1442,37 +1442,44 @@ Four things the September audit found, judged worth doing properly rather than
 half-doing in the same pass. Ordered by what they buy against what they cost,
 not by how interesting they are.
 
-#### 19a. Strip the logs from the release build — do this before signing
+#### 19a. ~~Strip the logs from the release build~~ — done
 
-The app writes 71 diagnostic lines to Android's system log, and
-`proguard-android-optimize.txt` does not remove them, so they all survive into
-the shipping APK. None carries a credential — every one was read — but several
-carry feed and article addresses, which is a record of what somebody reads
-sitting in a log they did not know existed.
+Four `-assumenosideeffects` lines for `Log.d`, `Log.v` and `Log.i`. `Log.w` and
+`Log.e` stay: a crash report with no preceding warning is one nobody can act
+on.
 
-The exposure is small: since Android 4.1 only the app itself and a computer
-attached over USB can read it. The fix is smaller still — an
-`-assumenosideeffects` rule for `Log.d`, `Log.v` and `Log.i`, four lines, no
-code touched. `Log.w` and `Log.e` stay, because a crash report with no
-preceding warning is a crash report nobody can act on.
+**Verified against the shipped dex rather than assumed.** Every `Log.d/i/v`
+literal in the source was extracted and searched for in the preview APK's dex
+files, and every `Log.w/e` literal checked for wrongful removal. Result: 33
+warning and error lines all present, and every line that carried an address
+gone — the full-text fetcher's `Fetching full page <url>`, the discovery pass's
+`Suggesting <host>`, `requestFeedSync`, the Mastodon and cleanup lines, the
+launcher's message log.
 
-Cheapest thing on this list and the only one with a privacy argument, so it
-goes first, and it should land before the first signed build rather than after.
+Three survive, and it is worth writing down why. Each is the final statement of
+a `try` inside a suspend function, where the call's `int` result is the block's
+value before being coerced to Unit, and R8 will not remove a call in that
+position. The same file's other log, which is *not* last in its block, went.
+What the three actually print is `Exported OPML in 412 ms`, `Imported OPML in
+88 ms` and `Exported Bookmarks successfully` — a duration and a success marker,
+no address, no title, nothing about what anybody reads. Contorting three
+functions to move a log statement off the end of a block would buy nothing, so
+they stay.
 
-#### 19b. Index the read state — the power-user one
+Two of them also lost a `${Thread.currentThread().name}` while this was being
+worked out. That was a diagnostic from an old threading investigation, and it
+was doing real work on every OPML import and export to produce a string that is
+thrown away.
 
-`Article.readAt` has no index, so every question about read state reads every
-row: the unread badge, the "unread only" filter, the read-articles window the
-suggestion engine learns from. The table is already indexed on
-`primarySortTime` and `feedId`, which is why the feed itself is quick — this is
-the one column the queries lean on that was missed.
+#### 19b. ~~Index the read state~~ — done
 
-Invisible at a few thousand articles. Somebody running forty feeds at a hundred
-items each is at four thousand and climbing, and it is exactly the reader who
-notices. One index, one migration to version 18, no behaviour change.
+`CREATE INDEX index_Article_readAt ON Article (readAt)`, database version 18.
+No column added, no row rewritten, no behaviour changed; SQLite builds it in
+one pass over a table that is thousands of rows rather than millions.
 
-Worth pairing with 19a: same build, both small, neither can break anything a
-test would not catch.
+The migration's index name has to match what Room generates for the entity or
+Room's schema validation fails on the next open and the app will not start —
+checked against the generated `18.json` rather than trusted.
 
 #### 19c. Stop blocking on preference reads — the real work
 

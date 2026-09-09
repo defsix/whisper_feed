@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_17_18,
     MIGRATION_16_17,
     MIGRATION_15_16,
     MIGRATION_14_15,
@@ -238,6 +239,21 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_17_18 : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // An index and nothing else: no column added, no row rewritten, no
+        // behaviour changed. SQLite builds it in one pass over a table that is
+        // thousands of rows rather than millions, so the upgrade is not
+        // something anyone will see happen.
+        //
+        // The name has to match what Room generates for the entity, or Room's
+        // own schema validation fails on the next open and the app will not
+        // start.
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_Article_readAt` ON `Article` (`readAt`)")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_16_17 : Migration(16, 17) {

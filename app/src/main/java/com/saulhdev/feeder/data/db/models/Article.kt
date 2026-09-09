@@ -49,6 +49,16 @@ import kotlin.time.Instant
         // Read state arrives from a server as a list of its own ids; without
         // an index this is a full scan per article on every sync.
         Index(value = ["remoteId"]),
+        // Every question about read state — the unread badge, the unread-only
+        // filter, the window of recently read articles the suggestion engine
+        // learns from — asked this column and got a full table scan. The two
+        // columns that made the feed itself quick were indexed and this one,
+        // which the same queries lean on, was missed.
+        //
+        // Invisible at a few thousand rows. Forty feeds at a hundred items
+        // each is four thousand and climbing, and that reader is exactly the
+        // one who would notice.
+        Index(value = ["readAt"]),
     ],
     foreignKeys = [
         ForeignKey(
