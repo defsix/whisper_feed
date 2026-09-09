@@ -76,6 +76,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -293,15 +296,27 @@ fun ArticleListPage(
                                     containerColor = MaterialTheme.colorScheme.background,
                                     scrolledContainerColor = MaterialTheme.colorScheme.background,
                                 ),
+                                // The overlay's header, to the digit. Both were
+                                // meant to be sized to the mockup — the mark
+                                // standing about twice the cap height of the
+                                // name — and only the overlay actually was; this
+                                // one kept the number it already had while its
+                                // drawable was swapped underneath it, so the two
+                                // headers have been quietly different sizes
+                                // since.
                                 title = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Image(
                                             painter = painterResource(R.drawable.ic_brand_mark),
                                             contentDescription = null,
-                                            modifier = Modifier.height(32.dp),
+                                            modifier = Modifier.height(36.dp),
                                         )
-                                        Spacer(Modifier.width(12.dp))
-                                        Text(text = stringResource(id = R.string.app_name))
+                                        Spacer(Modifier.width(14.dp))
+                                        Text(
+                                            text = stringResource(id = R.string.app_name),
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
                                     }
                                 },
                                 scrollBehavior = scrollBehavior,
@@ -363,10 +378,13 @@ fun ArticleListPage(
                             )
                         },
                         floatingActionButton = {
+                            // Fading and scaling, as the overlay's does. A
+                            // button that fades in at full size reads as having
+                            // been there all along and missed.
                             AnimatedVisibility(
                                 visible = showFAB,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut(),
                             ) {
                                 FloatingActionButton(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
