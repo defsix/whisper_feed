@@ -52,6 +52,15 @@ import com.saulhdev.feeder.ui.components.dialog.BaseDialog
 import com.saulhdev.feeder.ui.components.dialog.StringSelectionPrefDialogUI
 import androidx.compose.runtime.DisposableEffect
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.Row
+import com.saulhdev.feeder.NeoApp
+import com.saulhdev.feeder.manager.sync.SyncRestClient
+import com.saulhdev.feeder.ui.components.OutlinedActionButton
+import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
+import com.saulhdev.feeder.ui.icons.phosphor.Power
+import kotlinx.coroutines.launch
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import org.koin.compose.koinInject
 
@@ -61,6 +70,8 @@ fun PreferencesPage(
     prefs: FeedPreferences = koinInject(),
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val syncClient: SyncRestClient = koinInject()
     val title = stringResource(id = R.string.title_settings)
     // The row acts on the feed, which lives in a view model this screen does
     // not otherwise touch; see FeedPreferences.markEverythingRead.
@@ -85,7 +96,6 @@ fun PreferencesPage(
         prefs.learned,
         prefs.showTour,
         prefs.launcherSetup,
-        prefs.starterSources,
         prefs.readVisibility,
         prefs.volumeKeyScroll,
     )
@@ -103,6 +113,12 @@ fun PreferencesPage(
         prefs.appFont,
         prefs.dynamicColor,
         prefs.overlayTransparency,
+    )
+    // Both ways of getting a feed into the app, together, at the top. Data
+    // sources was previously only in the feed's overflow menu.
+    val sourcePrefs = listOf(
+        prefs.sources,
+        prefs.starterSources,
     )
     val syncPrefs = listOf(
         prefs.backupFolder,
@@ -144,6 +160,37 @@ fun PreferencesPage(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Reload and Restart, which used to be in the feed's overflow
+            // menu. They are actions rather than settings, so they are buttons
+            // at the top rather than rows in a group pretending to be
+            // preferences.
+            item(key = "actions") {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    OutlinedActionButton(
+                        text = stringResource(R.string.action_reload),
+                        icon = Phosphor.ArrowCounterClockwise,
+                        modifier = Modifier.weight(1f),
+                        onClick = { scope.launch { syncClient.syncAllFeeds() } },
+                    )
+                    OutlinedActionButton(
+                        text = stringResource(R.string.action_restart),
+                        icon = Phosphor.Power,
+                        modifier = Modifier.weight(1f),
+                        onClick = { NeoApp.instance?.restart(false) },
+                    )
+                }
+            }
+
+            item(key = R.string.title_sources) {
+                PreferenceGroup(
+                    stringResource(id = R.string.title_sources),
+                    prefs = sourcePrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
             item(key = R.string.title_service) {
                 PreferenceGroup(
                     stringResource(id = R.string.title_service),

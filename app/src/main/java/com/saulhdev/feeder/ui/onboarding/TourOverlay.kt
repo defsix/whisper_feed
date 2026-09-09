@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +38,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableIntStateOf
+import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -220,13 +228,40 @@ private fun TourTooltip(
     onNext: () -> Unit,
 ) {
     val density = LocalDensity.current
-    // Measured rather than guessed at: the placement below depends on the
-    // card's height, and the text is translated into fifteen languages with
-    // fifteen different heights.
-    var height by remember { mutableStateOf(0) }
+    // Measured rather than guessed at: the placement depends on the card's
+    // height, and the text is translated into fifteen languages with fifteen
+    // different heights.
+    var height by remember { mutableIntStateOf(0) }
     val gap = GAP_DP * density.density
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The status bar, the camera cutout, and the gesture bar. The card is
+    // positioned in root coordinates so it can be compared against the hole,
+    // which means these have to be subtracted by hand rather than by a
+    // windowInsetsPadding that would move the origin out from under it.
+    val insets = WindowInsets.safeDrawing
+    val topLimit = insets.getTop(density).toFloat()
+    val bottomInset = insets.getBottom(density).toFloat()
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenHeight = constraints.maxHeight.toFloat()
+        val bottomLimit = (screenHeight - bottomInset - height).coerceAtLeast(topLimit)
+
+        // Below the target, above it when there is no room below, and at the
+        // foot of the screen when the target is too tall for either.
+        //
+        // The comparison used to be written inside a graphicsLayer block,
+        // where `size` is the card's own size rather than the screen's — so
+        // "does it fit below?" compared the card against itself, always failed,
+        // and fell through to a fallback that worked out to zero. The card sat
+        // at the very top of the display on every step, under the status bar
+        // and the camera cutout, covering the control it was describing.
+        val target = when {
+            hole.bottom + gap + height <= screenHeight - bottomInset -> hole.bottom + gap
+            hole.top - gap - height >= topLimit -> hole.top - gap - height
+            else -> bottomLimit
+        }
+        val y = target.coerceIn(topLimit, bottomLimit)
+
         Surface(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -235,19 +270,13 @@ private fun TourTooltip(
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
+                .offset { IntOffset(0, y.roundToInt()) }
                 .onSizeChanged { height = it.height }
-                .graphicsLayer {
-                    val below = hole.bottom + gap
-                    val above = hole.top - gap - height
-                    translationY = when {
-                        below + height <= size.height -> below
-                        above >= 0f -> above
-                        // Neither fits: the target is most of the screen. The
-                        // foot of it is the least bad place, and the lit hole
-                        // is still visible above the card.
-                        else -> (size.height - height - gap).coerceAtLeast(0f)
-                    }
-                }
+                // Nothing to show until it has been measured once: drawing it
+                // at a position worked out from a height of zero would put it
+                // in the wrong place for exactly one frame, which reads as a
+                // flicker every time a step changes.
+                .alpha(if (height == 0) 0f else 1f)
                 .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
             Column(
@@ -334,7 +363,15 @@ private const val FIRST_TARGET_WAIT_MS = 1_000L
 /** How often to look while waiting for that first one. */
 private const val TICK_MS = 16L
 private const val FADE_MS = 200
-private const val SCRIM_ALPHA = 0.78f
+/**
+ * How dark the screen goes behind the spotlight.
+ *
+ * It was 0.78, which buried the feed so completely that the tour looked like
+ * it was describing a black rectangle. The point is to say "look here", not to
+ * hide everything else — the reader should still recognise the screen they are
+ * being shown around.
+ */
+private const val SCRIM_ALPHA = 0.55f
 private const val PADDING_PX = 6f
 private const val HOLE_RADIUS_DP = 16f
 private const val GAP_DP = 12f

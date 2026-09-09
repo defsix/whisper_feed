@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.rememberNavController
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
-import com.saulhdev.feeder.ui.components.OverflowMenu
+import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.components.RoundButton
 import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.overlay.articlePlaceholder
@@ -42,7 +41,6 @@ import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.WithBidiDeterminedLayoutDirection
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowSquareOut
-import com.saulhdev.feeder.ui.icons.phosphor.BookOpenUser
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.ui.navigation.Routes
 import com.saulhdev.feeder.ui.theme.LinkTextStyle
@@ -175,34 +173,15 @@ fun ArticlePage(
                 saved = state?.article?.bookmarked ?: false,
                 onSavedChange = { viewModel.bookmarkArticle(articleId, it) },
             )
-            OverflowMenu {
-                DropdownMenuItem(
-                    leadingIcon = {
-                        Icon(
-                            Phosphor.ShareNetwork,
-                            contentDescription = stringResource(id = R.string.share),
-                        )
-                    },
-                    onClick = {
-                        hideMenu()
-                        context.shareIntent(currentUrl, title)
-                    },
-                    text = { Text(text = stringResource(id = R.string.share)) }
-                )
-                DropdownMenuItem(
-                    leadingIcon = {
-                        Icon(
-                            Phosphor.BookOpenUser,
-                            contentDescription = stringResource(id = R.string.action_open_smry),
-                        )
-                    },
-                    onClick = {
-                        hideMenu()
-                        context.launchView("https://www.smry.ai/$currentUrl")
-                    },
-                    text = { Text(text = stringResource(id = R.string.action_open_smry)) }
-                )
-            }
+            // Share, as a button rather than the first item of a menu. The
+            // menu held two things and the second was a third-party summary
+            // service nobody here uses, so it existed to hide one action
+            // behind two taps.
+            HeaderAction(
+                icon = Phosphor.ShareNetwork,
+                description = stringResource(id = R.string.share),
+                onClick = { context.shareIntent(currentUrl, title) },
+            )
         }
     ) { paddingValues ->
         SelectionContainer {

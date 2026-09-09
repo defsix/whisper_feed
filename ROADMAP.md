@@ -1250,6 +1250,34 @@ Still to do: nothing on this section. The Lawnchair pane became a settings
 screen instead, for the reason above.
 ---
 
+### 16. The built-in browser, made to match
+
+The reader and the browser are two screens showing the same kind of thing, and
+at the moment they do not look related. Somebody who taps an article and then
+taps through to the site should not feel the app hand them over to something
+else.
+
+- **The same margins as the reader.** `ComposeWebView` sets its own padding and
+  the article page sets a different one, so the text starts in a different
+  place on each. One measurement, used twice — and the spacing between blocks
+  should match too, not only the outer margin.
+- **Justified text.** The reader is left-aligned. Full justification suits a
+  column of body text and is what the reader expects from a page that is
+  pretending to be a page. Worth checking on narrow screens first: justified
+  text with no hyphenation opens rivers in a column this narrow, so this may
+  need `Layout.HYPHENATION_FREQUENCY_NORMAL` alongside it rather than on its
+  own.
+- **The source's favicon beside its name.** The feed's cards already fetch and
+  cache one per source; the reader shows the name alone. Same image, already on
+  disk, and it is the thing that makes a byline look like a byline.
+- ~~**Share instead of a menu.**~~ Done. The overflow held two items and the
+  second was a third-party summary service nobody uses, so the menu existed to
+  put one action behind two taps. It is a share button now.
+
+None of this is structural — it is a screen's worth of styling against another
+screen that already exists — which is why it sits here rather than in a
+milestone.
+
 ## Replacing Discover: what is actually possible
 
 The short version: **the minus-one page belongs to the launcher, not to

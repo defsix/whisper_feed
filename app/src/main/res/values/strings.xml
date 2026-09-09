@@ -276,6 +276,8 @@
     <string name="pref_mark_all_read_summary">Clears the unread count. The feed offers it back until you leave it.</string>
     <string name="pref_mark_read_on_scroll">Mark as read while scrolling</string>
     <string name="pref_mark_read_on_scroll_summary">How long an article has to be on screen before scrolling past it counts as reading it. Nothing is marked while you are still looking at it. A fling past a card gives it about half a second.</string>
+    <string name="mark_read_off">Off</string>
+    <string name="mark_read_seconds_short">%1$.1fs</string>
     <string name="mark_read_never">Never — only when opened</string>
     <string name="mark_read_seconds">After %1$.1f seconds on screen, once scrolled past</string>
     <string name="pref_read_visibility">Articles you have read</string>
@@ -344,7 +346,6 @@
     <string name="disabled">Disabled</string>
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
-    <string name="action_open_smry">Open in SMRY</string>
 
     <string name="add_mastodon_account">Add Mastodon account</string>
     <string name="mastodon_instance_hint">Instance (e.g. mastodon.social)</string>
@@ -389,7 +390,7 @@
     <string name="tour_filter_title">Sort and filter</string>
     <string name="tour_filter_body">Change the order, mute a source, or hide what you have already read.</string>
     <string name="tour_overflow_title">Settings</string>
-    <string name="tour_overflow_body">Layout, what gets fetched in full, and what Whisper has learned about your reading.</string>
+    <string name="tour_overflow_body">Your sources, the layout, what gets fetched in full, and what Whisper has learned about your reading. Reload and restart are at the top.</string>
     <string name="pref_show_tour">Show the tour again</string>
     <string name="pref_show_tour_queued">The tour will start when you go back to your feed.</string>
     <string name="pref_show_tour_summary">Walk through the feed\'s controls</string>
@@ -422,6 +423,7 @@
     <string name="starter_none">Skip — I\'ll add my own</string>
     <string name="starter_added">%1$d sources added</string>
     <string name="starter_all_added">You are already subscribed to all of these.</string>
+    <string name="pref_sources_summary">The feeds you follow, and their categories</string>
     <string name="pref_starter_sources">Suggested sources</string>
     <string name="pref_starter_sources_summary">A short list to add to what you already follow</string>
 

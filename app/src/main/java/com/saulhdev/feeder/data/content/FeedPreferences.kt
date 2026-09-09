@@ -448,6 +448,23 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = false,
     )
 
+    /**
+     * The feeds the reader has subscribed to.
+     *
+     * It used to be reachable only from a dropdown behind the feed's overflow
+     * button, which is a strange place for the second most important screen in
+     * the app — and a place nobody looks for it, because a three-dot menu next
+     * to a title usually means "settings".
+     */
+    var sources = StringPref(
+        titleId = R.string.title_sources,
+        summaryId = R.string.pref_sources_summary,
+        icon = Phosphor.Graph,
+        key = SOURCES_ROUTE,
+        dataStore = dataStore,
+        route = NavRoute.Sources
+    )
+
     /** The starter list, still reachable after onboarding. */
     var starterSources = StringPref(
         titleId = R.string.pref_starter_sources,
@@ -511,9 +528,14 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         // A list of five fixed options was both arbitrary and ungrammatical
         // at one of them. The honest shape for a number nobody knows the right
         // value of is the number itself.
+        // Short enough to sit in a quarter of the row. It used to be a whole
+        // sentence — "After 5.7 seconds on screen, once scrolled past" — which
+        // is a summary rather than a value, and it squeezed the track it was
+        // meant to be labelling down to nothing. The sentence is in the
+        // summary above, where a sentence belongs.
         specialOutputs = {
-            if (it < 0.25f) context.getString(R.string.mark_read_never)
-            else context.getString(R.string.mark_read_seconds, it)
+            if (it < 0.25f) context.getString(R.string.mark_read_off)
+            else context.getString(R.string.mark_read_seconds_short, it)
         }
     )
 
@@ -846,6 +868,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
         val STARTER_SOURCES = stringPreferencesKey("pref_starter_sources")
+        val SOURCES_ROUTE = stringPreferencesKey("pref_sources_route")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

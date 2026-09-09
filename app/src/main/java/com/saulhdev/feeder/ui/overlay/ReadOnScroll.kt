@@ -98,22 +98,30 @@ fun MarkReadWhileScrolling(
     if (thresholdMs <= 0L) return
 
     LaunchedEffect(thresholdMs, isGrid, articles) {
+        // Looked up by the key the list was given rather than by layout
+        // position. The two are not the same and were being treated as such:
+        // a sticky held article occupies a slot of its own, and so does the
+        // empty one that releases it, so from the release onwards every layout
+        // index pointed at the article before the one actually on screen — and
+        // any header added above the feed would have shifted the lot.
+        val position = articles.withIndex().associate { (i, item) -> item.id to i }
+        val byId = articles.associateBy { it.id }
+
         val dwell = mutableMapOf<String, Long>()
         // Articles that have earned their dwell and are now only waiting to be
-        // scrolled past. Held by index as well as id: deciding whether one
-        // left through the top or the bottom is the whole point, and once it
-        // is gone from the layout there is nothing left to ask.
+        // scrolled past, held with their position in the feed: deciding whether
+        // one left through the top or the bottom is the whole point, and once
+        // it is gone from the layout there is nothing left to ask.
         val ready = mutableMapOf<String, Int>()
 
         while (true) {
             delay(TICK_MS)
-            val visible = visibleEnoughIndices(isGrid, listState, gridState)
-            val onScreen = visibleIndices(isGrid, listState, gridState)
+            val visible = visibleEnoughKeys(isGrid, listState, gridState)
+            val onScreen = visibleKeys(isGrid, listState, gridState)
             val ids = HashSet<String>(visible.size)
 
-            visible.forEach { index ->
-                val item = articles.getOrNull(index) ?: return@forEach
-                val id = item.id
+            visible.forEach { id ->
+                val item = byId[id] ?: return@forEach
                 ids += id
                 if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
 
@@ -123,14 +131,18 @@ fun MarkReadWhileScrolling(
                     // Not marked yet. It has been looked at long enough to
                     // count, and now has to be left behind before it counts.
                     dwell -= id
-                    ready[id] = index
+                    ready[id] = position[id] ?: return@forEach
                 }
             }
 
-            passedIds(ready, onScreen.minOrNull()).forEach { id ->
-                val index = ready.remove(id) ?: return@forEach
+            // Anything above everything still on screen has been passed.
+            // Non-article keys — a sticky header, the glance row, the chips —
+            // simply have no position and drop out of the comparison.
+            val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
+            passedIds(ready, topmost).forEach { id ->
+                ready -= id
                 marked += id
-                articles.getOrNull(index)?.takeIf { it.id == id }?.let(onRead)
+                byId[id]?.let(onRead)
             }
 
             // An article scrolled away before the threshold starts again next
@@ -145,34 +157,17 @@ fun MarkReadWhileScrolling(
 }
 
 /**
- * Every index with any part of itself on screen.
- *
- * Separate from [visibleEnoughIndices], which answers "has this been looked
- * at". This answers "is this still there at all", and a card sliding out with
- * a sliver showing has not been passed yet.
- */
-private fun visibleIndices(
-    isGrid: Boolean,
-    listState: LazyListState,
-    gridState: LazyStaggeredGridState,
-): List<Int> = if (isGrid) {
-    gridState.layoutInfo.visibleItemsInfo.map { it.index }
-} else {
-    listState.layoutInfo.visibleItemsInfo.map { it.index }
-}
-
-/**
- * The indices currently showing at least [VISIBLE_ENOUGH] of themselves.
+ * The keys of everything showing at least [VISIBLE_ENOUGH] of itself.
  *
  * The two containers report their layout through different types with the same
  * shape, and neither shares an interface, so the arithmetic is written twice
  * rather than hidden behind a wrapper that would be longer than both.
  */
-private fun visibleEnoughIndices(
+private fun visibleEnoughKeys(
     isGrid: Boolean,
     listState: LazyListState,
     gridState: LazyStaggeredGridState,
-): List<Int> = if (isGrid) {
+): List<String> = if (isGrid) {
     val info = gridState.layoutInfo
     info.visibleItemsInfo.filter { item ->
         val height = item.size.height
@@ -182,7 +177,7 @@ private fun visibleEnoughIndices(
             viewportStart = info.viewportStartOffset,
             viewportEnd = info.viewportEndOffset,
         ) >= VISIBLE_ENOUGH
-    }.map { it.index }
+    }.mapNotNull { it.key as? String }
 } else {
     val info = listState.layoutInfo
     info.visibleItemsInfo.filter { item ->
@@ -192,7 +187,24 @@ private fun visibleEnoughIndices(
             viewportStart = info.viewportStartOffset,
             viewportEnd = info.viewportEndOffset,
         ) >= VISIBLE_ENOUGH
-    }.map { it.index }
+    }.mapNotNull { it.key as? String }
+}
+
+/**
+ * The keys of everything with any part of itself on screen.
+ *
+ * Separate from [visibleEnoughKeys], which answers "has this been looked at".
+ * This answers "is this still there at all", and a card sliding out with a
+ * sliver showing has not been passed yet.
+ */
+private fun visibleKeys(
+    isGrid: Boolean,
+    listState: LazyListState,
+    gridState: LazyStaggeredGridState,
+): List<String> = if (isGrid) {
+    gridState.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }
+} else {
+    listState.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }
 }
 
 private fun visibleFraction(

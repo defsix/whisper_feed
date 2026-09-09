@@ -326,76 +326,18 @@ fun ArticleListPage(
                                     )
                                     }
 
-                                    Box(modifier = Modifier.tourTarget(TourTarget.Overflow)) {
-                                    OverflowMenu {
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(text = stringResource(id = R.string.title_sources))
-                                            },
-                                            onClick = {
-                                                hideMenu()
-                                                navController.navigate(NavRoute.Sources)
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Phosphor.Graph,
-                                                    contentDescription = null,
-                                                )
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(text = stringResource(id = R.string.title_settings))
-                                            },
-                                            onClick = {
-                                                hideMenu()
-                                                navController.navigate(NavRoute.Settings)
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Phosphor.GearSix,
-                                                    contentDescription = null,
-                                                )
-                                            }
-                                        )
-                                        HorizontalDivider()
-
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(text = stringResource(id = R.string.action_reload))
-                                            },
-                                            onClick = {
-                                                hideMenu()
-                                                scope.launch {
-                                                    syncClient.syncAllFeeds()
-                                                }
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Phosphor.ArrowCounterClockwise,
-                                                    contentDescription = null,
-                                                )
-                                            }
-                                        )
-                                        HorizontalDivider()
-
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(text = stringResource(id = R.string.action_restart))
-                                            },
-                                            onClick = {
-                                                hideMenu()
-                                                NeoApp.instance!!.restart(false)
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Phosphor.Power,
-                                                    contentDescription = null,
-                                                )
-                                            }
-                                        )
-                                    }
-                                    }
+                                    // Straight to Settings rather than a menu
+                                    // of four. Three of the four were things
+                                    // that belong in Settings and one was
+                                    // Settings itself, so the menu existed to
+                                    // ask which kind of settings the reader
+                                    // wanted — a question with one answer.
+                                    HeaderAction(
+                                        icon = Phosphor.GearSix,
+                                        description = stringResource(R.string.title_settings),
+                                        onClick = { navController.navigate(NavRoute.Settings) },
+                                        modifier = Modifier.tourTarget(TourTarget.Overflow),
+                                    )
                                 }
                             )
                         },
@@ -441,28 +383,44 @@ fun ArticleListPage(
                                 .collectAsState(initial = emptySet())
 
                             val glance by glanceHolder.state.collectAsState()
-                            GlanceRow(
-                                state = glance,
-                                onSetLocation = { navController.navigate(NavRoute.Settings) },
-                                modifier = Modifier.tourTarget(TourTarget.Glance),
-                            )
-
-                            CategoryChipRow(
-                                modifier = Modifier.tourTarget(TourTarget.Chips),
-                                categories = categories,
-                                selected = selectedCategories,
-                                onSelectedChange = { picked ->
-                                    scope.launch(Dispatchers.IO) {
-                                        prefs.categoryFilter.setValue(picked)
-                                    }
-                                },
-                            )
+                            // Scrolled with the feed rather than fixed above
+                            // it, the way the launcher's own page behaves: on a
+                            // phone these two take a third of the screen, and a
+                            // third of the screen that never moves is a third
+                            // of the screen not showing articles.
+                            //
+                            // They are drawn inside the scrolling container,
+                            // which is why read-on-scroll now matches articles
+                            // by key rather than by layout position — with
+                            // headers in the list those two stopped agreeing.
+                            val header: @Composable () -> Unit = {
+                                Column {
+                                    GlanceRow(
+                                        state = glance,
+                                        onSetLocation = {
+                                            navController.navigate(NavRoute.Settings)
+                                        },
+                                        modifier = Modifier.tourTarget(TourTarget.Glance),
+                                    )
+                                    CategoryChipRow(
+                                        modifier = Modifier.tourTarget(TourTarget.Chips),
+                                        categories = categories,
+                                        selected = selectedCategories,
+                                        onSelectedChange = { picked ->
+                                            scope.launch(Dispatchers.IO) {
+                                                prefs.categoryFilter.setValue(picked)
+                                            }
+                                        },
+                                    )
+                                }
+                            }
 
                             when {
                                 showBookmarks -> LazyColumn(
                                     state = listState,
                                     contentPadding = PaddingValues(vertical = 4.dp)
                                 ) {
+                                    item(key = FEED_HEADER_KEY) { header() }
                                     itemsIndexed(
                                         bookmarked.bookmarkedArticles,
                                         key = { _, item -> item.id },
@@ -560,6 +518,9 @@ fun ArticleListPage(
                                     ) {
                                         SearchEmptyState(searchQuery)
                                     } else if (state.articles.isEmpty()) {
+                                        // Nothing to scroll, so the header has
+                                        // nowhere to scroll away to.
+                                        header()
                                         // Which of the four it is decides what
                                         // the reader should do about it, so the
                                         // reasons are told apart rather than
@@ -581,6 +542,10 @@ fun ArticleListPage(
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             gridState = gridState,
                                             content = {
+                                                item(
+                                                    key = FEED_HEADER_KEY,
+                                                    span = StaggeredGridItemSpan.FullLine,
+                                                ) { header() }
                                                 itemsIndexed(
                                                     state.articles,
                                                     key = { _, item -> item.id },
@@ -607,6 +572,7 @@ fun ArticleListPage(
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             listState = listState,
                                             content = {
+                                                item(key = FEED_HEADER_KEY) { header() }
                                                 heldFeed(state.articles, held) { index, item ->
                                                     article(
                                                         index,
@@ -686,3 +652,12 @@ private const val UNDO_SETTLE_MS = 30_000L
  * failed to notice.
  */
 private const val UNDO_MIN_COUNT = 5
+
+/**
+ * The key the glance row and chips travel under.
+ *
+ * A key rather than a bare item because read-on-scroll reads keys now: it
+ * ignores anything that is not an article, and it can only do that if the
+ * header has a name to be ignored by.
+ */
+private const val FEED_HEADER_KEY = "feed-header"

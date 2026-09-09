@@ -1,6 +1,8 @@
 package com.saulhdev.feeder.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.width
@@ -46,11 +48,24 @@ fun SeekBarPreference(
             )
         },
         bottomWidget = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Three quarters slider, one quarter value, and the value centred
+            // in its quarter rather than pushed against either edge. Material's
+            // slider puts the value in a fixed column beside the track so the
+            // track does not change length as the number does — a slider that
+            // grows and shrinks while being dragged is very hard to aim.
+            //
+            // It used to be weight(1f) against a text with a minimum width and
+            // no maximum, so a long value simply ate the slider: at its worst
+            // the track was a few pixels wide and the value wrapped onto two
+            // lines underneath it.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Slider(
                     modifier = Modifier
                         .requiredHeight(24.dp)
-                        .weight(1f),
+                        .weight(SLIDER_WIDTH),
                     value = currentValue,
                     valueRange = pref.minValue..pref.maxValue,
                     steps = pref.steps,
@@ -61,21 +76,32 @@ fun SeekBarPreference(
                     },
                     enabled = isEnabled
                 )
-                Spacer(Modifier.width(12.dp))
-                // Every FloatPref already carried a specialOutputs lambda saying
-                // how to write its value down, and nothing read it: the sliders
-                // were a bare track with no number anywhere, so "somewhere near
-                // the left" was the only reading available. The value is the
-                // whole point of a slider whose units are not obvious.
-                Text(
-                    text = pref.specialOutputs(currentValue),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isEnabled) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.widthIn(min = 56.dp),
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.weight(1f - SLIDER_WIDTH),
+                ) {
+                    // Every FloatPref already carried a specialOutputs lambda
+                    // saying how to write its value down, and nothing read it:
+                    // the sliders were a bare track with no number anywhere.
+                    Text(
+                        text = pref.specialOutputs(currentValue),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isEnabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     )
 }
+
+/**
+ * How much of the row the track gets.
+ *
+ * The value needs enough room for the longest thing it will ever say and no
+ * more; everything left over is worth giving to the track, because the track is
+ * the part being aimed at.
+ */
+private const val SLIDER_WIDTH = 0.75f
