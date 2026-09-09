@@ -56,6 +56,31 @@ android {
                 "proguard-rules.pro"
             )
         }
+        /**
+         * The shippable build, made installable for testing.
+         *
+         * Minified and resource-shrunk exactly as release is — so it exercises
+         * R8, which is the only thing that can break the reflective Moshi and
+         * Google Reader models, and which a debug build never runs — but signed
+         * with the debug key and carrying the same `.dev` application id as
+         * debug, so it installs straight over a debug build already on the
+         * phone instead of arriving as a second app.
+         *
+         * A debug APK is 31 MB of unminified dex; this is about 9. That is the
+         * difference between a build that can be handed over and one that
+         * cannot.
+         *
+         * Not a release: the debug signing key is public and every phone
+         * already trusts it. Never distribute one of these.
+         */
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".dev"
+            signingConfig = signingConfigs.getByName("debug")
+            // The google-gsa module has only debug and release; without this
+            // Gradle cannot decide which of them a "preview" app should use.
+            matchingFallbacks += listOf("release")
+        }
         all {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
