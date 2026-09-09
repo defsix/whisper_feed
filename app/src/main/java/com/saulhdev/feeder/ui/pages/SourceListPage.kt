@@ -69,6 +69,8 @@ import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowUp
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
+import com.saulhdev.feeder.ui.icons.phosphor.SortAscending
+import com.saulhdev.feeder.ui.icons.phosphor.SortDescending
 import com.saulhdev.feeder.ui.navigation.LocalNavController
 import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
@@ -132,6 +134,7 @@ fun SourceListPage(
     val selection by viewModel.selection.collectAsState()
     val query by viewModel.query.collectAsState()
     val sort by viewModel.sort.collectAsState()
+    val ascending by viewModel.ascending.collectAsState()
     var tagAction by remember { mutableStateOf<TagAction?>(null) }
 
     // "Not updating" needs a fixed instant to compare against. Computed once
@@ -276,20 +279,48 @@ fun SourceListPage(
                                 text = { Text(stringResource(R.string.manage_categories)) },
                             )
                             HorizontalDivider()
+                            // Only the chosen row carries an arrow, and the
+                            // arrow is the direction rather than a tick. Every
+                            // row used to show a sort glyph whether or not it
+                            // was in use, which made four identical-looking
+                            // icons and told the reader nothing about which
+                            // order they were actually in.
                             SourceSort.entries.forEach { option ->
+                                val chosen = option == sort
                                 DropdownMenuItem(
                                     leadingIcon = {
-                                        Icon(
-                                            imageVector = if (option == sort) Phosphor.Check
-                                            else Phosphor.Sort,
-                                            contentDescription = null,
-                                        )
+                                        if (chosen) {
+                                            Icon(
+                                                imageVector = if (ascending) {
+                                                    Phosphor.SortAscending
+                                                } else {
+                                                    Phosphor.SortDescending
+                                                },
+                                                contentDescription = stringResource(
+                                                    if (ascending) R.string.sort_ascending
+                                                    else R.string.sort_descending
+                                                ),
+                                            )
+                                        }
                                     },
+                                    // Left open on the chosen row: tapping it
+                                    // reverses the order, and closing the menu
+                                    // would hide the arrow that just changed —
+                                    // the only feedback the action has.
                                     onClick = {
-                                        hideMenu()
+                                        if (!chosen) hideMenu()
                                         viewModel.setSort(option)
                                     },
-                                    text = { Text(stringResource(option.labelId)) },
+                                    text = {
+                                        Text(
+                                            text = stringResource(option.labelId),
+                                            color = if (chosen) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                        )
+                                    },
                                 )
                             }
                             HorizontalDivider()

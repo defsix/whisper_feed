@@ -27,8 +27,7 @@
     <string name="sources_select_all">Select all</string>
     <string name="sort_by_title">Name</string>
     <string name="sort_by_category">Category</string>
-    <string name="sort_by_last_sync">Least recently updated</string>
-    <string name="sort_by_added">Recently added</string>
+    <string name="sort_by_added">Added</string>
     <string name="sources_add_tag">Add category</string>
     <string name="sources_remove_tag">Remove category</string>
     <string name="sources_replace_tags">Replace categories</string>

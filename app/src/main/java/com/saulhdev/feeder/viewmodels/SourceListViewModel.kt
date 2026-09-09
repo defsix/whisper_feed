@@ -33,6 +33,18 @@ class SourceListViewModel(
     val sort: StateFlow<SourceSort> = _sort.asStateFlow()
 
     /**
+     * Which way round the chosen order runs.
+     *
+     * Every sort starts ascending and the same row reverses it, which is the
+     * pattern Material uses and the one a table header has used for thirty
+     * years. The alternative was a separate list of directions, or the four
+     * options this menu used to carry where two of them were one field in two
+     * directions with different names.
+     */
+    private val _ascending = MutableStateFlow(true)
+    val ascending: StateFlow<Boolean> = _ascending.asStateFlow()
+
+    /**
      * Ids picked out for a bulk action.
      *
      * Held here rather than in the screen so that a rotation, or the list being
@@ -48,9 +60,12 @@ class SourceListViewModel(
         // TODO move the getter eventually to SourcesRepository
         articleRepo.getBookmarkedFeedItems(),
         _query,
-        _sort,
-    ) { allSources, allTags, bookmarked, query, sort ->
-        val matching = allSources.filter { it.matches(query) }.sortedWith(sort.comparator)
+        combine(_sort, _ascending) { sort, ascending -> sort to ascending },
+    ) { allSources, allTags, bookmarked, query, order ->
+        val (sort, ascending) = order
+        val comparator =
+            if (ascending) sort.comparator else sort.comparator.reversed()
+        val matching = allSources.filter { it.matches(query) }.sortedWith(comparator)
         val (enabledSources, disabledSources) = matching.partition { it.isEnabled }
         SourceListState(
             allSources = allSources,
@@ -81,8 +96,21 @@ class SourceListViewModel(
         _query.value = value
     }
 
+    /**
+     * Picks an order, or reverses the one already picked.
+     *
+     * Choosing the row that is already chosen is not a no-op — it is the only
+     * way to ask for the other direction, and it is what tapping a sorted
+     * column header does everywhere else. Choosing a different one always
+     * starts ascending rather than inheriting the last direction, so the same
+     * tap always produces the same result.
+     */
     fun setSort(value: SourceSort) {
-        _sort.value = value
+        if (_sort.value == value) _ascending.value = !_ascending.value
+        else {
+            _sort.value = value
+            _ascending.value = true
+        }
     }
 
     /* Selection */
@@ -198,7 +226,17 @@ data class SourceListState(
     val allTags: List<String> = emptyList(),
 )
 
-/** How the source list is ordered. */
+/**
+ * How the source list is ordered.
+ *
+ * Three fields, each sorted either way, rather than four entries where two
+ * were the same field in two directions under different names — "Least
+ * recently updated" and "Recently added" both named a direction in their
+ * label, which left no way to ask for the other one and made the menu look
+ * like it offered four orders when it offered two and a half.
+ *
+ * Each comparator here is the *ascending* one. The view model reverses it.
+ */
 enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Feed>) {
     Title(R.string.sort_by_title, compareBy(String.CASE_INSENSITIVE_ORDER, Feed::title)),
     Category(
@@ -207,27 +245,18 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
     ),
 
     /**
-     * Least recently synced first — which is to say, the ones that look broken
-     * at the top. A source that has failed for days is otherwise
-     * indistinguishable from one that is simply quiet.
-     */
-    LastSync(R.string.sort_by_last_sync, compareBy { it.lastSync.toEpochMilliseconds() }),
-
-    /**
-     * Most recently added first.
+     * Oldest first ascending, newest first descending.
      *
      * There is no "added" column and none is needed: `Feeds.id` is
-     * autoGenerate, so id order is insertion order, and descending id is
-     * newest-first — which is what someone sorting this way is looking for,
-     * the thing they just subscribed to.
+     * autoGenerate, so id order is insertion order.
      *
      * Two honest caveats. An OPML import arrives in file order, so a hundred
      * sources imported at once are "added" in whatever order the file listed
      * them rather than all at the same moment. And undoing a removal
-     * re-inserts under a fresh id, so a restored source moves to the top —
-     * the old id is gone and nothing else refers to it.
+     * re-inserts under a fresh id, so a restored source counts as newly added
+     * — the old id is gone and nothing else refers to it.
      */
-    Added(R.string.sort_by_added, compareByDescending(Feed::id)),
+    Added(R.string.sort_by_added, compareBy(Feed::id)),
 }
 
 /**
