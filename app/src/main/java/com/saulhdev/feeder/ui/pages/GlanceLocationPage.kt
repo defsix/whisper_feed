@@ -87,7 +87,10 @@ fun GlanceLocationPage(
         searching = false
     }
 
-    ViewWithActionBar(title = stringResource(R.string.pref_glance_place)) { padding ->
+    ViewWithActionBar(
+        title = stringResource(R.string.pref_glance_place),
+        largeTitle = true,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)

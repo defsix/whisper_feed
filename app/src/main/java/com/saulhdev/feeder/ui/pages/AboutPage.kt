@@ -85,6 +85,7 @@ fun AboutPage() {
     val title = stringResource(id = R.string.title_about)
     ViewWithActionBar(
         title = title,
+        largeTitle = true,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -262,8 +263,8 @@ fun LicensePage() {
         LazyColumn(
             modifier = Modifier
                 .padding(
-                    start = 8.dp,
-                    end = 8.dp,
+                    start = 16.dp,
+                    end = 16.dp,
                     top = 32.dp,
                     bottom = paddingValues.calculateBottomPadding()
                 )

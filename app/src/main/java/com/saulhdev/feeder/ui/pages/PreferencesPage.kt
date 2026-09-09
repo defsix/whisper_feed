@@ -56,9 +56,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Row
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.manager.sync.SyncRestClient
+import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
+import com.saulhdev.feeder.ui.icons.phosphor.GearSix
 import com.saulhdev.feeder.ui.icons.phosphor.Power
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
@@ -81,24 +83,36 @@ fun PreferencesPage(
         onDispose { FeedPreferences.markEverythingRead = null }
     }
 
-    val servicePrefs = listOf(
-        prefs.itemsPerFeed,
+    // Grouped by what the reader is trying to do, because one list of sixteen
+    // rows called "Service" is a list nobody reads to the end of. Every group
+    // below fits on a screen and can be named in one word.
+
+    /** How much is fetched, how often, and over what. */
+    val fetchingPrefs = listOf(
         prefs.syncFrequency,
         prefs.syncRange,
+        prefs.itemsPerFeed,
         prefs.syncOnlyOnWifi,
-        prefs.articleOpenMode,
         prefs.fullTextForAllFeeds,
-        prefs.removeDuplicates,
+    )
+
+    /** What appears in the feed and in what order. */
+    val feedPrefs = listOf(
         prefs.breakingNews,
         prefs.stickyTop,
+        prefs.removeDuplicates,
+        prefs.readVisibility,
+        prefs.learned,
+    )
+
+    /** What happens while reading it. */
+    val readingPrefs = listOf(
+        prefs.articleOpenMode,
         prefs.markReadOnScroll,
         prefs.markAllRead,
-        prefs.learned,
-        prefs.showTour,
-        prefs.launcherSetup,
-        prefs.readVisibility,
         prefs.volumeKeyScroll,
     )
+
     val filterPrefs = listOf(
         prefs.blockedWords,
     )
@@ -114,8 +128,6 @@ fun PreferencesPage(
         prefs.dynamicColor,
         prefs.overlayTransparency,
     )
-    // Both ways of getting a feed into the app, together, at the top. Data
-    // sources was previously only in the feed's overflow menu.
     val sourcePrefs = listOf(
         prefs.sources,
         prefs.starterSources,
@@ -124,10 +136,14 @@ fun PreferencesPage(
         prefs.backupFolder,
         prefs.account,
     )
-    val debugPrefs = listOf(
+
+    /** Everything that explains the app rather than changing it. */
+    val helpPrefs = listOf(
+        prefs.showTour,
+        prefs.launcherSetup,
+        prefs.about,
         prefs.reportProblem,
         prefs.exportDiagnostics,
-        prefs.about,
     )
 
     // Turning the global switch on should start downloading now, not at the
@@ -154,8 +170,8 @@ fun PreferencesPage(
         LazyColumn(
             modifier = Modifier
                 .padding(
-                    start = 8.dp,
-                    end = 8.dp,
+                    start = 16.dp,
+                    end = 16.dp,
                     top = paddingValues.calculateTopPadding(),
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -167,7 +183,7 @@ fun PreferencesPage(
             item(key = "actions") {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp),
                 ) {
                     OutlinedActionButton(
                         text = stringResource(R.string.action_reload),
@@ -191,17 +207,24 @@ fun PreferencesPage(
                     onPrefDialog = onPrefDialog
                 )
             }
-            item(key = R.string.title_service) {
+            item(key = R.string.pref_cat_fetching) {
                 PreferenceGroup(
-                    stringResource(id = R.string.title_service),
-                    prefs = servicePrefs,
+                    stringResource(id = R.string.pref_cat_fetching),
+                    prefs = fetchingPrefs,
                     onPrefDialog = onPrefDialog
                 )
             }
-            item(key = R.string.pref_account) {
+            item(key = R.string.pref_cat_feed) {
                 PreferenceGroup(
-                    stringResource(id = R.string.pref_account),
-                    prefs = syncPrefs,
+                    stringResource(id = R.string.pref_cat_feed),
+                    prefs = feedPrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
+            item(key = R.string.pref_cat_reading) {
+                PreferenceGroup(
+                    stringResource(id = R.string.pref_cat_reading),
+                    prefs = readingPrefs,
                     onPrefDialog = onPrefDialog
                 )
             }
@@ -228,11 +251,13 @@ fun PreferencesPage(
 
                 if (!Settings.canDrawOverlays(context)) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Card(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    Card {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = stringResource(R.string.draw_permission_required))
                             Spacer(modifier = Modifier.height(12.dp))
-                            Button(
+                            ActionButton(
+                                text = stringResource(R.string.go_to_settings),
+                                icon = Phosphor.GearSix,
                                 onClick = {
                                     context.startActivity(
                                         Intent(
@@ -240,18 +265,23 @@ fun PreferencesPage(
                                             Uri.parse("package:${context.packageName}")
                                         )
                                     )
-                                }
-                            ) {
-                                Text(text = stringResource(R.string.go_to_settings))
-                            }
+                                },
+                            )
                         }
                     }
                 }
             }
-            item(key = R.string.title_other) {
+            item(key = R.string.pref_account) {
                 PreferenceGroup(
-                    stringResource(id = R.string.title_other),
-                    prefs = debugPrefs,
+                    stringResource(id = R.string.pref_account),
+                    prefs = syncPrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
+            item(key = R.string.pref_cat_help) {
+                PreferenceGroup(
+                    stringResource(id = R.string.pref_cat_help),
+                    prefs = helpPrefs,
                     onPrefDialog = onPrefDialog
                 )
                 Spacer(modifier = Modifier.height(8.dp))

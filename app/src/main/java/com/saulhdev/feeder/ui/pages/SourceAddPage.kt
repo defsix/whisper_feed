@@ -60,6 +60,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
@@ -78,6 +79,7 @@ import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.navigation.LocalNavController
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.Check
+import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURLNoThrows
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SearchResult
@@ -105,6 +107,12 @@ fun SourceAddPage(
     // was already thinking about when they added it.
     val sourcesState by sourcesViewModel.state.collectAsState()
     val filed = remember { mutableStateMapOf<String, String>() }
+
+    // "Subscribed already" and "just subscribed" both read as Added, which
+    // meant searching for a feed you already follow looked exactly like
+    // successfully adding it. The search already knows the difference — it
+    // checks the database per candidate — so the screen only had to say it.
+    val addedNow = remember { mutableStateListOf<String>() }
 
     // Subscribing happens when a result is tapped. It used to happen when the
     // screen was *left*: every feed the search turned up was added, whether or
@@ -158,12 +166,14 @@ fun SourceAddPage(
                 onClick = { result ->
                     if (!result.alreadyAdded) {
                         sourcesViewModel.addFeed(result)
+                        addedNow += result.url
                         results = results.map {
                             if (it.url == result.url) it.copy(alreadyAdded = true) else it
                         }
                     }
                 },
                 allTags = sourcesState.allTags,
+                addedNow = addedNow,
                 filedAs = filed,
                 onFile = { result, tag ->
                     filed[result.url] = tag
@@ -184,6 +194,7 @@ fun AddFeedView(
     currentlySearching: Boolean,
     onClick: (SearchResult) -> Unit,
     allTags: List<String> = emptyList(),
+    addedNow: List<String> = emptyList(),
     filedAs: Map<String, String> = emptyMap(),
     onFile: (SearchResult, String) -> Unit = { _, _ -> },
 ) {
@@ -216,6 +227,7 @@ fun AddFeedView(
                 currentlySearching = currentlySearching,
                 onClick = onClick,
                 allTags = allTags,
+                addedNow = addedNow,
                 filedAs = filedAs,
                 onFile = onFile,
             )
@@ -302,6 +314,7 @@ fun SearchResult(
     currentlySearching: Boolean,
     onClick: (SearchResult) -> Unit,
     allTags: List<String> = emptyList(),
+    addedNow: List<String> = emptyList(),
     filedAs: Map<String, String> = emptyMap(),
     onFile: (SearchResult, String) -> Unit = { _, _ -> },
 ) {
@@ -323,6 +336,7 @@ fun SearchResult(
             url = result.url,
             description = result.description,
             alreadyAdded = result.alreadyAdded,
+            justAdded = result.url in addedNow,
             allTags = allTags,
             filedAs = filedAs[result.url],
             onFile = { onFile(result, it) },
@@ -355,6 +369,7 @@ fun SearchResultView(
     url: String,
     description: String,
     alreadyAdded: Boolean = false,
+    justAdded: Boolean = false,
     allTags: List<String> = emptyList(),
     filedAs: String? = null,
     onFile: (String) -> Unit = {},
@@ -385,16 +400,25 @@ fun SearchResultView(
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (alreadyAdded) {
+                    // A tick in the primary colour is the language of "that
+                    // worked". A feed the reader already had did not just
+                    // work — nothing happened — so it says so plainly and in
+                    // the quieter colour.
+                    val tint = if (justAdded) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                     Icon(
-                        imageVector = Phosphor.Check,
+                        imageVector = if (justAdded) Phosphor.Check else Phosphor.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = tint,
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        stringResource(R.string.already_subscribed),
+                        stringResource(
+                            if (justAdded) R.string.already_subscribed
+                            else R.string.feed_already_yours
+                        ),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = tint,
                     )
                 }
             }
@@ -415,7 +439,7 @@ fun SearchResultView(
             // the reader and the one thing they came here to do, and a feed
             // with no category is a perfectly good feed — this is an offer at
             // the moment it is easiest to accept, not a required field.
-            if (alreadyAdded) {
+            if (justAdded) {
                 CategoryPicker(
                     allTags = allTags,
                     chosen = filedAs,
