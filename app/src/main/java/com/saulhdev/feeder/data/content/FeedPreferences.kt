@@ -525,7 +525,11 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = 0f,
         minValue = 0f,
         maxValue = 10f,
-        steps = 20,
+        // Nine intermediate marks over nought to ten is ten intervals of
+        // exactly one second. It was twenty, which Compose reads as
+        // twenty-one intervals — 0.476s each — so the slider could not be set
+        // to a whole number of seconds and reported things like "6.2s".
+        steps = 9,
         // A list of five fixed options was both arbitrary and ungrammatical
         // at one of them. The honest shape for a number nobody knows the right
         // value of is the number itself.

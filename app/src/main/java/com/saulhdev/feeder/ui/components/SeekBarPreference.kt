@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.data.content.FloatPref
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeekBarPreference(
     modifier: Modifier = Modifier,
@@ -74,7 +77,20 @@ fun SeekBarPreference(
                         pref.setValue(currentValue)
                         onValueChange(currentValue)
                     },
-                    enabled = isEnabled
+                    enabled = isEnabled,
+                    // No tick marks. Material draws one per step, which was
+                    // never a deliberate difference between these two sliders
+                    // — the opacity one has a hundred steps, so its ticks are
+                    // too dense to resolve and it reads as a solid bar, while
+                    // ten steps read as a row of dots. Same control, same
+                    // look, whatever the range happens to be.
+                    track = { sliderState ->
+                        SliderDefaults.Track(
+                            sliderState = sliderState,
+                            enabled = isEnabled,
+                            drawTick = { _, _ -> },
+                        )
+                    },
                 )
                 Box(
                     contentAlignment = Alignment.Center,

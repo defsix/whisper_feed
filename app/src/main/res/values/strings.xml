@@ -68,7 +68,7 @@
     <string name="tomorrow">tomorrow</string>
     <string name="yesterday">yesterday</string>
     <string name="pref_cat_contact">Contacts</string>
-    <string name="about_team">Team Members</string>
+    <string name="about_team">Whisper is a fork of Neo Feed</string>
     <string name="about_channel">Channel</string>
     <string name="about_community">Community</string>
     <string name="about_community_telegram">Community on Telegram</string>
@@ -76,13 +76,14 @@
     <string name="about_developer" translatable="false">Saul Henriquez</string>
     <string name="about_developer2" translatable="false">Antonios Hazim</string>
     <string name="about_build_information">Build info</string>
-    <string name="author_role">Developer</string>
+    <string name="author_role">Neo Feed author</string>
     <string name="about_licenses">License</string>
     <string name="back_to_top">Back to Top</string>
     <string name="about_changelog">Changelog</string>
     <string name="about_open_source">Open Source Libraries</string>
     <string name="pref_tg">Telegram channel</string>
     <string name="about_source_code">Source code</string>
+    <string name="about_upstream">Neo Feed on GitHub</string>
     <string name="pref_cat_overlay">Appearance</string>
     <string name="pref_cat_debug">Debug</string>
     <string name="pref_transparency">Overlay background opacity</string>
@@ -279,7 +280,7 @@
     <string name="pref_mark_read_on_scroll">Mark as read while scrolling</string>
     <string name="pref_mark_read_on_scroll_summary">How long an article has to be on screen before scrolling past it counts as reading it. Nothing is marked while you are still looking at it. A fling past a card gives it about half a second.</string>
     <string name="mark_read_off">Off</string>
-    <string name="mark_read_seconds_short">%1$.1fs</string>
+    <string name="mark_read_seconds_short">%1$.0fs</string>
     <string name="mark_read_never">Never — only when opened</string>
     <string name="mark_read_seconds">After %1$.1f seconds on screen, once scrolled past</string>
     <string name="pref_read_visibility">Articles you have read</string>

@@ -75,7 +75,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.GithubLogo
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.TelegramLogo
-import com.saulhdev.feeder.ui.theme.kingthingsPrintingkit
 import com.saulhdev.feeder.utils.urlDecode
 import java.io.InputStream
 
@@ -140,7 +139,12 @@ fun AboutPage() {
                                 text = stringResource(id = R.string.app_name),
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontFamily = kingthingsPrintingkit,
+                                // No decorative face here. This was drawing
+                                // the app's own name in a display font
+                                // inherited from upstream, which is not the
+                                // wordmark, does not match a single other
+                                // screen, and rendered "Whisper" as something
+                                // the brand board would not recognise.
                             )
                         },
                         supportingContent = {
@@ -217,27 +221,23 @@ private data class TeamMember(
     val webpage: String
 )
 
+/**
+ * Where this came from.
+ *
+ * There were four links here and all of them belonged to Neo Feed: its
+ * repository under "Source code", and its Telegram and Matrix rooms under
+ * "Channel" and "Community". Sending a Whisper reader to another project's
+ * chat rooms to ask about this app helps nobody in either place.
+ *
+ * Whisper's own repository is deliberately not here yet. It is about to be
+ * renamed, and a link that 404s the week after release is worse than no link.
+ */
 private val links = listOf(
     Link(
         icon = Phosphor.GithubLogo,
-        labelResId = R.string.about_source_code,
+        labelResId = R.string.about_upstream,
         url = "https://github.com/NeoApplications/Neo-Feed"
     ),
-    Link(
-        icon = Phosphor.Megaphone,
-        labelResId = R.string.about_channel,
-        url = "https://t.me/neo_applications"
-    ),
-    Link(
-        icon = Phosphor.TelegramLogo,
-        labelResId = R.string.about_community_telegram,
-        url = "https://t.me/neo_launcher"
-    ),
-    Link(
-        icon = Phosphor.BracketsSquare,
-        labelResId = R.string.about_community_matrix,
-        url = "https://matrix.to/#/#neo-launcher:matrix.org"
-    )
 )
 
 private val contributors = listOf(
