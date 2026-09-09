@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -160,6 +161,8 @@ fun TourOverlay(
         if (next == null) onFinished() else current = next
     }
 
+    val ring = MaterialTheme.colorScheme.primary
+
     val alpha by animateFloatAsState(
         targetValue = 1f,
         animationSpec = tween(if (animate) FADE_MS else 0),
@@ -189,14 +192,29 @@ fun TourOverlay(
         ) {
             drawRect(Color.Black.copy(alpha = SCRIM_ALPHA))
             val pad = PADDING_PX * density.density
+            val topLeft = Offset(hole.left - pad, hole.top - pad)
+            val size = Size(hole.width + pad * 2, hole.height + pad * 2)
+            val radius = androidx.compose.ui.geometry.CornerRadius(
+                HOLE_RADIUS_DP * density.density
+            )
             drawRoundRect(
                 color = Color.Transparent,
-                topLeft = Offset(hole.left - pad, hole.top - pad),
-                size = Size(hole.width + pad * 2, hole.height + pad * 2),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-                    HOLE_RADIUS_DP * density.density
-                ),
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius,
                 blendMode = BlendMode.Clear,
+            )
+            // A ring, because cutting the scrim only helps a control that was
+            // bright to begin with. A settings gear is a thin grey glyph on a
+            // dark bar: undimmed it looks very much like the dimmed one next
+            // to it, and the reader is left hunting for what changed. The ring
+            // does not depend on what is underneath it.
+            drawRoundRect(
+                color = ring,
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = radius,
+                style = Stroke(width = RING_WIDTH_DP * density.density),
             )
         }
 
@@ -374,4 +392,7 @@ private const val FADE_MS = 200
 private const val SCRIM_ALPHA = 0.55f
 private const val PADDING_PX = 6f
 private const val HOLE_RADIUS_DP = 16f
+
+/** How heavy the ring around the lit control is. */
+private const val RING_WIDTH_DP = 2.5f
 private const val GAP_DP = 12f

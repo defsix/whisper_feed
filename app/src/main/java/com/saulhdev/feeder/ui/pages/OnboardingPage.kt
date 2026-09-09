@@ -348,7 +348,15 @@ private fun StarterSourcesStep(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Opaque, because this is drawn over the live feed. The welcome panes
+    // carry artwork and are solid by accident of that; this step had nothing
+    // behind it, so the header, the glance row and the first article showed
+    // through its text and the screen read as two screens at once.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -25,6 +25,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,7 +44,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
@@ -53,15 +55,9 @@ import kotlin.math.roundToInt
 /** Every chip is this tall, whatever it contains. */
 private val CHIP_HEIGHT = 84.dp
 
-/**
- * Chip width as a fraction of the screen.
- *
- * Just under a half, so two sit side by side and the third is visibly cut off —
- * which is what tells you the row scrolls. Three equal thirds fitted exactly and
- * therefore looked complete, but left each chip a 71dp text column: everything
- * fitted and nothing had any room.
- */
-private const val CHIP_WIDTH_FRACTION = 0.455f
+/** The space between two chips, and part of the sum that sizes them. */
+private val CHIP_GAP = 10.dp
+
 
 /** The supplied artwork is rendered at this size; see docs/brand/08_icons. */
 private val ICON_SIZE = 32.dp
@@ -109,13 +105,26 @@ fun GlanceRow(
 
     val weather = state.weather
 
-    val chipWidth = (LocalConfiguration.current.screenWidthDp * CHIP_WIDTH_FRACTION).dp
+    // Measured, not guessed. The width was 45.5% of the screen — a fraction
+    // chosen to be "just under half", which meant two chips plus their margins
+    // and the gap between them never added up to the width available, so the
+    // pair sat off-centre with the second one clipped at the edge.
+    //
+    // Two chips, two margins and one gap is an equation with one answer.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val chipWidth = (maxWidth - CARD_MARGIN * 2 - CHIP_GAP) / 2
+        val listState = rememberLazyListState()
 
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+        LazyRow(
+            state = listState,
+            // So a swipe always comes to rest on a pair rather than halfway
+            // between two. There are three chips and room for two, which
+            // without this leaves the third permanently half-visible.
+            flingBehavior = rememberSnapFlingBehavior(listState),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = CARD_MARGIN, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+        ) {
         if (weather != null) {
             val look = weatherLook(weather.weatherCode, weather.isDay)
             // Condition on top and the place underneath. Place names run long,
@@ -165,13 +174,14 @@ fun GlanceRow(
             }
         }
 
-        item {
-            GlanceChip(
-                width = chipWidth,
-                label = stringResource(R.string.glance_read_today),
-                value = state.readToday.toString(),
-                iconRes = R.drawable.ic_glance_articles_read,
-            )
+            item {
+                GlanceChip(
+                    width = chipWidth,
+                    label = stringResource(R.string.glance_read_today),
+                    value = state.readToday.toString(),
+                    iconRes = R.drawable.ic_glance_articles_read,
+                )
+            }
         }
     }
 }
