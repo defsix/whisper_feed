@@ -1,25 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Nothing leaves through the platform, by either route.
+    What may travel on each route, once PlatformBackupAgent has decided the
+    reader agreed to that route at all.
 
-    cloud-backup would put the reading database and subscription list in the
-    reader's Google Drive without ever asking. device-transfer is a direct
-    phone-to-phone copy with no server in between, which is far more
-    defensible — but it is still data leaving the phone without being chosen,
-    and the app now has its own restore for exactly that case. One sentence
-    that is true beats two with an exception in them.
+    The encrypted credential files are excluded from both. Their key lives in
+    the Keystore, and restoring the ciphertext without it means the first read
+    throws — an app that will not start, for exactly the person who restored
+    their phone properly. This is excluded even from device transfer, where the
+    Keystore does move: one rule that always holds is easier to trust than one
+    with a case in it.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="file" path="." />
+    <exclude domain="sharedpref" path="whisper_account.xml" />
+    <exclude domain="sharedpref" path="mastodon_tokens.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="file" path="." />
+    <exclude domain="sharedpref" path="whisper_account.xml" />
+    <exclude domain="sharedpref" path="mastodon_tokens.xml" />
     </device-transfer>
 </data-extraction-rules>

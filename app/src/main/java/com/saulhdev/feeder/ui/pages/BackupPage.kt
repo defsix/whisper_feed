@@ -55,6 +55,7 @@ import com.saulhdev.feeder.manager.backup.BackupStore
 import com.saulhdev.feeder.manager.backup.BackupWorker
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
+import com.saulhdev.feeder.ui.components.SwitchPreference
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
@@ -267,6 +268,31 @@ fun BackupPage(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+            }
+
+            // Android's own backup, asked separately from the folder above
+            // because it is a different mechanism with a different answer.
+            // Placed after it rather than before: the folder is the one this
+            // app controls end to end, and is what most people should use.
+            item {
+                Text(
+                    text = stringResource(R.string.backup_platform_heading),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.backup_platform_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                SwitchPreference(pref = prefs.platformBackupDevice, index = 1, groupSize = 2)
+            }
+            item {
+                SwitchPreference(pref = prefs.platformBackupCloud, index = 2, groupSize = 2)
             }
 
             item {

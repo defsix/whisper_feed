@@ -1097,23 +1097,39 @@ picker. In order:
    written, so an older build reads what it understands from a newer backup and
    leaves no junk behind.
 
-6. **Backups are the only way data leaves the phone, and the app says so.**
-   Android's automatic backup was on — the platform default — which meant the
-   reading database, the subscription list and every preference were being
-   copied to the reader's Google Drive silently, with no moment where they
-   were asked. An app that tells people nothing leaves their phone cannot also
-   do that in the background, so it is off: no cloud backup, and no
-   device-to-device transfer either.
+6. **Everything that can send data anywhere is off until asked, including
+   Android's own backup.** The platform backup was on by default — the
+   platform's choice, never anyone's here — quietly copying the reading
+   database, subscription list and every preference to the reader's Google
+   Drive. An app whose claim is that nothing leaves the phone cannot also do
+   that in the background.
 
-   Dropping device transfer is the sharper end of the trade and is deliberate.
-   It never touches a server and would have been defensible to keep, but it is
-   still data leaving without being chosen — and this section exists precisely
-   so the new-phone case has an answer the reader picked. One sentence that is
-   true beats two with an exception in them.
+   The first pass simply turned it off, which traded one imposed default for
+   another: somebody who *wants* their apps to follow them to a new phone had
+   that decided for them too. Choice is the point, so the reader is asked.
 
-   The backup screen now says it in the app, above the button that turns it
-   on, rather than in a privacy policy nobody opens: what is written, where it
-   goes, and that the platform's own backup is switched off.
+   **The mechanism is not the obvious one.** `allowBackup` is a manifest
+   attribute read at install time and `BackupManager` cannot enable or disable
+   a backup, only request one — so no settings switch can turn the platform
+   backup on and off. What an app *can* control is what it hands over when the
+   system asks. `PlatformBackupAgent` overrides `onFullBackup`, reads the
+   reader's choice, and returns without writing anything if they have not made
+   it. The system sees an app with no data rather than an error.
+
+   **Two routes, asked separately**, via `getTransportFlags()`: a
+   phone-to-phone transfer is a direct copy to the reader's next handset with
+   no server in it, and a cloud backup puts the same data in Google's hands.
+   Plenty of people want the first and not the second, and one switch for both
+   would force them to choose the stricter answer.
+
+   Both default to off, and the sign-in tokens are excluded on every route
+   whatever is chosen — their key lives in the Keystore, which is never part of
+   a backup, so restoring the ciphertext without it means the first read throws
+   and the app will not start.
+
+   Verified in the built APK rather than the source, and in the release mapping
+   file: R8 leaves the agent unrenamed, which matters because the manifest
+   names it as a string.
 
 Because it is a file rather than a live connection, there is no reconciliation
 to design, no conflict to resolve and no id mapping — the three things making

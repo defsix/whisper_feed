@@ -351,6 +351,44 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.Backup
     )
 
+    /**
+     * Whether Android may include this app in a phone-to-phone transfer.
+     *
+     * Read by [com.saulhdev.feeder.manager.backup.PlatformBackupAgent] when
+     * the system asks, rather than by anything in the app: `allowBackup` is a
+     * manifest attribute with no runtime switch, so what a preference can
+     * change is not whether a backup runs but whether anything is handed over
+     * when it does.
+     *
+     * A direct copy to the reader's next phone, with no server in it. Off
+     * until asked for all the same.
+     */
+    var platformBackupDevice = BooleanPref(
+        titleId = R.string.pref_platform_device,
+        summaryId = R.string.pref_platform_device_summary,
+        icon = Phosphor.CloudArrowUp,
+        key = PLATFORM_BACKUP_DEVICE,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
+    /**
+     * Whether Android may put this app's data in the reader's cloud backup.
+     *
+     * A separate question from the transfer above, because it has a different
+     * answer for a lot of people: this one puts the subscription list and
+     * reading history in Google's hands, and the app's whole claim is that
+     * nothing leaves the phone unasked.
+     */
+    var platformBackupCloud = BooleanPref(
+        titleId = R.string.pref_platform_cloud,
+        summaryId = R.string.pref_platform_cloud_summary,
+        icon = Phosphor.CloudArrowUp,
+        key = PLATFORM_BACKUP_CLOUD,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
     /** When the last automatic backup succeeded, for the status line. */
     var backupLastRun = StringPref(
         titleId = R.string.pref_backup,
@@ -797,6 +835,12 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val ACCOUNT = stringPreferencesKey("pref_account")
         val BACKUP_FOLDER = stringPreferencesKey("pref_backup_folder")
         val BACKUP_LAST_RUN = stringPreferencesKey("pref_backup_last_run")
+
+        // Spelled out again in PlatformBackupAgent, which the system builds
+        // before the preference graph is worth loading. If either name changes
+        // here it has to change there, which is why both say so.
+        val PLATFORM_BACKUP_DEVICE = booleanPreferencesKey("pref_platform_backup_device")
+        val PLATFORM_BACKUP_CLOUD = booleanPreferencesKey("pref_platform_backup_cloud")
         val ONBOARDING_SEEN = booleanPreferencesKey("pref_onboarding_seen")
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
