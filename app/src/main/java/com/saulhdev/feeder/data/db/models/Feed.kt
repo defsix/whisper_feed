@@ -58,6 +58,25 @@ data class Feed(
     val requireImage: Boolean = false,
     @ColumnInfo(defaultValue = "1")
     val excludeReplies: Boolean = true,
+
+    /**
+     * How many syncs in a row have failed for this feed.
+     *
+     * A failure used to be logged and forgotten: the syncing flag was cleared,
+     * `lastSync` was left alone, and nothing anywhere said the feed had
+     * stopped working. A reader could only find out by noticing that a source
+     * had gone quiet — which is indistinguishable from a source that has
+     * nothing to say.
+     *
+     * Reset to zero by any success, so one bad afternoon on somebody's server
+     * does not accumulate into a claim that their feed is dead.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val consecutiveFailures: Int = 0,
+
+    /** When the run of failures started, so "since Tuesday" can be said. */
+    @ColumnInfo(defaultValue = "0")
+    val failingSince: Long = 0L,
 ) {
     /**
      * The feed's categories.

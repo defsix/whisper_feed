@@ -44,6 +44,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.CheckCircle
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
+import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowUp
 import com.saulhdev.feeder.utils.READ_KEEP
@@ -465,6 +466,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = SOURCES_ROUTE,
         dataStore = dataStore,
         route = NavRoute.Sources
+    )
+
+    /** Feeds that have gone quiet, and the offer to find where they went. */
+    var brokenFeeds = StringPref(
+        titleId = R.string.pref_broken_feeds,
+        summaryId = R.string.pref_broken_feeds_summary,
+        icon = Phosphor.ArrowCounterClockwise,
+        key = BROKEN_FEEDS,
+        dataStore = dataStore,
+        route = NavRoute.BrokenFeeds
     )
 
     /** The websites the reader already keeps, turned into feeds. */
@@ -928,6 +939,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SOURCES_SORT_ASC = booleanPreferencesKey("pref_sources_sort_asc")
         val SUGGESTIONS = stringPreferencesKey("pref_suggestions")
         val IMPORT_BOOKMARKS = stringPreferencesKey("pref_import_bookmarks")
+        val BROKEN_FEEDS = stringPreferencesKey("pref_broken_feeds")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

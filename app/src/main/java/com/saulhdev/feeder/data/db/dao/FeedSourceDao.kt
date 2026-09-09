@@ -138,4 +138,34 @@ interface FeedSourceDao {
         """
     )
     suspend fun setCurrentlySyncingOn(feedId: Long, syncing: Boolean, lastSync: Instant)
+
+    /**
+     * One more failure for this feed, and the moment the run began.
+     *
+     * `failingSince` is only set on the first failure of a run — COALESCE on a
+     * zero — so the screen can say how long this has been going on rather than
+     * how long ago the last attempt was.
+     */
+    @Query(
+        """
+    UPDATE Feeds SET
+        consecutiveFailures = consecutiveFailures + 1,
+        failingSince = CASE WHEN failingSince = 0 THEN :now ELSE failingSince END
+    WHERE id = :feedId
+    """
+    )
+    suspend fun recordFailure(feedId: Long, now: Long)
+
+    /** A success wipes the record: one bad afternoon is not a dead feed. */
+    @Query("UPDATE Feeds SET consecutiveFailures = 0, failingSince = 0 WHERE id = :feedId")
+    suspend fun clearFailures(feedId: Long)
+
+    /** Feeds that have failed enough times to be worth telling the reader about. */
+    @Query(
+        """
+    SELECT * FROM Feeds WHERE consecutiveFailures >= :threshold
+    ORDER BY consecutiveFailures DESC
+    """
+    )
+    fun getFailingFeeds(threshold: Int): Flow<List<Feed>>
 }

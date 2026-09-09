@@ -440,6 +440,17 @@
     <string name="starter_added">%1$d sources added</string>
     <string name="starter_all_added">You are already subscribed to all of these.</string>
     <string name="pref_sources_summary">The feeds you follow, and their categories</string>
+    <string name="pref_broken_feeds">Feeds that stopped working</string>
+    <string name="pref_broken_feeds_summary">Look for a new address when a feed goes quiet</string>
+    <string name="broken_explanation">A feed usually goes quiet because its address moved, not because the site stopped publishing. Whisper can ask the site where its feed lives now.</string>
+    <string name="broken_none">Nothing is failing. A feed appears here after three syncs in a row have not worked \u2014 one bad afternoon on somebody\u2019s server is not a broken feed.</string>
+    <string name="broken_look">Look for a new address</string>
+    <string name="broken_looking">Asking the site\u2026</string>
+    <string name="broken_found">The site now lists a different address</string>
+    <string name="broken_use_new">Use this address</string>
+    <string name="broken_unchanged">The site still lists the address you have, so something else is wrong \u2014 the server may be down, or blocking.</string>
+    <string name="broken_nothing">No feed could be found at that site. It may have stopped publishing one.</string>
+    <string name="broken_forget">Stop warning me about this</string>
     <string name="pref_import_bookmarks">Import from bookmarks</string>
     <string name="pref_import_bookmarks_summary">Give Whisper your bookmark folders and it finds the feeds</string>
     <string name="import_explanation">Export your bookmarks from any browser and choose the file here. Whisper reads it on this phone and looks up the feeds itself \u2014 nothing is uploaded anywhere.</string>
@@ -480,5 +491,9 @@
     <plurals name="import_found">
         <item quantity="one">Found %1$d feed. Untick anything you do not want.</item>
         <item quantity="other">Found %1$d feeds. Untick anything you do not want.</item>
+    </plurals>
+    <plurals name="broken_failures">
+        <item quantity="one">Failed %1$d time in a row</item>
+        <item quantity="other">Failed %1$d times in a row</item>
     </plurals>
 </resources>

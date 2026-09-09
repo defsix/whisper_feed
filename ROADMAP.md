@@ -1019,9 +1019,9 @@ Three things make it tractable, and the first is by far the biggest:
   matters: the site *said* this is its feed, or Whisper *guessed*. A middle
   band between them adds a word to the UI and nothing to the decision.
 
-#### The best idea in the document is buried at §46
+#### The best idea in the document was buried at §46
 
-**Broken-feed recovery.** When a subscribed feed starts failing, run discovery
+**Broken-feed recovery — now §18, and built.** When a subscribed feed starts failing, run discovery
 against its site and offer the replacement. Whisper already surfaces broken
 feeds, so this is one screen and a use of an engine built for something else —
 and it fixes a problem every RSS reader has and none of them solve. It may be
@@ -1341,6 +1341,42 @@ Two things found while doing it, both of which would have shipped:
   app's release notes from 2023, and the licence page carried its name and
   copyright alone. Both rewritten — the licence now names the whole line, since
   a GPL fork has to credit what it was forked from.
+
+### 18. Broken-feed recovery
+
+Built, and promoted out of §13 where it was a paragraph. It fixes a problem
+every RSS reader has and none of them solve.
+
+A feed's address changes — a site moves to a new CMS, drops `/rss` for `/feed`,
+changes host — and every reader in the world treats that as the feed having
+died. The site is usually still there, still publishing, still advertising the
+new address in its own head. Nobody looks, so nobody finds it, and the reader
+eventually notices a silence and unsubscribes from something that was working
+all along.
+
+**A failure had to be recorded before it could be noticed.** It was logged and
+forgotten: the syncing flag was cleared, `lastSync` left alone, and nothing
+anywhere said a feed had stopped working — so a dead feed was
+indistinguishable from a quiet one. `Feed.consecutiveFailures` counts them and
+`failingSince` records when the run began; any success wipes both, because one
+bad afternoon on somebody's server is not a broken feed.
+
+Three failures in a row before it is mentioned. A single timeout is noise, and
+warning on one is how a warning becomes something people learn to ignore.
+
+Looking is one request through the `FeedDiscovery` §13 shipped with. Three
+answers, and they are different problems: a **different address** is the
+useful case and is offered; the **same address** means the feed did not move
+and something else is wrong, so offering to "fix" it by writing the identical
+URL would be theatre; **nothing found** may mean the site stopped publishing,
+which only the reader can judge, so the offer there is to stop warning rather
+than to unsubscribe.
+
+Accepting updates the feed **in place**. Every article, the read state, the
+categories and whatever the weighting has learned about that source survive —
+a subscription somebody has had for years is not worth losing to a URL change.
+
+---
 
 ### 17. Scroll parallax on the feed — parked, at the bottom
 

@@ -185,10 +185,19 @@ internal suspend fun syncFeeds(
                                     syncing = false,
                                     lastSync = Clock.System.now(),
                                 )
+                                // And forget any run of failures: whatever was
+                                // wrong is not wrong now.
+                                feedsRepo.clearFailures(feed.id)
                             } catch (e: Throwable) {
                                 Log.e(TAG, "Failed to sync ${feed.title}: ${feed.url}", e)
                                 // Error, clear syncing flag but don't update lastSync
                                 feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = false)
+                                // Counted rather than only logged. Without this
+                                // a feed that has stopped working is
+                                // indistinguishable from one with nothing to
+                                // say, and the reader finds out by noticing a
+                                // silence months later.
+                                feedsRepo.recordFailure(feed.id)
                             }
                         }
                     }

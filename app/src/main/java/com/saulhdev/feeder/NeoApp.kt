@@ -41,6 +41,7 @@ import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import com.saulhdev.feeder.viewmodels.BookmarkImportViewModel
+import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
 import com.saulhdev.feeder.viewmodels.SuggestionsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -79,6 +80,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         viewModelOf(::SortFilterViewModel)
         viewModelOf(::SuggestionsViewModel)
         viewModelOf(::BookmarkImportViewModel)
+        viewModelOf(::BrokenFeedsViewModel)
         viewModelOf(::MastodonAuthViewModel)
     }
 

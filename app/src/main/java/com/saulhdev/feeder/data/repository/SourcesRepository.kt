@@ -85,6 +85,20 @@ class SourcesRepository(db: NeoFeedDb) {
     }
 
     fun getAllSourcesFlow(): Flow<List<Feed>> = feedsDao.getAllFeeds()
+
+    /** One more failure for a feed, so a run of them can be noticed. */
+    suspend fun recordFailure(feedId: Long) = withContext(jcc) {
+        feedsDao.recordFailure(feedId, System.currentTimeMillis())
+    }
+
+    /** A success wipes the record. */
+    suspend fun clearFailures(feedId: Long) = withContext(jcc) {
+        feedsDao.clearFailures(feedId)
+    }
+
+    /** Feeds that have failed often enough to be worth mentioning. */
+    fun getFailingFeeds(threshold: Int = FAILURES_BEFORE_BROKEN): Flow<List<Feed>> =
+        feedsDao.getFailingFeeds(threshold)
         .flowOn(cc)
 
     suspend fun getAllSources(): List<Feed> = feedsDao.loadFeeds()
@@ -302,3 +316,13 @@ class SourcesRepository(db: NeoFeedDb) {
         _recentlyDeletedMany.value = emptyList()
     }
 }
+
+/**
+ * How many consecutive failures make a feed worth mentioning.
+ *
+ * Three, because servers have bad days: a single timeout is noise, and telling
+ * somebody their feed is broken on the strength of one is how a warning
+ * becomes something people learn to ignore. Three failed syncs in a row is a
+ * feed that has stopped rather than stumbled.
+ */
+const val FAILURES_BEFORE_BROKEN = 3

@@ -133,6 +133,7 @@ fun PreferencesPage(
         prefs.starterSources,
         prefs.importBookmarks,
         prefs.suggestions,
+        prefs.brokenFeeds,
     )
     val syncPrefs = listOf(
         prefs.backupFolder,

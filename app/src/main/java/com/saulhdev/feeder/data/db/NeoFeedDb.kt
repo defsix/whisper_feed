@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_16_17,
     MIGRATION_15_16,
     MIGRATION_14_15,
     MIGRATION_1_2,
@@ -237,6 +238,16 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_16_17 : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Zero for everything: no feed has a failure history because none was
+        // ever kept. The count starts building from the next sync.
+        db.execSQL("ALTER TABLE Feeds ADD COLUMN consecutiveFailures INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE Feeds ADD COLUMN failingSince INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_15_16 : Migration(15, 16) {
