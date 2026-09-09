@@ -113,4 +113,21 @@ class SourceListTest {
     fun `every sort option carries a label`() {
         SourceSort.entries.forEach { assertTrue(it.name, it.labelId != 0) }
     }
+
+    @Test
+    fun `a stored order resolves by name`() {
+        assertEquals(SourceSort.Category, SourceSort.byName("Category"))
+        assertEquals(SourceSort.Added, SourceSort.byName("Added"))
+    }
+
+    @Test
+    fun `an order that no longer exists falls back rather than throwing`() {
+        // "LastSync" was a real option and is not any more, so it is sitting in
+        // the DataStore of every phone that used it. Resolving by ordinal
+        // would have silently repointed those at whatever now occupies that
+        // position; resolving by name gives nothing, and nothing means Title.
+        assertEquals(SourceSort.Title, SourceSort.byName("LastSync"))
+        assertEquals(SourceSort.Title, SourceSort.byName(null))
+        assertEquals(SourceSort.Title, SourceSort.byName(""))
+    }
 }

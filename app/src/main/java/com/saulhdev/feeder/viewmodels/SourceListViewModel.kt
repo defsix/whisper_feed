@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.data.repository.ArticleRepository
+import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -22,6 +24,7 @@ import kotlinx.coroutines.plus
 class SourceListViewModel(
     private val feedsRepo: SourcesRepository,
     articleRepo: ArticleRepository,
+    private val prefs: FeedPreferences,
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
 
@@ -29,20 +32,24 @@ class SourceListViewModel(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
-    private val _sort = MutableStateFlow(SourceSort.Title)
-    val sort: StateFlow<SourceSort> = _sort.asStateFlow()
-
     /**
-     * Which way round the chosen order runs.
+     * How the list is ordered, read straight from the stored preference.
      *
-     * Every sort starts ascending and the same row reverses it, which is the
-     * pattern Material uses and the one a table header has used for thirty
-     * years. The alternative was a separate list of directions, or the four
-     * options this menu used to carry where two of them were one field in two
-     * directions with different names.
+     * Derived rather than held: a MutableStateFlow seeded from DataStore would
+     * be a second copy of the same fact, and the two would drift the first
+     * time anything else wrote to the preference.
+     *
+     * An unrecognised name falls back to Title. The stored value is the enum's
+     * name rather than its ordinal precisely so that removing or reordering an
+     * option cannot silently change what somebody's phone is sorted by.
      */
-    private val _ascending = MutableStateFlow(true)
-    val ascending: StateFlow<Boolean> = _ascending.asStateFlow()
+    val sort: StateFlow<SourceSort> = prefs.sourcesSort.get()
+        .map(SourceSort::byName)
+        .stateIn(ioScope, SharingStarted.Eagerly, SourceSort.Title)
+
+    /** Which way round that order runs. */
+    val ascending: StateFlow<Boolean> = prefs.sourcesSortAsc.get()
+        .stateIn(ioScope, SharingStarted.Eagerly, true)
 
     /**
      * Ids picked out for a bulk action.
@@ -60,7 +67,7 @@ class SourceListViewModel(
         // TODO move the getter eventually to SourcesRepository
         articleRepo.getBookmarkedFeedItems(),
         _query,
-        combine(_sort, _ascending) { sort, ascending -> sort to ascending },
+        combine(sort, ascending) { sort, ascending -> sort to ascending },
     ) { allSources, allTags, bookmarked, query, order ->
         val (sort, ascending) = order
         val comparator =
@@ -106,10 +113,14 @@ class SourceListViewModel(
      * tap always produces the same result.
      */
     fun setSort(value: SourceSort) {
-        if (_sort.value == value) _ascending.value = !_ascending.value
-        else {
-            _sort.value = value
-            _ascending.value = true
+        // On the IO scope because setValue is a blocking DataStore write, and
+        // this is called straight from a tap.
+        ioScope.launch {
+            if (sort.value == value) prefs.sourcesSortAsc.setValue(!ascending.value)
+            else {
+                prefs.sourcesSort.setValue(value.name)
+                prefs.sourcesSortAsc.setValue(true)
+            }
         }
     }
 
@@ -272,6 +283,23 @@ enum class SourceSort(@StringRes val labelId: Int, val comparator: Comparator<Fe
      * — the old id is gone and nothing else refers to it.
      */
     Added(R.string.sort_by_added, compareBy(Feed::id)),
+    ;
+
+    companion object {
+        /**
+         * The order stored under this name, or the default if there isn't one.
+         *
+         * Stored by name rather than by ordinal, and resolved rather than
+         * indexed, because a preference outlives the code that wrote it. An
+         * order removed in a later version — "LastSync" was, in this one —
+         * leaves that name sitting in somebody's DataStore, and an ordinal
+         * would quietly resolve it to whichever order happens to sit at that
+         * position now. A name that no longer exists resolves to nothing, and
+         * nothing means Title.
+         */
+        fun byName(name: String?): SourceSort =
+            entries.firstOrNull { it.name == name } ?: Title
+    }
 }
 
 /**

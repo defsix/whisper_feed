@@ -53,6 +53,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
+import com.saulhdev.feeder.ui.icons.phosphor.Sort
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
@@ -788,6 +789,35 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = emptySet(),
     )
 
+    /**
+     * How the source list was last ordered.
+     *
+     * Kept in DataStore rather than in the view model, which is what held it
+     * before: a view model survives a rotation and nothing else, so the order
+     * reset every time the screen was left. Somebody who sorts a hundred
+     * sources by category means it, and means it tomorrow.
+     *
+     * Stored as the enum's name. An unknown value — an order removed in a
+     * later version, or a downgrade — falls back to Title rather than
+     * throwing, which is the whole reason this is not an ordinal.
+     */
+    var sourcesSort = StringPref(
+        titleId = R.string.sorting_order,
+        icon = Phosphor.Sort,
+        key = SOURCES_SORT,
+        dataStore = dataStore,
+        defaultValue = "Title",
+    )
+
+    /** Which way round that order runs. */
+    var sourcesSortAsc = BooleanPref(
+        titleId = R.string.sort_ascending,
+        icon = Phosphor.Sort,
+        key = SOURCES_SORT_ASC,
+        dataStore = dataStore,
+        defaultValue = true,
+    )
+
     var sortingFilter = StringSelectionPref(
         titleId = R.string.sorting_order,
         icon = Phosphor.Info,
@@ -869,6 +899,8 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
         val STARTER_SOURCES = stringPreferencesKey("pref_starter_sources")
         val SOURCES_ROUTE = stringPreferencesKey("pref_sources_route")
+        val SOURCES_SORT = stringPreferencesKey("pref_sources_sort")
+        val SOURCES_SORT_ASC = booleanPreferencesKey("pref_sources_sort_asc")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 
