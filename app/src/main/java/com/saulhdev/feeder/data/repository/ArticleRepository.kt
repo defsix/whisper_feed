@@ -213,6 +213,39 @@ class ArticleRepository(db: NeoFeedDb) {
 
     fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()
 
+    /** Attaches a server's id to the article at that address. */
+    suspend fun attachRemoteId(link: String, remoteId: String): Int = withContext(cc) {
+        articlesDao.attachRemoteId(link, remoteId)
+    }
+
+    /** The server's id for one article, if a server has claimed it. */
+    suspend fun remoteIdFor(uuid: String): String? = withContext(cc) {
+        articlesDao.remoteIdFor(uuid)
+    }
+
+    /**
+     * Applies a server's unread list, in chunks SQLite will accept.
+     *
+     * `NOT IN (:list)` becomes one bind parameter per id and SQLite stops at
+     * 999 by default, so a thousand unread articles would throw rather than
+     * sync. The read pass has to see the whole list at once to be correct —
+     * chunking a NOT IN would mark an article read for being absent from a
+     * chunk it was never going to be in — so the guard is on the count, and a
+     * list too long to bind is left alone rather than half-applied.
+     */
+    suspend fun markReadFromServer(unreadRemoteIds: List<String>): Int = withContext(cc) {
+        if (unreadRemoteIds.size > SQLITE_ARG_LIMIT) 0
+        else articlesDao.markReadExcept(unreadRemoteIds, System.currentTimeMillis())
+    }
+
+    /** The other direction, which chunks safely because it is an IN. */
+    suspend fun markUnreadFromServer(unreadRemoteIds: List<String>): Int = withContext(cc) {
+        unreadRemoteIds.chunked(SQLITE_ARG_LIMIT).sumOf { articlesDao.markUnread(it) }
+    }
+
+    /** How many articles a server has claimed. */
+    suspend fun countWithRemoteId(): Int = withContext(cc) { articlesDao.countWithRemoteId() }
+
     /** When each feed last had an article, for the source list's sort. */
     fun latestArticlePerFeed(): Flow<Map<Long, Long>> =
         articlesDao.latestArticlePerFeed()

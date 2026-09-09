@@ -46,7 +46,7 @@ const val ID_ALL: Long = -1L
         Feed::class,
         Article::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -221,6 +221,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_14_15,
     MIGRATION_1_2,
     MIGRATION_2_3,
     MIGRATION_7_8,
@@ -231,6 +232,17 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_14_15 : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Null for everything that already exists, which is correct: no server
+        // has claimed any of these articles yet, and a sync fills it in for
+        // the ones a server turns out to know about.
+        db.execSQL("ALTER TABLE Article ADD COLUMN remoteId TEXT DEFAULT NULL")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_Article_remoteId ON Article (remoteId)")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_13_14 : Migration(13, 14) {

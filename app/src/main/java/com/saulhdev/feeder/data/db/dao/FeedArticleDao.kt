@@ -291,6 +291,49 @@ interface FeedArticleDao {
     """
     )
     fun latestArticlePerFeed(): Flow<List<FeedLatestArticle>>
+
+    /**
+     * Attaches a server's id to the article at a given link.
+     *
+     * Matched on link because that is the only thing both sides know. The
+     * article was fetched from the feed by this app, so it has a local uuid the
+     * server has never seen; the server names the same article with an id this
+     * app has never seen. The canonical URL is what they agree on.
+     */
+    @Query("UPDATE Article SET remoteId = :remoteId WHERE link = :link AND remoteId IS NULL")
+    suspend fun attachRemoteId(link: String, remoteId: String): Int
+
+    /** The server's id for one article, for pushing a change back. */
+    @Query("SELECT remoteId FROM Article WHERE uuid = :uuid")
+    suspend fun remoteIdFor(uuid: String): String?
+
+    /**
+     * Marks read everything the server did not list as unread.
+     *
+     * Scoped to articles that have a remoteId, which is the whole safety
+     * property: an article the server has never claimed is left alone rather
+     * than assumed read because it was absent from a list it was never in.
+     */
+    @Query(
+        """
+    UPDATE Article SET readAt = :now
+    WHERE remoteId IS NOT NULL AND readAt = 0 AND remoteId NOT IN (:unreadRemoteIds)
+    """
+    )
+    suspend fun markReadExcept(unreadRemoteIds: List<String>, now: Long): Int
+
+    /** And back the other way, for something read here and unread there. */
+    @Query(
+        """
+    UPDATE Article SET readAt = 0
+    WHERE remoteId IS NOT NULL AND readAt != 0 AND remoteId IN (:unreadRemoteIds)
+    """
+    )
+    suspend fun markUnread(unreadRemoteIds: List<String>): Int
+
+    /** How many articles a server has claimed, for the sync log. */
+    @Query("SELECT COUNT(*) FROM Article WHERE remoteId IS NOT NULL")
+    suspend fun countWithRemoteId(): Int
 }
 
 /** One row of [FeedArticleDao.latestArticlePerFeed]. */

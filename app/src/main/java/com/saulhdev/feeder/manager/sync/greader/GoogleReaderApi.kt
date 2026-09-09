@@ -138,6 +138,39 @@ class GoogleReaderApi(
             .mapNotNull { GoogleReaderIds.itemId(it.id) }
     }
 
+    /**
+     * The items in a stream, with the addresses they point at.
+     *
+     * This is the only call that says which server id belongs to which
+     * article, and the app needs that because it does not take its articles
+     * from the server: they are fetched from the feeds themselves, so every
+     * one has a local id the server has never seen. The link is the one thing
+     * both sides know.
+     *
+     * Only the id and the alternate link are read. The rest of the payload is
+     * the article itself, which this app already has in a better form —
+     * extracted full text, a chosen image, a built summary — so taking the
+     * server's copy would mean losing those or fetching twice.
+     */
+    suspend fun streamContents(
+        auth: String,
+        stream: String = GoogleReaderIds.STREAM_READING_LIST,
+        limit: Int = 1000,
+        since: Long? = null,
+    ): List<StreamItem> = withContext(Dispatchers.IO) {
+        val params = buildList {
+            add("n" to limit.toString())
+            add("output" to "json")
+            since?.let { add("ot" to (it / 1000).toString()) }
+        }
+        val json = getString(
+            auth,
+            "reader/api/0/stream/contents/" + stream,
+            *params.toTypedArray(),
+        )
+        streamContentsAdapter.fromJson(json)?.items.orEmpty()
+    }
+
     /** Marks items read or unread, starred or not, in one call per batch. */
     suspend fun editTag(
         auth: String,
@@ -225,6 +258,7 @@ class GoogleReaderApi(
 
         internal val subscriptionsAdapter = moshi.adapter(SubscriptionList::class.java)
         internal val itemRefsAdapter = moshi.adapter(ItemRefList::class.java)
+        internal val streamContentsAdapter = moshi.adapter(StreamContents::class.java)
     }
 }
 
@@ -255,3 +289,27 @@ data class ItemRefList(val itemRefs: List<ItemRef> = emptyList())
 
 @JsonClass(generateAdapter = true)
 data class ItemRef(val id: String = "")
+
+@JsonClass(generateAdapter = true)
+data class StreamContents(val items: List<StreamItem> = emptyList())
+
+@JsonClass(generateAdapter = true)
+data class StreamItem(
+    val id: String = "",
+    val alternate: List<StreamLink> = emptyList(),
+) {
+    /**
+     * The article's address, and the server's id for it in the short form.
+     *
+     * Null when either is missing, which is how a malformed item costs one
+     * article rather than the whole mapping.
+     */
+    fun mapping(): Pair<String, String>? {
+        val link = alternate.firstOrNull { !it.href.isNullOrBlank() }?.href ?: return null
+        val item = GoogleReaderIds.itemId(id) ?: return null
+        return link to item
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class StreamLink(val href: String? = null, val type: String? = null)

@@ -70,6 +70,10 @@ class GoogleReaderService(
             // Articles still come from the feeds themselves; see the note above.
             syncFeeds(context = context, forceNetwork = true)
 
+            // Learn which of our articles the server knows about, then apply
+            // what it says about them. The order matters: read state is
+            // useless until the mapping exists.
+            mapRemoteIds(auth)
             pullReadState(auth)
 
             account.lastSync = System.currentTimeMillis()
@@ -121,11 +125,41 @@ class GoogleReaderService(
     }
 
     /**
-     * Brings read and starred state down from the server.
+     * Attaches the server's ids to the articles this app already has.
+     *
+     * The two sides name the same article differently and nothing connected
+     * them: a local `uuid` is generated here and means nothing anywhere else,
+     * while the server assigns an id of its own. Articles are fetched from the
+     * feeds rather than from the server, so the server's id never arrives with
+     * them — this is the call that goes and asks.
+     *
+     * Matched on the article's address, which is the only thing both sides
+     * know. Not the guid: that is set by the publisher and has nothing to do
+     * with the id the server assigned.
+     */
+    private suspend fun mapRemoteIds(auth: String) {
+        val items = api.streamContents(auth)
+        var attached = 0
+        items.forEach { item ->
+            val (link, remoteId) = item.mapping() ?: return@forEach
+            attached += articles.attachRemoteId(link, remoteId)
+        }
+        Log.i(TAG, "Mapped $attached of ${items.size} server items to local articles")
+    }
+
+    /**
+     * Brings read state down from the server and applies it.
      *
      * Asks for the unread ids rather than the read ones, because unread is the
      * smaller set by a wide margin on any real account — a year of reading is
      * tens of thousands of read articles and a few dozen unread ones.
+     *
+     * **Only articles the server has claimed are touched.** That is the whole
+     * safety property of this, and the reason it can be applied at all: an
+     * article with no `remoteId` is one the server has never mentioned, so its
+     * absence from a list of unread ids means nothing about whether it has
+     * been read. Marking those read is exactly the mistake this used to avoid
+     * by throwing the answer away.
      */
     private suspend fun pullReadState(auth: String) {
         val unread = api.itemIds(
@@ -133,20 +167,42 @@ class GoogleReaderService(
             stream = GoogleReaderIds.STREAM_READING_LIST,
             excludeTag = GoogleReaderIds.TAG_READ,
         ).toSet()
-        val starred = api.itemIds(auth = auth, stream = GoogleReaderIds.STREAM_STARRED).toSet()
 
-        // Deliberately not applied yet: matching the protocol's item ids to
-        // Whisper's own article uuids needs a mapping this version does not
-        // store, and guessing at it would mark the wrong articles read. The
-        // ids are fetched so the shape is proven against a real server; the
-        // mapping is the next piece. See ROADMAP.md §7.
-        Log.i(TAG, "Server reports ${unread.size} unread, ${starred.size} starred")
+        if (unread.isEmpty()) {
+            // Everything read, or a server that answered oddly. Applying a
+            // blanket "mark everything read" on an empty response is precisely
+            // the failure a first version meets, so it is left alone.
+            Log.i(TAG, "Server reported nothing unread; leaving read state alone")
+            return
+        }
+
+        val ids = unread.toList()
+        val markedRead = articles.markReadFromServer(ids)
+        val markedUnread = articles.markUnreadFromServer(ids)
+        Log.i(
+            TAG,
+            "Read state applied: $markedRead read, $markedUnread unread, " +
+                "of ${articles.countWithRemoteId()} mapped articles"
+        )
     }
 
     override suspend fun setRead(articleId: String, read: Boolean) {
         if (read) articles.markRead(articleId) else articles.unmarkRead(listOf(articleId))
-        // Pushing this to the server needs the same id mapping; queued rather
-        // than dropped once that exists.
+
+        // And tell the server, if it knows this article. An article with no
+        // remoteId is one the server has never seen — there is nothing to tell
+        // it, and inventing an id would edit somebody else's article.
+        val remoteId = articles.remoteIdFor(articleId) ?: return
+        val auth = account.authToken
+        if (auth.isEmpty()) return
+        val token = api.writeToken(auth) ?: return
+        api.editTag(
+            auth = auth,
+            token = token,
+            itemIds = listOf(remoteId),
+            addTag = if (read) GoogleReaderIds.TAG_READ else null,
+            removeTag = if (read) null else GoogleReaderIds.TAG_READ,
+        )
     }
 
     override suspend fun setStarred(articleId: String, starred: Boolean) {

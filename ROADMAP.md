@@ -682,18 +682,35 @@ any of this, and it should be built before the rest of it.
 
 #### Deliberately unfinished, and named rather than hidden
 
-- **Read state is pulled but not applied.** Matching the protocol's item ids to
-  Whisper's own article uuids needs a mapping this version does not store, and
-  guessing would mark the wrong articles read. The ids are fetched so the shape
-  is proven against a real server. The mapping — a `remoteId` column on
-  `Article`, written at sync time — is the next piece, and the same mapping is
-  what lets read state be pushed back.
+- ~~**Read state is pulled but not applied.**~~ Built. `Article.remoteId`, and
+  it needed more than the column this note promised: because articles are
+  fetched from the feeds rather than from the server, the server's id never
+  arrives with them, and the ids endpoint returns bare ids with nothing to
+  match against. So there is a `stream/contents` call now whose only job is to
+  say which id belongs to which address — the link being the one thing both
+  sides know. Not the guid: that is set by the publisher and has nothing to do
+  with the id the server assigned.
+
+  **Only articles the server has claimed are touched**, and that is what makes
+  applying it safe at all: an article with no `remoteId` has never been
+  mentioned by the server, so its absence from a list of unread ids means
+  nothing. An empty unread response is also ignored rather than treated as
+  "everything is read", which is the failure a first version meets.
+
+  Read state pushes back too, through the same mapping — `setRead` tells the
+  server when it knows the article and does nothing when it does not.
+
+  **Unverified against a real server.** The id shapes and the mapping are
+  tested as pure logic; the `stream/contents` response shape is written from
+  the protocol and has not met a live FreshRSS or Miniflux. That is the next
+  thing to do with it, and it needs an account rather than a compiler.
 - **Removals are not applied.** A feed the server does not mention is left
   alone rather than deleted. Deleting somebody's subscriptions because of a
   partial response or the wrong account is unrecoverable, and those are exactly
   the failure modes a first version meets.
-- **No background sync yet.** The account screen syncs on demand; hooking it
-  into the existing `FeedSyncer` schedule comes with the id mapping.
+- **No background sync yet.** The account screen syncs on demand. The id
+  mapping it was waiting on now exists, so this is the next piece: hooking the
+  account sync into the existing `FeedSyncer` schedule.
 
 ### 8. Ship it
 

@@ -46,6 +46,9 @@ import kotlin.time.Instant
         // Every feed query orders by primarySortTime; without this SQLite sorted
         // the whole result set on each one.
         Index(value = ["primarySortTime"]),
+        // Read state arrives from a server as a list of its own ids; without
+        // an index this is a full scan per article on every sync.
+        Index(value = ["remoteId"]),
     ],
     foreignKeys = [
         ForeignKey(
@@ -87,6 +90,26 @@ data class Article constructor(
      */
     @ColumnInfo(defaultValue = "0")
     val readAt: Long = 0L,
+
+    /**
+     * What a Google Reader server calls this article, if one does.
+     *
+     * Null for every article on an account-less install, which is most of
+     * them, and null until a sync has actually seen the article on the server.
+     *
+     * It exists because the two sides name the same article differently and
+     * nothing connected them: `uuid` is generated here with
+     * `UUID.randomUUID()` and means nothing anywhere else, while the server
+     * assigns its own id. Read state arrives as a list of server ids, so
+     * without this column the only options were to guess or to throw the
+     * answer away — and the app threw it away, deliberately, rather than mark
+     * the wrong articles read.
+     *
+     * Not the guid: an RSS guid is set by the publisher and the item id is
+     * assigned by the server, so they are unrelated.
+     */
+    @ColumnInfo(defaultValue = "NULL")
+    val remoteId: String? = null,
 ) {
     fun updateFromParsedEntry(
         entry: Item,
