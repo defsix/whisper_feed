@@ -179,6 +179,19 @@ fun AboutPage() {
                 }
             }
             item {
+                PreferenceGroupHeading(heading = stringResource(id = R.string.about_whisper_team))
+            }
+            itemsIndexed(whisperTeam) { i, it ->
+                ContributorRow(
+                    nameId = it.name,
+                    roleId = it.descriptionRes,
+                    photoUrl = it.photoUrl,
+                    url = it.webpage,
+                    index = i,
+                    groupSize = whisperTeam.size
+                )
+            }
+            item {
                 PreferenceGroupHeading(heading = stringResource(id = R.string.about_team))
             }
             itemsIndexed(contributors) { i, it ->
@@ -235,8 +248,37 @@ private data class TeamMember(
 private val links = listOf(
     Link(
         icon = Phosphor.GithubLogo,
+        labelResId = R.string.about_source_code,
+        url = "https://github.com/defsix/076feed"
+    ),
+    Link(
+        icon = Phosphor.GithubLogo,
         labelResId = R.string.about_upstream,
         url = "https://github.com/NeoApplications/Neo-Feed"
+    ),
+    // The root of the line, and not a footnote: HomeFeeder's SDK package is
+    // still named in this app's ProGuard rules, and Lawnchair's feed whitelist
+    // still carries its package.
+    Link(
+        icon = Phosphor.GithubLogo,
+        labelResId = R.string.about_origin,
+        url = "https://github.com/iTaysonLab/HomeFeeder"
+    ),
+)
+
+/**
+ * Whisper's author.
+ *
+ * Kept separate from the Neo Feed credit below rather than appended to it:
+ * one list of three people under one heading would claim a team that does not
+ * exist and would take credit for Neo Feed's work at the same time.
+ */
+private val whisperTeam = listOf(
+    TeamMember(
+        name = R.string.about_whisper_author,
+        descriptionRes = R.string.about_whisper_role,
+        photoUrl = "https://github.com/defsix.png",
+        webpage = "https://github.com/defsix/076feed"
     ),
 )
 
