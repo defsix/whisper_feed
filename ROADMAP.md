@@ -284,21 +284,46 @@ a hundred sources, one at a time is the wrong unit.
   sources left highlighted after acting on them invites acting on them twice,
   and a bulk delete is undoable from the same snackbar a single delete uses.
 
-  Still missing from the selection bar, in the order they are worth doing:
+  The bar itself was rebuilt after none of this could be found on a device.
+  It was a card in the list carrying six chips in a horizontally scrolling row,
+  which put Delete sixth — off the right edge of a phone, with nothing to say
+  the row scrolled — and labelled it with `remove_title`, whose text is
+  "Confirm action". The one destructive action was both off screen and
+  misnamed. It is now the Material contextual app bar: the count and a close
+  cross where the title and back arrow were, Category and Delete as icons,
+  everything else in an overflow, all of it pinned while the list scrolls.
 
-  - **Select all should mean all shown.** The search filter stays live while a
-    selection is running — the list underneath is still filtered — but the bar
-    hides the field, so Select all quietly takes every source in the database
-    including the ones filtered off screen. Selecting things the user cannot see
-    is the wrong default for an action whose next tap may be Delete. It should
-    take the filtered list, with the count on the bar saying which.
-  - **Fetch full articles, in bulk.** `fullTextByDefault` is per-feed and only
-    reachable by opening each source's editor. It is the one setting someone
-    actually wants to apply to twenty feeds at once — every summary-only
-    newspaper in the list.
+  Also built with it:
+
+  - ~~**Select all means all shown.**~~ The search field used to be *replaced*
+    by the selection bar, so a filter stayed in force while invisible and
+    Select all quietly took every source in the database — in a bar whose next
+    button is Delete. The field now stays put and both bulk gestures read the
+    drawn list.
+  - ~~**Range select.**~~ Long-press a second source and the run between it and
+    the last one picked comes with it, in the order on screen. Filing thirty
+    imported feeds was thirty taps.
+  - ~~**Category filter chips.**~~ The categories in use, as a single-choice
+    row above the list. Searching the name nearly did this, but it also matched
+    titles and addresses containing the word.
+  - ~~**Clear articles, keep the source.**~~ For the feed sitting on nine
+    hundred items nobody will read. Bookmarked and pinned articles are kept and
+    the snackbar reports the count, since that is the only honest way to say
+    what a delete-with-exceptions did.
+  - ~~**Find duplicates.**~~ Two imports will happily add the same feed twice
+    under two titles; they sort apart and look alike. Matched on the normalised
+    address, so the http/https/trailing-slash variants that let the duplicate
+    in are the ones it catches.
+  - ~~**Fetch full articles, in bulk.**~~ Was per-feed and reachable only from
+    each source's editor.
+
+  Still missing, in the order they are worth doing:
+
   - **Refresh these now.** Syncing one selection is a smaller, more useful
     action than pulling the whole list, particularly straight after a bulk
-    enable.
+    enable. Left out for now because `requestFeedSync` takes one feed id and
+    enqueues one work request, and firing it per selected source needs its
+    unique-work naming checked first.
   - **Export the selection.** OPML export is currently all-or-nothing. Handing
     someone the eight feeds from one category is a share, not a backup, and it
     is the same writer with a different input list.

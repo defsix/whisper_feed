@@ -36,6 +36,25 @@ class SourceListViewModel(
     val query: StateFlow<String> = _query.asStateFlow()
 
     /**
+     * One category to narrow the list to, or null for all of them.
+     *
+     * Separate from the search field even though searching a category's name
+     * very nearly does the same thing: typing "Tech" also matches a source
+     * called "Tech Review" and a URL containing the word, so the two are
+     * different questions and a chip that quietly answered the looser one
+     * would be a chip nobody could trust.
+     */
+    private val _category = MutableStateFlow<String?>(null)
+    val category: StateFlow<String?> = _category.asStateFlow()
+
+    /** Whether the list is narrowed to sources that have a twin. */
+    private val _duplicatesOnly = MutableStateFlow(false)
+    val duplicatesOnly: StateFlow<Boolean> = _duplicatesOnly.asStateFlow()
+
+    /** Ids of sources sharing an address, recomputed when the filter is armed. */
+    private val _duplicateIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    /**
      * How the list is ordered, read straight from the stored preference.
      *
      * Derived rather than held: a MutableStateFlow seeded from DataStore would
@@ -67,14 +86,20 @@ class SourceListViewModel(
     val state = combine(
         feedsRepo.getAllSourcesFlow(),
         feedsRepo.getAllTagsFlow(),
-        _query,
+        // Three narrowing controls travelling as one value, because combine's
+        // typed arity stops at five and these change together anyway.
+        combine(_query, _category, _duplicatesOnly, _duplicateIds) { q, c, d, ids ->
+            Narrowing(q, c, d, ids)
+        },
         combine(sort, ascending) { sort, ascending -> sort to ascending },
         articleRepo.latestArticlePerFeed(),
-    ) { allSources, allTags, query, order, latestPosts ->
+    ) { allSources, allTags, narrowing, order, latestPosts ->
         val (sort, ascending) = order
         val base = sort.comparator(latestPosts)
         val comparator = if (ascending) base else base.reversed()
-        val matching = allSources.filter { it.matches(query) }.sortedWith(comparator)
+        val matching = allSources
+            .filter { narrowing.keeps(it) }
+            .sortedWith(comparator)
         val (enabledSources, disabledSources) = matching.partition { it.isEnabled }
         SourceListState(
             allSources = allSources,
@@ -112,6 +137,35 @@ class SourceListViewModel(
         _query.value = value
     }
 
+    /** Narrows to one category, or clears it by picking the same one again. */
+    fun setCategory(value: String?) {
+        _category.value = if (_category.value == value) null else value
+        if (_category.value != null) _duplicatesOnly.value = false
+    }
+
+    /**
+     * Arms or clears the duplicates filter.
+     *
+     * The set of duplicates is computed once when the filter goes on rather
+     * than kept in the state flow: it is a question asked deliberately, and
+     * grouping every source by normalised URL on each of a sync's writes to
+     * answer a question nobody asked is exactly the cost that made this
+     * screen slow in the first place.
+     */
+    fun setDuplicatesOnly(value: Boolean) {
+        if (!value) {
+            _duplicatesOnly.value = false
+            _duplicateIds.value = emptySet()
+            return
+        }
+        _category.value = null
+        _query.value = ""
+        ioScope.launch {
+            _duplicateIds.value = feedsRepo.duplicateSources().map(Feed::id).toSet()
+            _duplicatesOnly.value = true
+        }
+    }
+
     /**
      * Picks an order, or reverses the one already picked.
      *
@@ -135,9 +189,41 @@ class SourceListViewModel(
 
     /* Selection */
 
+    /**
+     * Where the last deliberate pick was made, for extending a range from.
+     *
+     * Cleared with the selection: an anchor pointing at a source nobody has
+     * selected would make the next long-press sweep up an arbitrary run of
+     * the list.
+     */
+    private var anchor: Long? = null
+
     fun toggleSelected(id: Long) {
         _selection.value = if (id in _selection.value) _selection.value - id
         else _selection.value + id
+        anchor = id
+    }
+
+    /**
+     * Takes everything between the last pick and this one.
+     *
+     * `shown` is the list as drawn, so the run selected is the run the user
+     * can see between their finger and the anchor — sorting or filtering the
+     * list changes what "between" means, and the answer should be the one on
+     * screen rather than one computed from the database's order.
+     *
+     * With no anchor, or an anchor that has since been filtered away, this is
+     * an ordinary toggle. Extending from nothing has no sensible meaning, and
+     * guessing one selects rows the user never pointed at.
+     */
+    fun extendSelection(shown: List<Long>, id: Long) {
+        val run = rangeBetween(shown, anchor, id)
+        if (run.isEmpty()) {
+            toggleSelected(id)
+            return
+        }
+        _selection.value = _selection.value + run
+        anchor = id
     }
 
     fun selectAll(ids: Collection<Long>) {
@@ -146,6 +232,7 @@ class SourceListViewModel(
 
     fun clearSelection() {
         _selection.value = emptySet()
+        anchor = null
     }
 
     /* Bulk actions. Each one clears the selection: leaving twelve sources
@@ -171,6 +258,33 @@ class SourceListViewModel(
         val ids = _selection.value
         clearSelection()
         viewModelScope.launch { feedsRepo.deleteSources(ids) }
+    }
+
+    /**
+     * Empties the selected sources, keeping the sources themselves.
+     *
+     * Reports the number of articles removed through [articlesCleared], which
+     * the screen drains into a snackbar: bookmarked and pinned articles are
+     * kept, so the count is the only honest way to say what happened.
+     */
+    private val _articlesCleared = MutableStateFlow<Int?>(null)
+    val articlesCleared: StateFlow<Int?> = _articlesCleared.asStateFlow()
+
+    fun clearSelectedArticles() {
+        val ids = _selection.value
+        clearSelection()
+        viewModelScope.launch { _articlesCleared.value = feedsRepo.clearArticles(ids) }
+    }
+
+    fun forgetArticlesCleared() {
+        _articlesCleared.value = null
+    }
+
+    /** Turns full-article fetching on or off across the selection. */
+    fun setSelectedFullText(enabled: Boolean) {
+        val ids = _selection.value
+        clearSelection()
+        viewModelScope.launch { feedsRepo.setFullTextByDefault(ids, enabled) }
     }
 
     /* Category management */
@@ -258,7 +372,18 @@ data class SourceListState(
     val disabledSources: List<Feed> = emptyList(),
     val tagsSourcesMap: Map<String, List<Feed>> = emptyMap(),
     val allTags: List<String> = emptyList(),
-)
+) {
+    /**
+     * The sources actually on screen, in the order they are drawn.
+     *
+     * Select-all and range-select both work from this rather than from
+     * [allSources]. Select-all used to take every source in the database,
+     * which meant searching for "bbc", starting a selection and tapping
+     * Select all quietly picked up two hundred sources the user could not
+     * see — in a bar whose next button is Delete.
+     */
+    val shownSources: List<Feed> get() = enabledSources + disabledSources
+}
 
 /**
  * How the source list is ordered.
@@ -361,6 +486,47 @@ internal fun groupByTag(sources: List<Feed>, tags: List<String>): Map<String, Li
         else own.forEach { byTag[it]?.add(source) }
     }
     return byTag + ("" to untagged)
+}
+
+/**
+ * The ids between two picks, in the order the list is drawn.
+ *
+ * Empty when there is nothing to extend from — no anchor, or an anchor that
+ * has since been filtered off the screen — which the caller treats as a plain
+ * toggle. Selecting a run computed from a row the user can no longer see would
+ * sweep up an arbitrary stretch of the list.
+ *
+ * The two ends are included, and the direction does not matter: dragging a
+ * selection upwards is the same gesture as dragging it down.
+ */
+internal fun rangeBetween(shown: List<Long>, anchor: Long?, id: Long): List<Long> {
+    val from = shown.indexOf(anchor ?: return emptyList())
+    val to = shown.indexOf(id)
+    if (from < 0 || to < 0) return emptyList()
+    val range = if (from <= to) from..to else to..from
+    return range.map(shown::get)
+}
+
+/**
+ * The three ways the list can be narrowed, as one value.
+ *
+ * They compose rather than replace one another — a search inside a category is
+ * a reasonable thing to want — with one exception enforced at the setters:
+ * arming the duplicates filter clears the other two, because "duplicates, but
+ * only the ones matching 'bbc'" is a question nobody is asking while trying to
+ * clean up a list.
+ */
+internal data class Narrowing(
+    val query: String = "",
+    val category: String? = null,
+    val duplicatesOnly: Boolean = false,
+    val duplicateIds: Set<Long> = emptySet(),
+) {
+    fun keeps(feed: Feed): Boolean {
+        if (duplicatesOnly && feed.id !in duplicateIds) return false
+        if (category != null && category !in feed.tags) return false
+        return feed.matches(query)
+    }
 }
 
 /**

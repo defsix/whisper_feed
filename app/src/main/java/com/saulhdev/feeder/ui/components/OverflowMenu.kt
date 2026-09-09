@@ -35,6 +35,13 @@ import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
 
 @Composable
 fun OverflowMenu(
+    /**
+     * What a screen reader calls the button.
+     *
+     * It announced "Settings" everywhere, on every screen that has one of
+     * these — including the ones with no settings in the menu at all.
+     */
+    description: Int = R.string.more_options,
     block: @Composable OverflowMenuScope.() -> Unit)
 {
     val showMenu = remember { mutableStateOf(false) }
@@ -46,7 +53,7 @@ fun OverflowMenu(
         ) {
             Icon(
                 imageVector = Phosphor.DotsThreeVertical,
-                contentDescription = stringResource(id = R.string.title_settings),
+                contentDescription = stringResource(id = description),
                 modifier = Modifier.size(HeaderIconSize),
             )
         }

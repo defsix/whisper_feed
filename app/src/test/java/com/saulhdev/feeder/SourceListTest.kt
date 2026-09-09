@@ -1,7 +1,10 @@
 package com.saulhdev.feeder
 
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.viewmodels.Narrowing
+import com.saulhdev.feeder.viewmodels.SourceListState
 import com.saulhdev.feeder.viewmodels.SourceSort
+import com.saulhdev.feeder.viewmodels.rangeBetween
 import com.saulhdev.feeder.viewmodels.groupByTag
 import com.saulhdev.feeder.viewmodels.matches
 import org.junit.Assert.assertEquals
@@ -211,5 +214,124 @@ class SourceListTest {
         )
         val map = groupByTag(feeds, listOf("News", "Tech"))
         assertEquals(feeds.map(Feed::title).toSet(), map.values.flatten().map(Feed::title).toSet())
+    }
+}
+
+/**
+ * The list's three narrowing controls and the range gesture.
+ *
+ * Both are decided by pure functions rather than by the view model precisely
+ * so they can be checked here: the bug that prompted them — Select all taking
+ * two hundred hidden sources while a search was live — was invisible in the
+ * code and obvious the moment it was written down as a fixture.
+ */
+class SourceNarrowingTest {
+
+    private val bbc = feed(id = 1, title = "BBC", url = "https://bbc.co.uk/rss", tag = "News")
+    private val guardian =
+        feed(id = 2, title = "Guardian", url = "https://theguardian.com/rss", tag = "News,World")
+    private val ars = feed(id = 3, title = "Ars", url = "https://arstechnica.com/feed", tag = "Tech")
+
+    @Test
+    fun `nothing set keeps everything`() {
+        val all = Narrowing()
+        assertTrue(listOf(bbc, guardian, ars).all(all::keeps))
+    }
+
+    @Test
+    fun `a category keeps only its own sources`() {
+        val news = Narrowing(category = "News")
+        assertTrue(news.keeps(bbc))
+        assertTrue("a source in several categories still counts", news.keeps(guardian))
+        assertFalse(news.keeps(ars))
+    }
+
+    @Test
+    fun `the category is exact where the search is not`() {
+        // Searching "New" matches anything containing it; the chip must not,
+        // or a chip labelled News would quietly include a source called
+        // "Newsnight Tech" filed under Tech.
+        val newsnight = feed(id = 4, title = "Newsnight", tag = "Tech")
+        assertTrue(newsnight.matches("News"))
+        assertFalse(Narrowing(category = "News").keeps(newsnight))
+    }
+
+    @Test
+    fun `a search inside a category narrows twice`() {
+        val both = Narrowing(query = "guardian", category = "News")
+        assertFalse(both.keeps(bbc))
+        assertTrue(both.keeps(guardian))
+    }
+
+    @Test
+    fun `the duplicates filter keeps only the ids it was given`() {
+        val dupes = Narrowing(duplicatesOnly = true, duplicateIds = setOf(1L, 2L))
+        assertTrue(dupes.keeps(bbc))
+        assertTrue(dupes.keeps(guardian))
+        assertFalse(dupes.keeps(ars))
+    }
+
+    @Test
+    fun `an armed duplicates filter with no ids keeps nothing`() {
+        // The state between arming the filter and the query returning. Keeping
+        // everything for that frame would flash the whole list.
+        val dupes = Narrowing(duplicatesOnly = true)
+        assertFalse(listOf(bbc, guardian, ars).any(dupes::keeps))
+    }
+}
+
+class SelectionRangeTest {
+
+    private val shown = listOf(10L, 20L, 30L, 40L, 50L)
+
+    @Test
+    fun `a range covers both ends`() {
+        assertEquals(listOf(20L, 30L, 40L), rangeBetween(shown, anchor = 20L, id = 40L))
+    }
+
+    @Test
+    fun `dragging upwards is the same range`() {
+        assertEquals(listOf(20L, 30L, 40L), rangeBetween(shown, anchor = 40L, id = 20L))
+    }
+
+    @Test
+    fun `a range of one is the item itself`() {
+        assertEquals(listOf(30L), rangeBetween(shown, anchor = 30L, id = 30L))
+    }
+
+    @Test
+    fun `no anchor means no range`() {
+        // The caller falls back to a plain toggle. Extending from nothing has
+        // no meaning, and guessing one selects rows nobody pointed at.
+        assertTrue(rangeBetween(shown, anchor = null, id = 30L).isEmpty())
+    }
+
+    @Test
+    fun `an anchor that has been filtered away means no range`() {
+        assertTrue(rangeBetween(shown, anchor = 99L, id = 30L).isEmpty())
+    }
+
+    @Test
+    fun `the run follows the order on screen, not the order of the ids`() {
+        // Sorted by name descending, say. The user's finger travels down the
+        // list they can see, so that is the list the range is taken from.
+        val reversed = listOf(50L, 40L, 30L, 20L, 10L)
+        assertEquals(listOf(50L, 40L, 30L), rangeBetween(reversed, anchor = 50L, id = 30L))
+    }
+}
+
+class ShownSourcesTest {
+
+    @Test
+    fun `what select-all takes is the enabled list then the disabled one`() {
+        // Not allSources: a search or a category chip filters these two lists
+        // and leaves allSources whole, which is how Select all came to take
+        // sources that were not on screen.
+        val state = SourceListState(
+            allSources = listOf(feed(id = 1), feed(id = 2), feed(id = 3)),
+            enabledSources = listOf(feed(id = 1)),
+            disabledSources = listOf(feed(id = 2)),
+        )
+        assertEquals(listOf(1L, 2L), state.shownSources.map(Feed::id))
     }
 }

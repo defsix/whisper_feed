@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.ui.pages
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -107,6 +108,15 @@ import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.ui.icons.phosphor.Check
 import com.saulhdev.feeder.ui.icons.phosphor.Sort
 import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
+import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
+import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
+import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
+import com.saulhdev.feeder.ui.icons.phosphor.Filtered
+import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
+import com.saulhdev.feeder.ui.icons.phosphor.Power
+import com.saulhdev.feeder.ui.icons.phosphor.Prohibit
+import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
+import com.saulhdev.feeder.ui.icons.phosphor.X
 import com.saulhdev.feeder.viewmodels.SourceSort
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -133,9 +143,21 @@ fun SourceListPage(
     val recentlyDeletedMany by viewModel.recentlyDeletedMany.collectAsState()
     val selection by viewModel.selection.collectAsState()
     val query by viewModel.query.collectAsState()
+    val category by viewModel.category.collectAsState()
+    val duplicatesOnly by viewModel.duplicatesOnly.collectAsState()
+    val articlesCleared by viewModel.articlesCleared.collectAsState()
     val sort by viewModel.sort.collectAsState()
     val ascending by viewModel.ascending.collectAsState()
     var tagAction by remember { mutableStateOf<TagAction?>(null) }
+
+    // Both bulk lists come from the same ordering the screen draws, so
+    // "select all" and "everything between these two" mean what they look
+    // like they mean.
+    val shown = state.shownSources
+    // Remembered against the list rather than rebuilt each frame: this screen
+    // has form for recomposing on every write a sync makes, and both bulk
+    // gestures want the ids rather than the rows.
+    val shownIds = remember(shown) { shown.map(Feed::id) }
 
     // "Not updating" needs a fixed instant to compare against. Computed once
     // per composition of the screen rather than inside each row, where each
@@ -147,6 +169,11 @@ fun SourceListPage(
     // Leaving the screen with a selection still live would mean coming back to
     // a bulk action armed against a list that may have changed underneath it.
     DisposableEffect(Unit) { onDispose { viewModel.clearSelection() } }
+
+    // Back dismisses the selection before it dismisses the screen, which is
+    // the same promise the close cross in the app bar makes. Without this the
+    // two gestures disagree: the cross clears, back leaves.
+    BackHandler(enabled = selection.isNotEmpty()) { viewModel.clearSelection() }
     val undoLabel = stringResource(R.string.action_undo)
     LaunchedEffect(recentlyDeleted) {
         val feed = recentlyDeleted ?: return@LaunchedEffect
@@ -172,6 +199,30 @@ fun SourceListPage(
         )
         if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteSources()
         else viewModel.forgetDeletedSources()
+    }
+
+    LaunchedEffect(articlesCleared) {
+        val count = articlesCleared ?: return@LaunchedEffect
+        // Said with a number because the query keeps bookmarked and pinned
+        // articles: "done" would leave someone counting rows to find out
+        // whether their saved items had just gone.
+        snackbarHostState.showSnackbar(
+            message = context.getString(R.string.sources_articles_cleared, count),
+            withDismissAction = true,
+        )
+        viewModel.forgetArticlesCleared()
+    }
+
+    LaunchedEffect(duplicatesOnly, shown.size) {
+        if (!duplicatesOnly || shown.isNotEmpty()) return@LaunchedEffect
+        // Disarmed before the message rather than after it, so the list comes
+        // straight back: a filter that leaves an empty screen for as long as a
+        // snackbar lasts reads as a screen that has broken.
+        viewModel.setDuplicatesOnly(false)
+        snackbarHostState.showSnackbar(
+            message = context.getString(R.string.sources_duplicates_none),
+            withDismissAction = true,
+        )
     }
 
     val opmlExporter = rememberLauncherForActivityResult(
@@ -247,27 +298,56 @@ fun SourceListPage(
         navigator = paneNavigator,
         listPane = {
             AnimatedPane {
+                val selecting = selection.isNotEmpty()
                 ViewWithActionBar(
-                    title = stringResource(id = R.string.title_sources),
+                    // The app bar becomes the selection's own bar while one is
+                    // running: count on the left, close where the back arrow
+                    // was, actions on the right. This used to be a card in the
+                    // list with the actions in a horizontally scrolling row,
+                    // which put Delete sixth — off the right edge of a phone,
+                    // with nothing to say the row scrolled at all. A
+                    // destructive action that has to be discovered by swiping
+                    // is one that will be found by accident.
+                    title = if (selecting) {
+                        stringResource(R.string.sources_selected, selection.size)
+                    } else {
+                        stringResource(id = R.string.title_sources)
+                    },
                     largeTitle = true,
-                    showBackButton = false,
+                    showBackButton = selecting,
+                    backIcon = Phosphor.X,
+                    backDescription = R.string.sources_clear_selection,
+                    onBackAction = viewModel::clearSelection,
                     snackbarHost = { SnackbarHost(snackbarHostState) },
                     floatingActionButton = {
-                        ExtendedFloatingActionButton(
-                            onClick = {
-                                navController.navigate(NavRoute.SourceAdd)
-                            },
-                            modifier = Modifier.padding(16.dp),
-                            shape = MaterialTheme.shapes.extraLarge
-                        ) {
-                            Icon(
-                                imageVector = Phosphor.Plus,
-                                contentDescription = stringResource(id = R.string.add_feed),
-                            )
+                        // Adding a source in the middle of picking sources to
+                        // act on is not a thing anyone is doing, and the FAB
+                        // sits over the last row of the list.
+                        if (!selecting) {
+                            ExtendedFloatingActionButton(
+                                onClick = {
+                                    navController.navigate(NavRoute.SourceAdd)
+                                },
+                                modifier = Modifier.padding(16.dp),
+                                shape = MaterialTheme.shapes.extraLarge
+                            ) {
+                                Icon(
+                                    imageVector = Phosphor.Plus,
+                                    contentDescription = stringResource(id = R.string.add_feed),
+                                )
+                            }
                         }
                     },
                     actions = {
-                        OverflowMenu {
+                        if (selecting) SelectionActions(
+                            onTag = { tagAction = it },
+                            onDelete = viewModel::deleteSelected,
+                            onSelectAll = { viewModel.selectAll(shownIds) },
+                            onEnable = { viewModel.setSelectedEnabled(true) },
+                            onDisable = { viewModel.setSelectedEnabled(false) },
+                            onFullText = viewModel::setSelectedFullText,
+                            onClearArticles = viewModel::clearSelectedArticles,
+                        ) else OverflowMenu {
                             DropdownMenuItem(
                                 leadingIcon = {
                                     Icon(
@@ -280,6 +360,19 @@ fun SourceListPage(
                                     navController.navigate(NavRoute.Categories)
                                 },
                                 text = { Text(stringResource(R.string.manage_categories)) },
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(
+                                        Phosphor.Filtered,
+                                        contentDescription = stringResource(R.string.sources_find_duplicates),
+                                    )
+                                },
+                                onClick = {
+                                    hideMenu()
+                                    viewModel.setDuplicatesOnly(true)
+                                },
+                                text = { Text(stringResource(R.string.sources_find_duplicates)) },
                             )
                             HorizontalDivider()
                             // Only the chosen row carries an arrow, and the
@@ -414,37 +507,49 @@ fun SourceListPage(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         item {
-                            if (selection.isEmpty()) {
-                                OutlinedTextField(
-                                    value = query,
-                                    onValueChange = viewModel::setQuery,
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = MaterialTheme.shapes.large,
-                                    label = { Text(stringResource(R.string.sources_search)) },
-                                    trailingIcon = {
-                                        if (query.isNotEmpty()) {
-                                            IconButton(onClick = { viewModel.setQuery("") }) {
-                                                Icon(Phosphor.SubtractSquare, null)
-                                            }
+                            // The search field stays put while a selection is
+                            // running. It used to be replaced by the selection
+                            // bar, which hid a filter that was still in force
+                            // — so Select all appeared to take what was on
+                            // screen while actually taking the whole database.
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = viewModel::setQuery,
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.large,
+                                label = { Text(stringResource(R.string.sources_search)) },
+                                trailingIcon = {
+                                    if (query.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.setQuery("") }) {
+                                            Icon(Phosphor.SubtractSquare, null)
                                         }
-                                    },
-                                )
-                            } else {
-                                SelectionBar(
-                                    count = selection.size,
-                                    onSelectAll = {
-                                        viewModel.selectAll(state.allSources.map(Feed::id))
-                                    },
-                                    onClear = viewModel::clearSelection,
-                                    onEnable = { viewModel.setSelectedEnabled(true) },
-                                    onDisable = { viewModel.setSelectedEnabled(false) },
-                                    onTag = { tagAction = it },
-                                    onDelete = viewModel::deleteSelected,
+                                    }
+                                },
+                            )
+                        }
+                        if (duplicatesOnly) {
+                            item {
+                                DuplicatesBanner(onClear = { viewModel.setDuplicatesOnly(false) })
+                            }
+                        } else if (state.allTags.isNotEmpty()) {
+                            item {
+                                // Categories exist in the database and on a
+                                // screen two taps away; nothing on the list
+                                // itself said which ones there were. Searching
+                                // the name nearly does this, but it also
+                                // matches titles and URLs containing the word.
+                                CategoryChips(
+                                    tags = state.allTags,
+                                    chosen = category,
+                                    onPick = viewModel::setCategory,
                                 )
                             }
                         }
-                        item {
+                        // A heading over nothing was tolerable when the list
+                        // was only ever searched; with a category chip it is
+                        // routine for one of the two sections to be empty.
+                        if (state.enabledSources.isNotEmpty()) item {
                             PreferenceGroupHeading(heading = stringResource(id = R.string.enabled))
                         }
                         items(state.enabledSources, key = { it.id }) { item ->
@@ -454,6 +559,9 @@ fun SourceListPage(
                                 selectionMode = selection.isNotEmpty(),
                                 selected = item.id in selection,
                                 onLongClick = { viewModel.toggleSelected(it.id) },
+                                onExtendSelection = {
+                                    viewModel.extendSelection(shownIds, it.id)
+                                },
                                 staleSince = staleSince,
                                 onClick = {
                                     scope.launch {
@@ -471,7 +579,7 @@ fun SourceListPage(
                                 }
                             )
                         }
-                        item {
+                        if (state.disabledSources.isNotEmpty()) item {
                             PreferenceGroupHeading(heading = stringResource(id = R.string.disabled))
                         }
                         items(state.disabledSources, key = { it.id }) { item ->
@@ -481,6 +589,9 @@ fun SourceListPage(
                                 selectionMode = selection.isNotEmpty(),
                                 selected = item.id in selection,
                                 onLongClick = { viewModel.toggleSelected(it.id) },
+                                onExtendSelection = {
+                                    viewModel.extendSelection(shownIds, it.id)
+                                },
                                 staleSince = staleSince,
                                 onClick = {
                                     scope.launch {
@@ -534,69 +645,141 @@ enum class TagAction(val labelId: Int) {
 }
 
 /**
- * What replaces the search field once sources are picked out.
+ * What the app bar carries while a selection is running.
  *
- * It stands in the list rather than in the app bar so that the count and the
- * actions scroll with the thing they act on: a bar pinned to the top, with the
- * selection somewhere below the fold, is how people act on a selection they
- * have forgotten the contents of.
+ * Two icons and an overflow, which is the Material limit and also the honest
+ * one: naming three tag operations, enable, disable, full text and clear
+ * across the top of a phone would mean either eight unlabelled glyphs or a row
+ * that scrolls. Category and Delete are the two anybody reaches for, and Delete
+ * is drawn in the error colour so the destructive one is the one that looks
+ * destructive.
  */
 @Composable
-private fun SelectionBar(
-    count: Int,
-    onSelectAll: () -> Unit,
-    onClear: () -> Unit,
-    onEnable: () -> Unit,
-    onDisable: () -> Unit,
+private fun SelectionActions(
     onTag: (TagAction) -> Unit,
     onDelete: () -> Unit,
+    onSelectAll: () -> Unit,
+    onEnable: () -> Unit,
+    onDisable: () -> Unit,
+    onFullText: (Boolean) -> Unit,
+    onClearArticles: () -> Unit,
 ) {
+    IconButton(onClick = { onTag(TagAction.Add) }) {
+        Icon(Phosphor.Hash, stringResource(R.string.sources_add_tag))
+    }
+    IconButton(onClick = onDelete) {
+        Icon(
+            imageVector = Phosphor.TrashSimple,
+            contentDescription = stringResource(R.string.sources_delete_selected),
+            tint = MaterialTheme.colorScheme.error,
+        )
+    }
+    OverflowMenu(description = R.string.sources_more_actions) {
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.Check, null) },
+            onClick = { hideMenu(); onSelectAll() },
+            text = { Text(stringResource(R.string.sources_select_all)) },
+        )
+        HorizontalDivider()
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.Hash, null) },
+            onClick = { hideMenu(); onTag(TagAction.Remove) },
+            text = { Text(stringResource(R.string.sources_remove_tag)) },
+        )
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.Hash, null) },
+            onClick = { hideMenu(); onTag(TagAction.Replace) },
+            text = { Text(stringResource(R.string.sources_replace_tags)) },
+        )
+        HorizontalDivider()
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.Power, null) },
+            onClick = { hideMenu(); onEnable() },
+            text = { Text(stringResource(R.string.sources_enable)) },
+        )
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.Prohibit, null) },
+            onClick = { hideMenu(); onDisable() },
+            text = { Text(stringResource(R.string.sources_disable)) },
+        )
+        HorizontalDivider()
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.BracketsSquare, null) },
+            onClick = { hideMenu(); onFullText(true) },
+            text = { Text(stringResource(R.string.sources_full_text_on)) },
+        )
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.ListDashes, null) },
+            onClick = { hideMenu(); onFullText(false) },
+            text = { Text(stringResource(R.string.sources_full_text_off)) },
+        )
+        DropdownMenuItem(
+            leadingIcon = { Icon(Phosphor.ArrowCounterClockwise, null) },
+            onClick = { hideMenu(); onClearArticles() },
+            text = { Text(stringResource(R.string.sources_clear_articles)) },
+        )
+    }
+}
+
+/**
+ * The categories in use, as a row that filters the list.
+ *
+ * Single-choice: two categories at once is either "and", which is usually
+ * empty, or "or", which is usually the whole list, and a chip row cannot say
+ * which one it meant. Tapping the chosen chip again clears it, so the row
+ * needs no All chip explaining how to get back.
+ */
+@Composable
+private fun CategoryChips(
+    tags: List<String>,
+    chosen: String?,
+    onPick: (String) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
+    ) {
+        tags.forEach { tag ->
+            FilterChip(
+                selected = tag == chosen,
+                onClick = { onPick(tag) },
+                label = { Text(tag) },
+                leadingIcon = if (tag == chosen) {
+                    { Icon(Phosphor.Check, null) }
+                } else null,
+            )
+        }
+    }
+}
+
+/**
+ * Says why the list is short, while the duplicates filter is on.
+ *
+ * Without it the screen is indistinguishable from a search that matched
+ * almost nothing, and the way out — the same menu entry, tapped again — is
+ * not somewhere anyone would look.
+ */
+@Composable
+private fun DuplicatesBanner(onClear: () -> Unit) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.sources_selected, count),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onSelectAll) {
-                    Text(stringResource(R.string.sources_select_all))
-                }
-                IconButton(onClick = onClear) {
-                    Icon(Phosphor.SubtractSquare, stringResource(android.R.string.cancel))
-                }
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(bottom = 4.dp),
-            ) {
-                TagAction.entries.forEach { action ->
-                    AssistChip(
-                        onClick = { onTag(action) },
-                        label = { Text(stringResource(action.labelId)) },
-                    )
-                }
-                AssistChip(
-                    onClick = onEnable,
-                    label = { Text(stringResource(R.string.sources_enable)) },
-                )
-                AssistChip(
-                    onClick = onDisable,
-                    label = { Text(stringResource(R.string.sources_disable)) },
-                )
-                AssistChip(
-                    onClick = onDelete,
-                    label = { Text(stringResource(R.string.remove_title)) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        labelColor = MaterialTheme.colorScheme.error,
-                    ),
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.sources_duplicates_showing),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onClear) {
+                Text(stringResource(R.string.sources_show_all))
             }
         }
     }

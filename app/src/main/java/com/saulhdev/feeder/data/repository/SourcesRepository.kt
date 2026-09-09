@@ -24,6 +24,7 @@ import com.saulhdev.feeder.data.db.ID_ALL
 import com.saulhdev.feeder.data.db.ID_UNSET
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.manager.sync.FeedSyncer
 import com.saulhdev.feeder.manager.sync.requestFeedSync
@@ -53,6 +54,7 @@ class SourcesRepository(db: NeoFeedDb) {
     private val jcc = Dispatchers.IO + SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO) + CoroutineName("FeedSourceRepository")
     private val feedsDao = db.feedSourceDao()
+    private val articlesDao = db.feedArticleDao()
     private val workManager: WorkManager by inject(WorkManager::class.java)
 
     suspend fun insertSource(feed: Feed) = withContext(jcc) {
@@ -233,6 +235,21 @@ class SourcesRepository(db: NeoFeedDb) {
     }
 
     /**
+     * Turns full-article fetching on or off across a selection.
+     *
+     * Per-feed and only reachable from each source's editor until now, which
+     * made it the one setting people wanted in bulk and could not have: a list
+     * imported from a browser is mostly summary-only newspapers, and twenty
+     * visits to twenty editors is not a feature.
+     */
+    suspend fun setFullTextByDefault(ids: Collection<Long>, enabled: Boolean) = withContext(jcc) {
+        val feeds = feedsDao.loadAllFeeds()
+            .filter { it.id in ids && it.fullTextByDefault != enabled }
+            .map { it.copy(fullTextByDefault = enabled) }
+        if (feeds.isNotEmpty()) feedsDao.updateAll(feeds)
+    }
+
+    /**
      * Adds, removes or replaces categories across a selection.
      *
      * The whole reason this is here rather than in the view model: `tag` is a
@@ -314,6 +331,43 @@ class SourcesRepository(db: NeoFeedDb) {
 
     fun forgetDeletedSources() {
         _recentlyDeletedMany.value = emptyList()
+    }
+
+    /**
+     * Throws away the articles of several sources, keeping the sources.
+     *
+     * Returns how many rows went, so the screen can say so rather than leave
+     * the user guessing whether anything happened — clearing a feed that was
+     * already empty looks identical to a button that does nothing.
+     *
+     * There is no undo, and deliberately no confirmation either: what this
+     * deletes is a cache the next sync rebuilds, minus the bookmarked and
+     * pinned articles the query refuses to touch.
+     */
+    suspend fun clearArticles(ids: Collection<Long>): Int = withContext(jcc) {
+        if (ids.isEmpty()) return@withContext 0
+        articlesDao.clearArticlesForFeeds(ids.toList())
+    }
+
+    /**
+     * Sources that are the same feed as some other source.
+     *
+     * Two imports — an OPML and a browser's bookmarks, say — will happily add
+     * the same feed twice under two different titles, and nothing in the list
+     * shows it: they sort apart, they look alike, and they deliver the same
+     * article twice. Matching is on the normalised address rather than the
+     * stored one, so `http://x/feed`, `https://x/feed` and `https://x/feed/`
+     * count as one feed, which is the whole reason a duplicate survives being
+     * added in the first place.
+     *
+     * Groups of one are dropped: a source with no twin is not a duplicate.
+     */
+    suspend fun duplicateSources(): List<Feed> = withContext(jcc) {
+        feedsDao.loadAllFeeds()
+            .groupBy { normalizeFeedUrl(it.url) }
+            .values
+            .filter { it.size > 1 }
+            .flatten()
     }
 }
 

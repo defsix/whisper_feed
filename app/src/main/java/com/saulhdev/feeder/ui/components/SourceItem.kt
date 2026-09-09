@@ -58,8 +58,21 @@ fun SourceItem(
     selectionMode: Boolean = false,
     selected: Boolean = false,
     onLongClick: (Feed) -> Unit = {},
+    /**
+     * Long-press while a selection is already running.
+     *
+     * Separate from [onLongClick] because the two gestures mean different
+     * things once a selection exists: a tap adds or removes this one source,
+     * a long-press takes the whole run back to the last one picked. That is
+     * the convention every file manager and mail app uses, and it is the
+     * difference between filing thirty imported feeds in two gestures and
+     * doing it in thirty taps. Defaults to [onLongClick], so a caller that
+     * has no range behaviour keeps the plain toggle.
+     */
+    onExtendSelection: ((Feed) -> Unit)? = null,
     staleSince: Long = 0L,
 ) {
+    val extend = onExtendSelection ?: onLongClick
     val (isEnabled, enable) = remember(source.isEnabled) {
         mutableStateOf(source.isEnabled)
     }
@@ -81,7 +94,7 @@ fun SourceItem(
             .clip(MaterialTheme.shapes.large)
             .combinedClickable(
                 onClick = { if (selectionMode) onLongClick(source) else onClick(source) },
-                onLongClick = { onLongClick(source) },
+                onLongClick = { if (selectionMode) extend(source) else onLongClick(source) },
             ),
         colors = ListItemDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer

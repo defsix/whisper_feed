@@ -76,6 +76,23 @@ interface FeedArticleDao {
     )
     suspend fun deleteFeedArticle(feedId: Long?): Int
 
+    /**
+     * Empties several feeds without emptying the reader.
+     *
+     * Bookmarked and pinned articles are kept. Clearing a source is a tidying
+     * action — "this feed is sitting on nine hundred items I will never read"
+     * — and someone who saved an article did the opposite of asking for it to
+     * go. The next sync refills the feed from the server anyway, so the only
+     * thing this can destroy for good is the one thing it excludes.
+     */
+    @Query(
+        """
+        DELETE FROM Article
+        WHERE feedId IN (:feedIds) AND bookmarked = 0 AND pinned = 0
+        """
+    )
+    suspend fun clearArticlesForFeeds(feedIds: List<Long>): Int
+
     @Query("SELECT * FROM Article WHERE guid IS :guid AND feedId IS :feedId")
     suspend fun loadArticle(guid: String, feedId: Long?): Article?
 
