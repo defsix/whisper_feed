@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +26,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -33,10 +36,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.rememberNavController
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.ui.overlay.CARD_MARGIN
 import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.components.RoundButton
 import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.overlay.articlePlaceholder
+import com.saulhdev.feeder.ui.overlay.SourceMark
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.WithBidiDeterminedLayoutDirection
 import com.saulhdev.feeder.ui.icons.Phosphor
@@ -100,14 +105,18 @@ fun ArticlePage(
 
     val title by remember { derivedStateOf { state?.article?.title ?: "Neo Feed" } }
     val currentUrl by remember { derivedStateOf { state?.article?.link ?: "Neo Feed" } }
+    val appName = stringResource(R.string.app_name)
     val subTitle by remember {
         derivedStateOf {
-            (if (currentUrl != "Neo Feed") Uri.parse(currentUrl).host else null)
+            // "Neo Feed" was the literal fallback here, and the sentinel this
+            // compared against — so an article whose source had no title was
+            // attributed on screen to a different app.
+            Uri.parse(currentUrl).host
                 ?: state?.source?.title
-                ?: "Neo Feed"
+                ?: appName
         }
     }
-    val feedTitle by remember { derivedStateOf { state?.source?.title ?: "Neo Feed" } }
+    val feedTitle by remember(appName) { derivedStateOf { state?.source?.title ?: appName } }
 
     val navController = rememberNavController()
     BackHandler(onDismiss == null) {
@@ -190,8 +199,12 @@ fun ArticlePage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        start = 4.dp,
-                        end = 4.dp,
+                        // The margin the feed uses. Both of these screens sat
+                        // at four points, so an article opened from a card
+                        // that started sixteen points in began four points in,
+                        // and the two screens read as different apps.
+                        start = CARD_MARGIN,
+                        end = CARD_MARGIN,
                         bottom = paddingValues.calculateBottomPadding() + 8.dp
                     ),
             ) {
@@ -206,22 +219,34 @@ fun ArticlePage(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    WithBidiDeterminedLayoutDirection(paragraph = feedTitle) {
-                        Text(
-                            text = feedTitle,
-                            style = MaterialTheme.typography.titleMedium.merge(LinkTextStyle()),
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .clearAndSetSemantics {
-                                    contentDescription = feedTitle
-                                }
-                                .clickable {
-                                    MainActivity.navigateIntent(
-                                        context,
-                                        "${Routes.WEB_VIEW}/${state?.article?.link?.urlEncode()}"
-                                    )
-                                }
+                    // The source's own mark beside its name, the same one the
+                    // cards carry and already cached from the feed. A byline
+                    // with a face on it is recognisable at a glance; a line of
+                    // text is something you have to read.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SourceMark(
+                            iconUrl = state?.source?.feedImage?.toString(),
+                            sourceName = feedTitle,
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        WithBidiDeterminedLayoutDirection(paragraph = feedTitle) {
+                            Text(
+                                text = feedTitle,
+                                style = MaterialTheme.typography.titleMedium
+                                    .merge(LinkTextStyle()),
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .clearAndSetSemantics {
+                                        contentDescription = feedTitle
+                                    }
+                                    .clickable {
+                                        MainActivity.navigateIntent(
+                                            context,
+                                            "${Routes.WEB_VIEW}/${state?.article?.link?.urlEncode()}"
+                                        )
+                                    }
+                            )
+                        }
                     }
 
                     if (authorDate != null) {

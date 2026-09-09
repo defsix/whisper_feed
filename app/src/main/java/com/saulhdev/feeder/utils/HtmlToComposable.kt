@@ -55,6 +55,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +95,25 @@ import org.jsoup.nodes.TextNode
 import java.io.InputStream
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+/**
+ * How a paragraph of an article is set.
+ *
+ * Justified, with hyphenation switched on — and the second is not optional
+ * with the first. A justified column this narrow and unhyphenated opens
+ * rivers: the spaces stretch to fill the line and the eye follows the gaps
+ * down the page instead of the words across it. Hyphens let the line breaks
+ * fall somewhere sensible so the stretching stays small.
+ */
+@Composable
+private fun bodyStyle() = MaterialTheme.typography.bodyLarge.merge(
+    TextStyle(
+        color = MaterialTheme.colorScheme.onBackground,
+        textAlign = TextAlign.Justify,
+        hyphens = Hyphens.Auto,
+        lineBreak = LineBreak.Paragraph,
+    )
+)
 
 fun LazyListScope.htmlFormattedText(
     inputStream: InputStream,
@@ -131,8 +153,7 @@ private fun LazyListScope.formatBody(
                 ) {
                     ClickableText(
                         text = paragraph,
-                        style = MaterialTheme.typography.bodyLarge
-                            .merge(TextStyle(color = MaterialTheme.colorScheme.onBackground)),
+                        style = bodyStyle(),
                         modifier = Modifier.width(dimens.maxContentWidth)
                     ) { offset ->
                         paragraph.getStringAnnotations("URL", offset, offset)
@@ -144,8 +165,7 @@ private fun LazyListScope.formatBody(
                 } else {
                     Text(
                         text = paragraph,
-                        style = MaterialTheme.typography.bodyLarge
-                            .merge(TextStyle(color = MaterialTheme.colorScheme.onBackground)),
+                        style = bodyStyle(),
                         modifier = Modifier.width(dimens.maxContentWidth)
                     )
                 }

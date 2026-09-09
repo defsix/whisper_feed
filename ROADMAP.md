@@ -1267,33 +1267,32 @@ Still to do: nothing on this section. The Lawnchair pane became a settings
 screen instead, for the reason above.
 ---
 
-### 16. The built-in browser, made to match
+### 16. The reader and the browser, made to match
 
-The reader and the browser are two screens showing the same kind of thing, and
-at the moment they do not look related. Somebody who taps an article and then
-taps through to the site should not feel the app hand them over to something
-else.
+Done. The two screens showing the same kind of thing no longer look unrelated.
 
-- **The same margins as the reader.** `ComposeWebView` sets its own padding and
-  the article page sets a different one, so the text starts in a different
-  place on each. One measurement, used twice — and the spacing between blocks
-  should match too, not only the outer margin.
-- **Justified text.** The reader is left-aligned. Full justification suits a
-  column of body text and is what the reader expects from a page that is
-  pretending to be a page. Worth checking on narrow screens first: justified
-  text with no hyphenation opens rivers in a column this narrow, so this may
-  need `Layout.HYPHENATION_FREQUENCY_NORMAL` alongside it rather than on its
-  own.
-- **The source's favicon beside its name.** The feed's cards already fetch and
-  cache one per source; the reader shows the name alone. Same image, already on
-  disk, and it is the thing that makes a byline look like a byline.
-- ~~**Share instead of a menu.**~~ Done. The overflow held two items and the
-  second was a third-party summary service nobody uses, so the menu existed to
-  put one action behind two taps. It is a share button now.
+- ~~**The same margins.**~~ Both sat at four points while the feed sat at
+  sixteen, so an article opened from a card that started sixteen points in
+  began four points in. One margin now, named once and shared.
+- ~~**Justified text.**~~ With hyphenation, which is not optional alongside it:
+  a justified column this narrow and unhyphenated opens rivers, the spaces
+  stretching to fill each line until the eye follows the gaps down the page
+  instead of the words across it.
+- ~~**The source's favicon beside its name.**~~ The same mark the cards carry
+  and already cached from the feed. A byline with a face on it is recognisable
+  at a glance; a line of text has to be read.
+- ~~**Share instead of a menu.**~~ The overflow held two items and the second
+  was a summary service nobody uses.
 
-None of this is structural — it is a screen's worth of styling against another
-screen that already exists — which is why it sits here rather than in a
-milestone.
+Two things found while doing it, both of which would have shipped:
+
+- **The reader attributed articles to "Neo Feed".** A source with no title fell
+  back to that literal string, and the same string was the sentinel it compared
+  against. It uses this app's name now.
+- **Changelog and Licence were Neo Feed's.** The changelog screen showed that
+  app's release notes from 2023, and the licence page carried its name and
+  copyright alone. Both rewritten — the licence now names the whole line, since
+  a GPL fork has to credit what it was forked from.
 
 ## Replacing Discover: what is actually possible
 

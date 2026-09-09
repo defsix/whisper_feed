@@ -42,6 +42,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.navigation.compose.rememberNavController
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
+import com.saulhdev.feeder.ui.overlay.CARD_MARGIN
 
 @Composable
 fun ComposeWebView(
@@ -74,8 +75,9 @@ fun ComposeWebView(
                 .fillMaxSize()
                 .padding(
                     top = paddingValues.calculateTopPadding(),
-                    start = 4.dp,
-                    end = 4.dp,
+                    // The margin the feed uses; see ArticlePage.
+                    start = CARD_MARGIN,
+                    end = CARD_MARGIN,
                     bottom = paddingValues.calculateBottomPadding() + 8.dp
                 ),
         ) {
