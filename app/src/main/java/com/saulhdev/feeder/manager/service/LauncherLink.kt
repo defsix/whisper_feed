@@ -20,6 +20,7 @@ package com.saulhdev.feeder.manager.service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Process
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -61,6 +62,10 @@ object LauncherLink {
      * inherit the same `FeedBridge`, so they very probably work, and listing
      * them costs nothing — the screen only uses this to decide whether the
      * setup instructions are worth showing at all.
+     *
+     * Looking any of these up needs the `<queries>` block in the manifest.
+     * Without it Android 11 and later answer NameNotFound for every package,
+     * installed or not, and this screen told everyone they had no launcher.
      */
     private val LAUNCHERS = listOf(
         "app.lawnchair",
@@ -85,6 +90,40 @@ object LauncherLink {
     fun settingsIntent(context: Context, packageName: String): Intent? =
         context.packageManager.getLaunchIntentForPackage(packageName)
             ?.takeIf { context.isInstalled(packageName) }
+
+    /**
+     * Whether the caller asking to bind [OverlayService] is a launcher.
+     *
+     * The caller is read out of the bind Uri, which is where the LauncherClient
+     * protocol puts it: the port is the calling uid and the host is the calling
+     * package. Not from `Binder.getCallingUid()` — `onBind` is dispatched on
+     * the main thread, outside the binder transaction, and there that method
+     * answers with our own uid. A check written that way passes for everyone,
+     * which is worse than no check because it looks like one.
+     *
+     * A caller naming itself is not a caller proving itself, so the package
+     * manager is asked whether that package really belongs to that uid before
+     * anything else is decided. Then the question that matters: does the
+     * package answer `CATEGORY_HOME`? Every app that can be a home screen
+     * does, no app that cannot has a reason to be here, and it needs no list of
+     * package names kept up to date.
+     *
+     * Our own uid passes, so the settings screen and the diagnostics can bind
+     * this to check the integration is alive.
+     */
+    fun callerIsALauncher(context: Context, intent: Intent): Boolean {
+        val data = intent.data ?: return false
+        val uid = data.port.takeIf { it != -1 } ?: return false
+        val pkg = data.host ?: return false
+        if (uid == Process.myUid()) return true
+
+        val pm = context.packageManager
+        if (pm.getPackagesForUid(uid)?.contains(pkg) != true) return false
+
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        return pm.queryIntentActivities(home, PackageManager.MATCH_DEFAULT_ONLY)
+            .any { it.activityInfo?.packageName == pkg }
+    }
 
     private fun Context.isInstalled(packageName: String): Boolean = try {
         packageManager.getPackageInfo(packageName, 0)

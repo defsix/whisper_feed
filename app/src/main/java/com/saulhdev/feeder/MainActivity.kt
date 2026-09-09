@@ -270,35 +270,12 @@ class MainActivity : ComponentActivity() {
             return Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
         }
 
-        private suspend fun start(
-            activity: Activity,
-            targetIntent: Intent,
-            extras: Bundle
-        ): ActivityResult {
-            return suspendCancellableCoroutine { continuation ->
-                val intent = Intent(activity, MainActivity::class.java)
-                    .putExtras(extras)
-                    .putExtra("intent", targetIntent)
-                val resultReceiver = createResultReceiver {
-                    if (continuation.isActive) {
-                        continuation.resume(it)
-                    }
-                }
-                activity.startActivity(intent.putExtra("callback", resultReceiver))
-            }
-        }
-
-        private fun createResultReceiver(callback: (ActivityResult) -> Unit): ResultReceiver {
-            return object : ResultReceiver(Handler(Looper.myLooper()!!)) {
-
-                override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
-                    val data = Intent()
-                    if (resultData != null) {
-                        data.putExtras(resultData)
-                    }
-                    callback(ActivityResult(resultCode, data))
-                }
-            }
-        }
+        // A start()/createResultReceiver pair stood here, putting a caller's
+        // Intent into an extra called "intent" and a ResultReceiver into one
+        // called "callback", for MainActivity to pull out and act on. Nothing
+        // ever called it and nothing ever read those extras — but the shape is
+        // the classic intent-redirection hole, and this activity is exported,
+        // so the next person to wire it up would have handed every app on the
+        // device a way to launch arbitrary intents with Whisper's identity.
     }
 }

@@ -20,6 +20,8 @@ import com.google.android.material.color.DynamicColors
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.utils.isViewable
+import com.saulhdev.feeder.utils.schemeOf
 import com.saulhdev.feeder.utils.LEGACY_THEME_BLACK
 import com.saulhdev.feeder.utils.LEGACY_THEME_SYSTEM_BLACK
 import com.saulhdev.feeder.utils.THEME_DARK
@@ -73,12 +75,22 @@ private fun Context.restartFeed() {
     exitProcess(0)
 }
 
-fun Context.launchView(url: String) {
-    val intent = Intent(
-        Intent.ACTION_VIEW,
-        url.toUri()
-    )
-    safeStartActivity(intent)
+/**
+ * Opens an address in whichever app handles it, if it is one we will open.
+ *
+ * The scheme allowlist is [isViewable]; see it for why this is not simply
+ * ACTION_VIEW on whatever a feed put in an href. Silent when it refuses — a
+ * link that quietly does nothing beats a dialog explaining a URI scheme — and
+ * returns whether it went, for callers with a fallback.
+ */
+fun Context.launchView(url: String): Boolean {
+    if (!isViewable(url)) {
+        Log.w("Context", "Refusing to open: ${schemeOf(url)}")
+        return false
+    }
+    val uri = runCatching { url.toUri() }.getOrNull() ?: return false
+    safeStartActivity(Intent(Intent.ACTION_VIEW, uri))
+    return true
 }
 
 /**

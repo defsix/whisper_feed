@@ -80,8 +80,10 @@ android {
 
     buildFeatures {
         compose = true
-        dataBinding = true
-        viewBinding = true
+        // dataBinding and viewBinding were both on and neither was used: no
+        // layout file has a <layout> root, and nothing in the source names a
+        // generated *Binding class. Each one adds a code-generation pass to
+        // every build for classes nobody references.
         buildConfig = true
         aidl = true
     }
@@ -91,8 +93,13 @@ android {
     }
 
     lint {
-        abortOnError = false
-        checkReleaseBuilds = false
+        // The report is clean, so it can be a gate rather than a document.
+        // With this off, a lint error changed nothing about the build and was
+        // only ever found by somebody reading the report on purpose — which is
+        // how an API-28 call in a minSdk-26 app, a crash on every Android 8
+        // phone, sat in it unnoticed.
+        abortOnError = true
+        checkReleaseBuilds = true
         disable += listOf(
             "MissingTranslation",
             "ExtraTranslation",

@@ -55,6 +55,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -76,7 +79,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.GithubLogo
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.TelegramLogo
 import com.saulhdev.feeder.utils.urlDecode
-import java.io.InputStream
 
 @OptIn(ExperimentalCoilApi::class)
 @Composable
@@ -329,63 +331,92 @@ fun ChangelogPage() {
     }
 }
 
+/**
+ * The bundled changelog and licence pages.
+ *
+ * Only ever pointed at `file:///android_asset`, and it stays that way: an
+ * asset page cannot be pointed somewhere else by anything the reader does,
+ * and a link inside one goes to the system browser rather than opening a
+ * remote page inside a WebView that trusts its own assets.
+ */
 @Composable
 fun PreferencesWebView(url: String) {
+    val context = LocalContext.current
+    // The stylesheet used to be light.css whatever the phone was set to, so
+    // the changelog opened as a white sheet in the middle of a dark app.
+    val cssFile = if (isSystemInDarkTheme()) "dark.css" else "light.css"
+    val loaded = remember { mutableStateOf<String?>(null) }
 
-    val cssFile = "light.css"
     AndroidView(
-        factory = { context ->
-            WebView(context).apply {
+        factory = { ctx ->
+            WebView(ctx).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
 
                 webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String) {
-                        if (url.startsWith("file:///android_asset")) {
-                            try {
-                                settings.javaScriptEnabled = true
-                                val inputStream: InputStream = context.assets.open(cssFile)
-                                val buffer = ByteArray(inputStream.available())
-                                inputStream.read(buffer)
-                                inputStream.close()
-                                val encoded = Base64.encodeToString(buffer, Base64.NO_WRAP)
-                                loadUrl(
-                                    "javascript:(function() { " +
-                                            "var head  = document.getElementsByTagName('head')[0];" +
-                                            "var style = document.createElement('style');" +
-                                            "style.type = 'text/css';" +
-                                            "style.innerHTML =  window.atob('" + encoded + "');" +
-                                            "head.appendChild(style);" +
-                                            "})()"
+                    override fun onPageFinished(view: WebView, finishedUrl: String) {
+                        if (finishedUrl.startsWith("file:///android_asset")) {
+                            runCatching {
+                                val encoded = Base64.encodeToString(
+                                    ctx.assets.open(cssFile).use { it.readBytes() },
+                                    Base64.NO_WRAP,
                                 )
-                                settings.javaScriptEnabled = false
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                                // JavaScript is turned on for the injection
+                                // and left on until the page reports it has
+                                // run. It used to be switched off on the very
+                                // next line, while loadUrl was still queued,
+                                // so whether the stylesheet applied at all
+                                // came down to a race.
+                                settings.javaScriptEnabled = true
+                                evaluateJavascript(
+                                    """
+                                    (function() {
+                                      var head = document.getElementsByTagName('head')[0];
+                                      var style = document.createElement('style');
+                                      style.type = 'text/css';
+                                      style.innerHTML = window.atob('$encoded');
+                                      head.appendChild(style);
+                                    })()
+                                    """.trimIndent()
+                                ) { settings.javaScriptEnabled = false }
                             }
                         }
-                        super.onPageFinished(view, url.urlDecode())
+                        super.onPageFinished(view, finishedUrl)
                     }
 
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
                         request: WebResourceRequest
                     ): Boolean {
-                        if (url.contains("file://")) {
-                            view.loadUrl(url)
-                        } else {
-                            try {
-                                context.launchView(url)
-                            } catch (e: ActivityNotFoundException) {
-                                view.loadUrl(url)
-                            }
-                        }
+                        // The request's own address, not the one this screen
+                        // was opened with. Testing the outer `url` meant every
+                        // link on the page led back to the page itself, or
+                        // opened the changelog in a browser.
+                        val target = request.url.toString()
+                        if (target.startsWith("file:///android_asset")) return false
+                        runCatching { context.launchView(target) }
                         return true
                     }
                 }
             }
         },
-        update = { webView -> webView.loadUrl(url.urlDecode()) }
+        // Reloaded only when the screen is pointed at a different page. It
+        // used to call loadUrl on every recomposition, throwing away the
+        // scroll position and re-running the stylesheet injection each time.
+        update = { webView ->
+            val target = url.urlDecode()
+            if (loaded.value != target) {
+                loaded.value = target
+                webView.loadUrl(target)
+            }
+        },
+        onRelease = { webView ->
+            webView.stopLoading()
+            webView.destroy()
+        },
     )
 }

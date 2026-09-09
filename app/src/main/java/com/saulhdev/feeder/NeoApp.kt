@@ -6,6 +6,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.multidex.MultiDexApplication
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import com.saulhdev.feeder.manager.bookmarks.BlockPrivateNetworks
+import okhttp3.OkHttpClient
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
@@ -59,7 +65,7 @@ import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.inject
 
 @OptIn(KoinExperimentalAPI::class)
-class NeoApp : MultiDexApplication(), KoinStartup {
+class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
     val activityHandler = ActivityHandler()
     private val applicationCoroutineScope = ApplicationCoroutineScope()
     private val wm: WorkManager by inject(WorkManager::class.java)
@@ -183,6 +189,43 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         onAppStarted()
     }
 
+    /**
+     * The one image loader, instead of the default Coil builds for itself.
+     *
+     * Two reasons, and the first is the same one the feed and full-text
+     * clients have: every `<img src>` in the app comes out of somebody else's
+     * XML, so an article can point the phone at an address on its own network
+     * and learn whether it answered. Images went out through a client with no
+     * such guard.
+     *
+     * The second is that the default loader keeps no disk cache tuned for this
+     * and a memory cache sized for a gallery app. A feed is a long scroll of
+     * pictures the reader passes once, so the useful cache is on disk, where a
+     * revisit is free and the heap is not the thing paying for it.
+     */
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .okHttpClient {
+            OkHttpClient.Builder()
+                .addNetworkInterceptor(BlockPrivateNetworks())
+                .build()
+        }
+        .memoryCache {
+            MemoryCache.Builder(this)
+                .maxSizePercent(0.20)
+                .build()
+        }
+        .diskCache {
+            DiskCache.Builder()
+                .directory(cacheDir.resolve("image_cache"))
+                .maxSizeBytes(IMAGE_DISK_CACHE_BYTES)
+                .build()
+        }
+        // Feed cards are small and fixed; decoding a 4000px newspaper photo at
+        // full size to draw it 300px wide is where a scroll's memory goes.
+        .respectCacheHeaders(false)
+        .crossfade(true)
+        .build()
+
     override fun onTerminate() {
         super.onTerminate()
         GlobalContext.get().close()
@@ -248,3 +291,12 @@ class ActivityHandler : ActivityLifecycleCallbacks {
         activities.add(activity)
     }
 }
+
+/**
+ * How much disk the image cache may take: 128 MB.
+ *
+ * Coil's default is 2% of the free space on the data partition, which on a
+ * mostly empty phone is gigabytes for pictures nobody will look at twice, and
+ * on a full one is a few megabytes — the wrong way round on both.
+ */
+private const val IMAGE_DISK_CACHE_BYTES = 128L * 1024 * 1024

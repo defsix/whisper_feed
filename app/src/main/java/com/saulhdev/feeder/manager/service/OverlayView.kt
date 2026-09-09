@@ -96,6 +96,9 @@ class OverlayView(val context: Context) :
     @Volatile
     private var overlayAlpha = prefs.overlayTransparency.getValue()
 
+    /** See [onClientMessage]: read once rather than per launcher message. */
+    private val debugLogging = prefs.debugging.getValue()
+
     /** Last colour handed to the window, so repeat frames do no work. */
     private var lastBackgroundColor: Int? = null
 
@@ -492,7 +495,13 @@ class OverlayView(val context: Context) :
     }
 
     override fun onClientMessage(action: String) {
-        if (prefs.debugging.getValue()) {
+        // Read once at construction, not per message. Every preference read
+        // goes through runBlocking on a DataStore, so this was a disk read on
+        // the main thread each time the launcher said anything — including the
+        // message that arrives as the panel is being swiped open, which is the
+        // one frame that must not stall. Whether debug logging is on is not
+        // something that needs to be true within one panel open.
+        if (debugLogging) {
             Log.d("OverlayView", "New message by OverlayBridge: $action")
         }
         if (action == "openContentView" && !keepingPanelForOurLaunch) {
