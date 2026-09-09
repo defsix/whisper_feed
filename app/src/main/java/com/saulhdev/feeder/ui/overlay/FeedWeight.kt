@@ -27,6 +27,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.READ_DIM
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.asState
 
 /**
  * How much of the screen an article has earned.
@@ -318,8 +319,7 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
 @Composable
 fun rememberStoryClusters(articles: List<FeedItem>): Map<String, StoryCluster> {
     val prefs: FeedPreferences = koinInject()
-    val enabled by prefs.breakingNews.get()
-        .collectAsState(initial = remember { prefs.breakingNews.getValue() })
+    val enabled by prefs.breakingNews.asState()
     return remember(articles, enabled) {
         if (!enabled) emptyMap()
         else clusterStories(articles, System.currentTimeMillis())
@@ -363,8 +363,7 @@ fun rememberReadingHabits(): Map<Long, Float> {
 @Composable
 fun rememberDimRead(): Boolean {
     val prefs: FeedPreferences = koinInject()
-    val setting by prefs.readVisibility.get()
-        .collectAsState(initial = remember { prefs.readVisibility.getValue() })
+    val setting by prefs.readVisibility.asState()
     return setting == READ_DIM
 }
 

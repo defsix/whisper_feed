@@ -83,6 +83,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
+import com.saulhdev.feeder.data.content.asState
 
 
 @Composable
@@ -99,8 +100,7 @@ fun SourceEditPage(
     val allTags = sourcesState.allTags
     var newTag by remember { mutableStateOf("") }
     val prefs: FeedPreferences = koinInject()
-    val fullTextForAll by prefs.fullTextForAllFeeds.get()
-        .collectAsState(initial = remember { prefs.fullTextForAllFeeds.getValue() })
+    val fullTextForAll by prefs.fullTextForAllFeeds.asState()
     // Initialise once per feed and do not overwrite user edits when viewState re-emits.
     val editState = remember(feedId) {
         mutableStateOf(viewState)

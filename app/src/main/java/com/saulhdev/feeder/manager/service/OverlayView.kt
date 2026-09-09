@@ -514,7 +514,9 @@ class OverlayView(val context: Context) :
     }
 
     override fun applyNewTransparency(value: Float) {
-        themeHolder.prefs.overlayTransparency.setValue(value)
+        // A blocking write on the main thread, driven by a message from the
+        // launcher while the panel is being dragged.
+        themeHolder.prefs.overlayTransparency.set(value)
     }
 
     override fun applyCompactCard(value: Boolean) {

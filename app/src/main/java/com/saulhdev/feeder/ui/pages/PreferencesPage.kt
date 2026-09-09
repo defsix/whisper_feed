@@ -65,6 +65,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Power
 import kotlinx.coroutines.launch
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.asState
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -154,8 +155,7 @@ fun PreferencesPage(
 
     // Turning the global switch on should start downloading now, not at the
     // next scheduled sync — the setting reads as an instruction, not a plan.
-    val fullTextForAll by prefs.fullTextForAllFeeds.get()
-        .collectAsState(initial = remember { prefs.fullTextForAllFeeds.getValue() })
+    val fullTextForAll by prefs.fullTextForAllFeeds.asState()
     var wasFullTextForAll by remember { mutableStateOf(fullTextForAll) }
     LaunchedEffect(fullTextForAll) {
         if (fullTextForAll && !wasFullTextForAll) scheduleFullTextParse()

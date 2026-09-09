@@ -141,6 +141,7 @@ import com.saulhdev.feeder.ui.onboarding.TourOverlay
 import com.saulhdev.feeder.ui.onboarding.TourTarget
 import com.saulhdev.feeder.ui.onboarding.tourTarget
 import androidx.compose.foundation.layout.Box
+import com.saulhdev.feeder.data.content.asState
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -167,8 +168,7 @@ fun ArticleListPage(
     // Collected once rather than read inside onClick. getValue() is a
     // runBlocking DataStore read, so reading it there blocked the main thread
     // on every article tap — the one moment the UI most has to stay responsive.
-    val openMode by prefs.articleOpenMode.get()
-        .collectAsState(initial = remember { prefs.articleOpenMode.getValue() })
+    val openMode by prefs.articleOpenMode.asState()
     val bookmarked by viewModel.bookmarksState.collectAsState()
     val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -422,9 +422,7 @@ fun ArticleListPage(
                                         categories = categories,
                                         selected = selectedCategories,
                                         onSelectedChange = { picked ->
-                                            scope.launch(Dispatchers.IO) {
-                                                prefs.categoryFilter.setValue(picked)
-                                            }
+                                            prefs.categoryFilter.set(picked)
                                         },
                                     )
                                 }

@@ -62,6 +62,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowDown
 import com.saulhdev.feeder.ui.icons.phosphor.CloudArrowUp
 import com.saulhdev.feeder.ui.icons.phosphor.Nut
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import java.text.DateFormat
@@ -95,7 +96,9 @@ fun BackupPage(
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         store.remember(uri)
-        scope.launch {
+        // On IO: everything in here writes to a DataStore or to a document,
+        // and the launcher callback arrives on the main thread.
+        scope.launch(Dispatchers.IO) {
             prefs.backupFolder.setValue(uri.toString())
             BackupWorker.schedule(context)
             // Written immediately rather than waiting for the first scheduled
@@ -222,7 +225,7 @@ fun BackupPage(
                         modifier = Modifier.fillMaxWidth(),
                         positive = true,
                         onClick = {
-                            scope.launch {
+                            scope.launch(Dispatchers.IO) {
                                 report(store.backUp(folder.toUri()), context) { message = it }
                                 prefs.backupLastRun.setValue(
                                     System.currentTimeMillis().toString()

@@ -61,6 +61,7 @@ import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
 import com.saulhdev.feeder.ui.navigation.LocalNavController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -77,7 +78,9 @@ fun BlockedWordsPage(
     var newWord by remember { mutableStateOf("") }
 
     fun save(updated: Set<String>) {
-        scope.launch {
+        // IO: a blocking preference write followed by a pass over every
+        // article, from a tap.
+        scope.launch(Dispatchers.IO) {
             prefs.blockedWords.setValue(updated)
             articleRepository.deleteArticlesMatchingWords(updated, context.filesDir)
         }

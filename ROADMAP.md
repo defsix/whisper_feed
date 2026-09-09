@@ -1481,34 +1481,66 @@ The migration's index name has to match what Room generates for the entity or
 Room's schema validation fails on the next open and the app will not start —
 checked against the generated `18.json` rather than trusted.
 
-#### 19c. Stop blocking on preference reads — the real work
+#### 19c. ~~Stop blocking on preference reads~~ — done
 
-`PrefDelegate.getValue()` and `setValue()` are both `runBlocking`. Reading a
-setting stops the calling thread until the DataStore answers, and there are
-about fifty such calls. Individually a millisecond or two; the problem is where
-they land — several run while a screen is being composed, which is precisely
-when the frame budget is already spent.
+**The diagnosis in this section was half wrong, and the correction is the
+interesting part.** It said fifty disk reads. It is one. DataStore keeps the
+loaded file in memory and serves every later collection from it, so only the
+first read in a process touches the disk.
 
-The honest fix is that reading a preference is asynchronous and the callers
-should be too, which means every one of them changes. That is why it was not
-done in the audit pass: a change touching fifty sites, made in a hurry beside
-twenty other changes, is how a regression gets in.
+What the other forty-nine were is worse in a way that is harder to see:
+`runBlocking(Dispatchers.IO) { flow.first() }` stops the calling thread, hands
+the work to the IO pool, and waits for it to come back. That is fast whenever
+the pool has a free thread, and unbounded when it does not — and what saturates
+the IO pool in this app is a sync, which is what runs while somebody is reading.
+Not a slow app. An occasionally, unreproducibly frozen one.
 
-Staged, so each stage is separately verifiable:
+**What was built**
 
-1. **Count what actually blocks the main thread.** Turn on StrictMode's disk-read
-   policy in debug and let it name them. Some of the fifty are in workers and
-   cost nothing; guessing which is how effort goes to the wrong half.
-2. **The composition sites.** Every `remember { prefs.x.getValue() }` becomes a
-   flow collected with a real default. This is the visible half — one disk read
-   per preference per screen open.
-3. **The write sites.** `setValue` from a tap is a blocking write on the main
-   thread; each becomes a launch on an IO scope, which the source list's sort
-   selector already does and can be copied from.
-4. **Then reconsider the delegate itself**, with the remaining callers small
-   enough in number to look at one by one.
+- `PrefCache` holds the whole preferences file in memory, filled once at
+  startup by the preferences singleton's constructor — before any screen
+  composes — and kept current by one collector. Reading a preference is now a
+  volatile field load and a map lookup, on any thread, waiting for nothing.
+  The blocking path survives only for the window before that first fill, which
+  a worker on a cold process can still hit, and where answering with a default
+  instead of the reader's actual setting would be the worse failure.
+- `runBlocking` on that fallback path lost its `Dispatchers.IO`. DataStore does
+  its file work on its own scope regardless, so dispatching there only added a
+  second thread to wait for.
+- `PrefDelegate.set()` writes on a scope that outlives the screen. `setValue()`
+  still blocks and is still right for workers, which must know the value landed
+  before they finish.
+- `PrefDelegate.asState()` replaces the fourteen hand-written
+  `collectAsState(initial = remember { pref.getValue() })` lines. Those were
+  themselves a repair — without the `remember`, the initial argument was
+  re-evaluated on every recomposition — which is the argument for having one
+  helper instead of fourteen chances to get it subtly wrong.
+- StrictMode in debug builds, watching for main-thread disk work, network on
+  the main thread, and leaked activities and receivers. Logged rather than
+  fatal: the platform itself trips it, and a build nobody can run is a build
+  nobody turns on. This is step 1 of the plan, kept, so the next one of these
+  is found by the machine rather than by reading fifty call sites.
 
-Biggest user-visible win on this list, and the only one that needs a plan.
+**A bug this fixed on the way past.** The theme-selection dialog wrote the
+chosen value in a coroutine started on `rememberCoroutineScope`, on the line
+after the one that closed the dialog. Closing it removes the composable, which
+cancels that scope. The write was racing its own screen's destruction and could
+simply not happen. It goes through `set()` now, and the ordering is no longer
+load-bearing.
+
+**Two mistakes worth recording, both caught before they shipped.** `PrefCache`
+was first written as a single process-wide snapshot — true of this app, which
+has one DataStore, and wrong as a design: the first test written against it
+warmed the cache through one store and read it back through another. Keying it
+by store cost a hash lookup and made it testable, which is the same property as
+being able to reason about it. Then `dataStore !in snapshots` on a
+`ConcurrentHashMap` resolves to `containsValue`, not `containsKey`, so the
+"prime once" guard would never have matched and it would have blocked on every
+call — the compiler caught that one.
+
+Six tests over a real DataStore on a temporary file, not a fake: what is being
+tested is how the cache behaves relative to the store, and a fake store would
+only test the fake.
 
 #### 19d. Coil 2 to 3 — after 1.0, not before
 

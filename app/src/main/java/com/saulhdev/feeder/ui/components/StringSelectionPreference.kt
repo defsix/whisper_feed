@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.saulhdev.feeder.data.content.StringSelectionPref
+import com.saulhdev.feeder.data.content.asState
 
 @Composable
 fun StringSelectionPreference(
@@ -19,7 +20,7 @@ fun StringSelectionPreference(
 ) {
     // Collected, not read once: derivedStateOf over a blocking getValue() never
     // recomposes, so the row went on showing the previous choice after a change.
-    val current by pref.get().collectAsState(initial = remember(pref) { pref.getValue() })
+    val current by pref.asState()
     val summary = pref.entries[current]
     BasePreference(
         modifier = modifier,

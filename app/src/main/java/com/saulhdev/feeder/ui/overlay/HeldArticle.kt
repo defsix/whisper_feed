@@ -32,6 +32,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.asState
 
 /**
  * The one article allowed to hold the top of the feed.
@@ -73,7 +74,7 @@ fun rememberHeldArticle(
     clusters: Map<String, StoryCluster>,
 ): FeedItem? {
     val prefs: FeedPreferences = koinInject()
-    val enabled by prefs.stickyTop.get().collectAsState(initial = remember { prefs.stickyTop.getValue() })
+    val enabled by prefs.stickyTop.asState()
     return remember(articles, clusters, enabled) {
         if (!enabled) return@remember null
         val first = articles.firstOrNull() ?: return@remember null

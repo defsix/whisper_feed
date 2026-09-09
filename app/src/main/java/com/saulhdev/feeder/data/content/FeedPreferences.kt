@@ -872,6 +872,10 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     init {
+        // Before anything reads a preference, and before any screen composes.
+        // One read here in place of the fifty-odd blocking round trips that
+        // getValue() used to make; everything after this is a field load.
+        PrefCache.start(dataStore)
         migrateRetiredThemeValues()
     }
 

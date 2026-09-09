@@ -30,6 +30,7 @@ import com.saulhdev.feeder.manager.mastodon.MastodonStorage
 import com.saulhdev.feeder.manager.service.OverlayBridge
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
+import com.saulhdev.feeder.utils.MainThreadWatch
 import com.saulhdev.feeder.utils.extensions.ToastMaker
 import com.saulhdev.feeder.utils.extensions.restartApp
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
@@ -176,6 +177,9 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        // First, so it sees everything that follows — including this class's
+        // own startup work, which is where main-thread disk reads hide best.
+        MainThreadWatch.install()
         instance = this
         // TODO remove on future release
         AndroidThreeTen.init(this)

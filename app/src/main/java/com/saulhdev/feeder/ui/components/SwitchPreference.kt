@@ -24,15 +24,14 @@ fun SwitchPreference(
     isEnabled: Boolean = true,
     onCheckedChange: ((Boolean) -> Unit) = {},
 ) {
-    val (checked, check) = remember(pref) { mutableStateOf(pref.getValue()) }
-    val scope = rememberCoroutineScope()
+    val (checked, check) = remember(pref) { mutableStateOf(pref.peekOrDefault()) }
 
     val set: (Boolean) -> Unit = { value ->
         onCheckedChange(value)
         check(value)
-        // Off the main thread: setValue is a blocking DataStore write and this
-        // is called straight from a tap.
-        scope.launch(Dispatchers.IO) { pref.setValue(value) }
+        // set, not setValue: the write goes to a scope that outlives this
+        // screen, so a switch flipped as the screen closes is still stored.
+        pref.set(value)
     }
 
     BasePreference(

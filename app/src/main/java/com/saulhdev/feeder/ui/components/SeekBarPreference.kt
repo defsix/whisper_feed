@@ -37,7 +37,7 @@ fun SeekBarPreference(
     isEnabled: Boolean = true,
     onValueChange: ((Float) -> Unit) = {},
 ) {
-    var currentValue by remember(pref) { mutableFloatStateOf(pref.getValue()) }
+    var currentValue by remember(pref) { mutableFloatStateOf(pref.peekOrDefault()) }
 
     BasePreference(
         modifier = modifier,
@@ -73,7 +73,9 @@ fun SeekBarPreference(
                     steps = pref.steps,
                     onValueChange = { currentValue = it },
                     onValueChangeFinished = {
-                        pref.setValue(currentValue)
+                        // Was a blocking DataStore write on the main thread,
+                        // called the moment a finger left the slider.
+                        pref.set(currentValue)
                         onValueChange(currentValue)
                     },
                     enabled = isEnabled,

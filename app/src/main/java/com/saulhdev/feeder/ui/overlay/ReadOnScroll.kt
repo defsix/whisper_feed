@@ -28,6 +28,7 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.asState
 
 /**
  * How often the tracker looks. Dwell is measured in whole seconds, so this is
@@ -85,8 +86,7 @@ fun MarkReadWhileScrolling(
     onRead: (FeedItem) -> Unit,
 ) {
     val prefs: FeedPreferences = koinInject()
-    val setting by prefs.markReadOnScroll.get()
-        .collectAsState(initial = remember { prefs.markReadOnScroll.getValue() })
+    val setting by prefs.markReadOnScroll.asState()
     // Below a quarter of a second means off: the slider's own bottom stop,
     // and anything shorter would fire during a fling anyway.
     val thresholdMs = remember(setting) { if (setting < 0.25f) 0L else (setting * 1000).toLong() }

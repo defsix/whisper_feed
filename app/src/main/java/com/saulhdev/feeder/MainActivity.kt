@@ -51,6 +51,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
+import com.saulhdev.feeder.data.content.asState
 
 class MainActivity : ComponentActivity() {
     private lateinit var navController: NavHostController
@@ -85,14 +86,10 @@ class MainActivity : ComponentActivity() {
             // recreate()s itself on a theme change: a full restart to repaint
             // colours Compose already tracks cost a frame budget and flashed
             // the splash screen on its way back.
-            val themeMode by prefs.overlayTheme.get()
-                .collectAsState(initial = remember { prefs.overlayTheme.getValue() })
-            val dynamic by prefs.dynamicColor.get()
-                .collectAsState(initial = remember { prefs.dynamicColor.getValue() })
-            val fontPref by prefs.appFont.get()
-                .collectAsState(initial = remember { prefs.appFont.getValue() })
-            val pureBlack by prefs.pureBlack.get()
-                .collectAsState(initial = remember { prefs.pureBlack.getValue() })
+            val themeMode by prefs.overlayTheme.asState()
+            val dynamic by prefs.dynamicColor.asState()
+            val fontPref by prefs.appFont.asState()
+            val pureBlack by prefs.pureBlack.asState()
 
             // One place decides light or dark, and the bars follow it rather
             // than re-deriving it from the preference on their own.

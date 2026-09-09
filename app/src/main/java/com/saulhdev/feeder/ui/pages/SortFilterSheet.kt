@@ -49,6 +49,7 @@ import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.compose.koinInject
+import com.saulhdev.feeder.data.content.asState
 
 @OptIn(
     ExperimentalCoroutinesApi::class,
@@ -68,8 +69,7 @@ fun SortFilterSheet(
     var sourcesPrefVar by prefs.sourcesFilter
     var tagsPrefVar by prefs.tagsFilter
     var readVisibilityPrefVar by prefs.readVisibility
-    val readVisibility by prefs.readVisibility.get()
-        .collectAsState(initial = remember { prefs.readVisibility.getValue() })
+    val readVisibility by prefs.readVisibility.asState()
     // Staged until Apply, like everything else in this sheet. A control that
     // acts the moment it is touched, sitting above an Apply button, leaves the
     // reader unsure which of the two did the work.
