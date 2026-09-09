@@ -152,8 +152,7 @@ fun ArticleHeroCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(MaterialTheme.shapes.large)
+            .padding(vertical = 8.dp)
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -262,37 +261,37 @@ fun ArticleCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            val image = item.article.imageUrl
-            if (!image.isNullOrBlank()) {
-                AsyncImage(
-                    model = image,
-                    contentDescription = null,
-                    placeholder = painterResource(articlePlaceholder()),
-                    error = painterResource(articlePlaceholder()),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(MaterialTheme.shapes.medium),
-                )
-            }
+        val image = item.article.imageUrl
+        // Edge to edge, square corners, outside the text's margin — the way the
+        // launcher's own feed does it. A photograph inset by sixteen points and
+        // rounded reads as a component on a page; the same photograph running
+        // the full width reads as the article itself, which is what it is.
+        if (!image.isNullOrBlank()) {
+            AsyncImage(
+                model = image,
+                contentDescription = null,
+                placeholder = painterResource(articlePlaceholder()),
+                error = painterResource(articlePlaceholder()),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
+            )
+        }
 
+        Column(
+            modifier = Modifier.padding(
+                horizontal = CARD_MARGIN,
+                vertical = 12.dp,
+            )
+        ) {
             if (item.pinned) {
-                PinnedLine(
-                    modifier = Modifier.padding(top = if (image.isNullOrBlank()) 0.dp else 12.dp),
-                )
+                PinnedLine(modifier = Modifier.padding(top = 0.dp))
             }
             coverage?.let {
                 CoverageLine(
                     sources = it,
-                    modifier = Modifier.padding(
-                        top = when {
-                            item.pinned           -> 4.dp
-                            image.isNullOrBlank() -> 0.dp
-                            else                  -> 12.dp
-                        }
-                    ),
+                    modifier = Modifier.padding(top = if (item.pinned) 4.dp else 0.dp),
                 )
             }
 
@@ -302,11 +301,7 @@ fun ArticleCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(
-                    top = when {
-                        coverage != null || item.pinned -> 6.dp
-                        image.isNullOrBlank()     -> 0.dp
-                        else                      -> 12.dp
-                    }
+                    top = if (coverage != null || item.pinned) 6.dp else 0.dp
                 ),
             )
 
@@ -331,7 +326,9 @@ fun ArticleCard(
                 ArticleMeta(
                     source = item.feedTitle,
                     age = item.relativeAge(context),
-                    style = MaterialTheme.typography.labelLarge,
+                    // A size down. It is a byline, not a heading, and at
+                    // labelLarge it competed with the summary above it.
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                     iconUrl = item.feedIconUrl,
@@ -743,6 +740,16 @@ private fun FeedItem.relativeAge(context: android.content.Context): String =
 fun articlePlaceholder(): Int =
     if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) R.drawable.placeholder_article_dark
     else R.drawable.placeholder_article_light
+
+/**
+ * The margin every piece of text in the feed lines up on.
+ *
+ * Named because three different rows were using three values a couple of
+ * points apart — enough that the glance row, the chips and the article text
+ * each started in a slightly different place, which reads as sloppiness rather
+ * than as a difference. Pictures ignore it on purpose and run full width.
+ */
+val CARD_MARGIN = 16.dp
 
 /** How far a read article fades, when the reader has asked for that. */
 private const val READ_ALPHA = 0.55f

@@ -324,19 +324,13 @@ fun SourceListPage(
                                 )
                             }
                             HorizontalDivider()
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(
-                                        Phosphor.Hash,
-                                        contentDescription = stringResource(id = R.string.add_mastodon_account),
-                                    )
-                                },
-                                onClick = {
-                                    hideMenu()
-                                    navController.navigate(NavRoute.MastodonAdd)
-                                },
-                                text = { Text(text = stringResource(id = R.string.add_mastodon_account)) }
-                            )
+                            // Mastodon is taken out of the menu rather than
+                            // out of the app: the screens, the auth flow and
+                            // the sync all still exist and are reachable by
+                            // route. It sat here carrying the same # icon as
+                            // "Manage categories", which made two unrelated
+                            // things look like a pair, and it is not finished
+                            // enough to earn a permanent slot next to OPML.
                             DropdownMenuItem(
                                 leadingIcon = {
                                     Icon(
