@@ -210,6 +210,21 @@ class SourceListViewModel(
         }
     }
 
+    /**
+     * Files a source under a category, found by its address.
+     *
+     * By url rather than by id because the screen that needs this has just
+     * added the feed and never saw the id — the insert happens in a coroutine
+     * and returns nothing. The url is what the reader was looking at, and it
+     * is unique in the table.
+     */
+    fun setCategory(url: String, tag: String) {
+        viewModelScope.launch {
+            val feed = feedsRepo.findSourceByUrl(sloppyLinkToStrictURL(url)) ?: return@launch
+            feedsRepo.updateSource(feed.copy(tag = tag))
+        }
+    }
+
     val recentlyDeleted = feedsRepo.recentlyDeleted
 
     fun undoDelete() = feedsRepo.undoDeleteSource()

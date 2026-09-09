@@ -141,6 +141,7 @@
     <string name="action_restart">Restart app</string>
     <string name="pm_empty">No sources installed</string>
     <string name="pm_desc">HomeFeeder uses them to display data</string>
+    <string name="add_feed_category">File it under</string>
     <string name="add_rss">Add new RSS</string>
     <string name="failed_to_parse">Could not parse %1$s</string>
     <string name="edit_rss">Edit Feed Item</string>

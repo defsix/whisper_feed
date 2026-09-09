@@ -19,6 +19,11 @@
 package com.saulhdev.feeder.ui.pages
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -137,13 +142,26 @@ fun SourceEditPage(
         showBackButton = true,
         onBackAction = onDismiss,
         bottomBar = {
-            Column {
-                HorizontalDivider(thickness = 2.dp)
+            // The buttons used to sit flush against the bottom of the display,
+            // under the gesture bar, separated from the form by a two-pixel
+            // rule — so the most consequential control on the screen was the
+            // one hardest to hit and closest to the edge.
+            //
+            // A surface of its own with room around it, clear of the system
+            // bars and lifted by the keyboard, which is what Material's bottom
+            // button group is and what every picker on the phone already does.
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 3.dp,
+            ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     OutlinedActionButton(
                         text = stringResource(id = R.string.action_delete),
