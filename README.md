@@ -100,3 +100,9 @@ launcher-overlay implementation it retains. See
 - [Privacy](PRIVACY.md) — what leaves your phone, in full. Short version: no
   servers, no analytics, no accounts.
 - [Disclaimer](DISCLAIMER.md) — Whisper is a reader, not a publisher.
+
+## Support
+
+Whisper is free, carries no adverts and collects nothing, and that is not
+going to change. If it has earned it, you can chip in through the Sponsor
+button — nothing in the app is withheld from anyone who does not.

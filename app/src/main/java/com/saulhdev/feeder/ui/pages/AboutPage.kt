@@ -69,6 +69,10 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.ui.navigation.PageItem
 import com.saulhdev.feeder.ui.components.ContributorRow
+import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.height
 import com.saulhdev.feeder.ui.components.LinkItem
 import com.saulhdev.feeder.ui.components.PagePreference
 import com.saulhdev.feeder.ui.components.PreferenceGroupHeading
@@ -194,6 +198,34 @@ fun AboutPage() {
                 )
             }
             item {
+                PreferenceGroupHeading(heading = stringResource(id = R.string.about_support))
+            }
+            item {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.about_support_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinkItem(
+                            icon = Phosphor.HeartStraight,
+                            label = stringResource(R.string.about_support),
+                            url = SPONSORS_URL,
+                        )
+                    }
+                }
+            }
+            item {
                 PreferenceGroupHeading(heading = stringResource(id = R.string.about_team))
             }
             itemsIndexed(contributors) { i, it ->
@@ -267,6 +299,23 @@ private val links = listOf(
         url = "https://github.com/iTaysonLab/HomeFeeder"
     ),
 )
+
+/**
+ * Where to chip in, for anyone who wants to.
+ *
+ * A link out rather than an in-app purchase, and that is a decision rather
+ * than a stage on the way to one. Play's billing library is proprietary, and
+ * it would be the only proprietary dependency in an app whose whole claim is
+ * that it has none — F-Droid would flag it, and the privacy statement would
+ * have to grow a paragraph explaining an exception. For a voluntary tip that
+ * gates nothing, a link costs the reader one tap and costs the app nothing.
+ *
+ * It sits at the bottom of About, on its own, once. Nothing in the app is
+ * withheld from anyone who ignores it, and nothing changes for anyone who
+ * does not — which is the only arrangement that leaves the reader free to
+ * decide it is not for them.
+ */
+private const val SPONSORS_URL = "https://github.com/sponsors/defsix"
 
 /**
  * Whisper's author.
