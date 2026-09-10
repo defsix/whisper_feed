@@ -1,4 +1,6 @@
-# Setting up a FreshRSS test server
+# Setting up a test server for Google Reader sync
+
+*FreshRSS first, then Miniflux. Both are covered here.*
 
 **Handover note.** This is written for a Claude instance working on the
 reader's own server, with no context on the Android app. It has one job:
@@ -192,6 +194,97 @@ The Android app logs warnings and errors with tags including
 alongside the server's access log gives both ends of each request.
 
 ---
+
+## Second pass: Miniflux
+
+**Do this after FreshRSS, not instead of it** — but do it.
+
+The Google Reader API is a de facto standard with no specification authority
+and no conformance suite. Implementations genuinely differ, most of all on the
+item id shapes described above. Testing against one server risks coding to that
+server's quirks and calling the protocol done; testing against two is what
+tells you the implementation is actually right rather than accidentally
+compatible.
+
+FreshRSS goes first because it is what most people who use this feature will
+actually be running, and because its implementation is the one most Android
+readers are tested against. Miniflux goes second because it is a different
+codebase in a different language written by different people, which is exactly
+what makes the second test worth running.
+
+### What differs
+
+Miniflux is a single Go binary plus PostgreSQL — lighter than FreshRSS, and
+with no PHP anywhere.
+
+```yaml
+# compose.yaml
+services:
+  miniflux:
+    image: miniflux/miniflux:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:8081:8080'
+    environment:
+      DATABASE_URL: postgres://miniflux:secret@db/miniflux?sslmode=disable
+      RUN_MIGRATIONS: 1
+      CREATE_ADMIN: 1
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: changeme
+      BASE_URL: https://miniflux.example.com
+      # The Google Reader endpoint is not on by default.
+      GOOGLE_READER_API_ENABLED: 1
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: miniflux
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'miniflux']
+```
+
+Check the variable names against Miniflux's current documentation before
+relying on them; this is written from memory.
+
+### The endpoint, and the credentials
+
+Miniflux serves the protocol at:
+
+```
+https://miniflux.example.com/googlereader
+```
+
+That is the whole base URL to give the app — there is no `.php` and no `/api`
+prefix, which is the first thing to get wrong when moving across from FreshRSS.
+
+Miniflux, like FreshRSS, keeps **separate Google Reader credentials** from the
+web login. Set them per-user in **Settings → Integrations → Google Reader**.
+Using the web password will report as bad credentials, exactly as it does on
+FreshRSS.
+
+### What the second pass is looking for
+
+Not "does it work" so much as "does it work *differently*". Specifically:
+
+- **Item id shapes.** If read state syncs on one server and silently does
+  nothing on the other, this is almost certainly why, and it is the single most
+  likely bug in Whisper's implementation.
+- **The `stream/contents` response.** Whether both servers include article URLs
+  in the same place and the same form. Whisper matches server ids to articles
+  by link, so a difference here breaks read state without breaking anything
+  visible.
+- **Whether anything Whisper does assumes FreshRSS.** A request that FreshRSS
+  tolerates and Miniflux rejects is a bug in the app, even though the app
+  appeared to work.
+
+Send back the same raw JSON as for FreshRSS. The value is in the comparison.
 
 ## Scope note
 
