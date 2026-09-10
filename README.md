@@ -94,3 +94,9 @@ Whisper is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
 It is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed), whose
 launcher-overlay implementation it retains. See
 [`ATTRIBUTION.md`](ATTRIBUTION.md) for full upstream copyright and credits.
+
+## Privacy and terms
+
+- [Privacy](PRIVACY.md) — what leaves your phone, in full. Short version: no
+  servers, no analytics, no accounts.
+- [Disclaimer](DISCLAIMER.md) — Whisper is a reader, not a publisher.
