@@ -177,9 +177,19 @@ fun ArticleHeroCard(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
+                        // Three stops rather than two. With a single ramp from
+                        // 35% to the bottom, the alpha where the text actually
+                        // sits — a two or three line headline reaching ~40% up
+                        // the card — was still close to nothing, so a white
+                        // headline over a bright image was unreadable on its
+                        // upper lines while the bottom of the card was pitch
+                        // dark. The middle stop puts real coverage under the
+                        // whole text block and leaves the top of the picture
+                        // alone, which is what the gradient was for.
                         Brush.verticalGradient(
-                            0.35f to Color.Transparent,
-                            1f to Color.Black.copy(alpha = 0.82f),
+                            0.30f to Color.Transparent,
+                            0.62f to Color.Black.copy(alpha = 0.45f),
+                            1f to Color.Black.copy(alpha = 0.88f),
                         )
                     )
             )
@@ -434,10 +444,16 @@ fun ArticleCompactRow(
             // the *else* branch above — the slot where a thumbnail would
             // otherwise go — so any compact row that had an image silently
             // lost its save button, which is most of them.
+            // Together, not SpaceBetween. SpaceBetween distributes over the
+            // column's height, which is the row's height — so on a row with a
+            // two-line headline the overflow dot went to the very top and the
+            // save button to the very bottom, with a gap between them that
+            // read as two unrelated controls belonging to different things.
+            // Two 20dp glyphs are a pair; they sit as one.
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.align(Alignment.Top),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.align(Alignment.CenterVertically),
             ) {
                 menu(null)
                 SaveButton(
