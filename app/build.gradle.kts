@@ -41,6 +41,38 @@ android {
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        /**
+         * The test-signing key, held in the repository on purpose.
+         *
+         * Without this block AGP falls back to `~/.android/debug.keystore`,
+         * which is generated per machine — so a debug or preview APK built
+         * here and one built on a laptop carry different signatures, and
+         * Android refuses to install one over the other. A tester handed a
+         * second build would have to uninstall the first and lose their feeds.
+         * `app/debug.keystore` was already committed, inherited from upstream,
+         * and simply never wired up; that is what it is for.
+         *
+         * Committing a key is normally indefensible. This one is the standard
+         * Android debug key — `android`/`androiddebugkey`, the same credentials
+         * every SDK install uses — so it is already public knowledge and grants
+         * nobody anything they did not have. Every Android project's debug key
+         * is effectively shared.
+         *
+         * It must never sign a release. It is public, so anyone could then
+         * publish an update to a real app. The release build type deliberately
+         * declares no signingConfig for exactly that reason: `assembleRelease`
+         * produces an unsigned APK, and signing it is a separate, local step
+         * with a key that never comes near this repository.
+         */
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false

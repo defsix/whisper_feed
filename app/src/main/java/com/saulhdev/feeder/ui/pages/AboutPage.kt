@@ -276,14 +276,15 @@ private data class TeamMember(
  * "Channel" and "Community". Sending a Whisper reader to another project's
  * chat rooms to ask about this app helps nobody in either place.
  *
- * Whisper's own repository is deliberately not here yet. It is about to be
- * renamed, and a link that 404s the week after release is worse than no link.
+ * Whisper's own repository leads the list now that it is renamed and public.
+ * It was deliberately left out while `076feed` was still the name, because a
+ * link that 404s the week after release is worse than no link.
  */
 private val links = listOf(
     Link(
         icon = Phosphor.GithubLogo,
         labelResId = R.string.about_source_code,
-        url = "https://github.com/defsix/076feed"
+        url = "https://github.com/defsix/whisper_feed"
     ),
     Link(
         icon = Phosphor.GithubLogo,
@@ -329,7 +330,7 @@ private val whisperTeam = listOf(
         name = R.string.about_whisper_author,
         descriptionRes = R.string.about_whisper_role,
         photoUrl = "https://github.com/defsix.png",
-        webpage = "https://github.com/defsix/076feed"
+        webpage = "https://github.com/defsix/whisper_feed"
     ),
 )
 
