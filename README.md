@@ -1,108 +1,232 @@
-# Whisper
+<div align="center">
 
-**Your feeds, your focus.**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/07_production/lockup_horizontal_notag_dark.png">
+  <img src="docs/brand/07_production/lockup_horizontal_notag_light.png" alt="Whisper" width="420">
+</picture>
 
-**A Pixel-quality, Lawnchair-native RSS feed with user-controlled sources, multiple layouts, transparent personalisation, and private cross-device sync.**
+**Curate. Read. Breathe.**
+
+An RSS reader that takes over your launcher's Discover page, and reads only the
+sources you chose.
+
+[![Licence: GPL v3](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
+![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
+![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-brightgreen)
+![Tests](https://img.shields.io/badge/tests-176%20passing-success)
+![No trackers](https://img.shields.io/badge/trackers-none-success)
+
+</div>
+
+---
 
 Whisper occupies Lawnchair's left-most **minus-one** page — the slot the Pixel
 Launcher reserves for Google Discover. Swipe right from Home and you get a
-continuously scrolling, personalised feed built from RSS/Atom sources you chose
-yourself.
-
-It is a genuine native launcher overlay surface, **not** a home-screen widget.
+continuously scrolling feed built from sources you picked yourself.
 
 ```
 Home screen → swipe right → Whisper
 ```
 
+It is a genuine native launcher overlay, **not** a home-screen widget. It also
+works as an ordinary app, and the two surfaces are deliberately identical —
+same layouts, same cards, same gestures.
+
 ## Status
 
-Early development. `ROADMAP.md` has the milestone-by-milestone position and
-what comes next; `UPSTREAM_NOTES.md` has the launcher-integration findings the
-project is built on.
+**Version 1.0.0, feature complete, in private testing. Not yet released.**
 
-- **Milestone 0 — launcher feasibility: complete.** Upstream builds, the
-  overlay provider mechanism is documented, and minus-one replacement is
-  confirmed working on-device against Lawnchair.
-- **Milestone 1 — Material shell: in progress.** App identity is renamed to
-  `io.zero76.whisper` / "Whisper"; the UI is still upstream's.
+The feature work is done and the app has been through a full security,
+correctness and performance audit — see [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md).
+What is left before a public release is on-device verification, which is being
+done now, and a signed build.
+
+Two things are honestly incomplete and worth knowing:
+
+- **Google Reader sync has never spoken to a live server.** It is written end
+  to end and unit-tested against fixtures, but until it has met a real FreshRSS
+  or Miniflux, treat it as unproven.
+- **There are no instrumentation or screenshot tests.** 176 unit tests cover
+  the logic; every on-device check so far has been done by hand.
+
+[`ROADMAP.md`](ROADMAP.md) has the position section by section, including what
+was deliberately left undone and why.
+
+## Screenshots
+
+<!--
+  Uncomment when the files land. See docs/screenshots/NEEDED.md for the
+  shortlist. Real screenshots only — the mockups in docs/brand/06_ui_mockups
+  predate the interface and must not stand in for it.
+
+| The feed | The launcher panel | Mosaic |
+|---|---|---|
+| <img src="docs/screenshots/01-feed-cards.png" width="240"> | <img src="docs/screenshots/02-overlay.png" width="240"> | <img src="docs/screenshots/03-feed-mosaic.png" width="240"> |
+-->
+
+*Coming with the first release — see [`docs/screenshots/NEEDED.md`](docs/screenshots/NEEDED.md).*
+
+## Download
+
+No public release yet. When there is one it will be on the
+[Releases](https://github.com/defsix/whisper_feed/releases) page.
+
+Until then, build it yourself — see [Building](#building). Test builds are
+handed out privately and are signed with the repository's public test key, so
+they are not upgradeable to a real release and are not for distribution.
+
+## What it does
+
+**Sources you control**
+- Add a feed by address, or paste a *website* and Whisper finds the feed — it
+  knows how to dig the feed address out of a YouTube channel page
+- Import OPML, or point it at your **browser's bookmarks** and it works out
+  which of those sites publish feeds, grouped by site, probed at the origin
+- A starter list you can take or leave, and remove entirely
+- Multi-select for bulk work: categories, enable, disable, delete, clear
+  articles, and find feeds you have added twice under different names
+- Broken feeds are surfaced rather than left looking quiet, and Whisper will
+  go and look for the feed's new address
+
+**Reading**
+- Four layouts — Cards, Magazine, List, Mosaic
+- Article size earned rather than positional: recency, your own reading habits
+  and whether several sources are covering one story
+- Mark read on scroll, with read articles dimmed or hidden as you prefer
+- Bookmarks, pinning, and full article text fetched per-feed or globally
+- A reader and an in-app browser, matched to each other
+
+**Personalisation you can see**
+- More like this / less like this, and a screen that shows exactly what the app
+  has learned, per source, with a reset
+- Weekly on-device suggestions drawn from what you actually read — never a
+  server, never a recommendation from anyone else
+- Chronological order is always available, and is the default
+
+**The glance row**
+- Weather and sunrise/sunset, optional and off by default
+- **No location permission.** You type a place name, and the coordinates are
+  rounded to about a kilometre before a forecast is requested
+
+**Sync and backup**
+- Google Reader API sync — FreshRSS, Miniflux, The Old Reader and others
+  (see the caveat under Status)
+- OPML and settings backup to a folder you choose, on a schedule
+- Android backup, off by default and asked separately for cloud and for
+  phone-to-phone transfer
 
 ## Principles
 
-- Pixel/Material 3 quality, with Material You dynamic colour and light/dark/system themes.
-- Local-first: Room is the source of truth; the app works fully offline and without any account.
-- You own your sources — add, remove, edit, categorise, reorder, mute, import and export freely.
-- Transparent personalisation. "More like this" / "Less like this" signals you can inspect and reset, never a mandatory opaque algorithm.
-- Chronological ordering is always available and is the default.
-- Feedly-compatible via OPML, never Feedly-dependent.
-- No ads, no sponsored stories, no analytics or telemetry by default.
+- Material 3 throughout, with Material You dynamic colour and light/dark/system
+- **Local-first.** Room is the source of truth, it works fully offline, and it
+  needs no account
+- **You own your sources.** Add, remove, edit, categorise, mute, import, export
+- **Transparent personalisation**, inspectable and resettable, never a
+  mandatory opaque algorithm
+- OPML-compatible, never Feedly-dependent
+- **No adverts, no sponsored stories, no analytics, no telemetry.** Not as a
+  default — there is no such code in the app at all
 
 ## Explicit non-goals
 
-Whisper does not ingest, scrape, or synchronise a user's actual Google
-Discover stream. There is no supported public API for that, and the
-alternatives (scraping the Google app, accessibility hacks, reverse-engineering
-private endpoints) are brittle and inappropriate. The goal is to reproduce the
+Whisper does not ingest, scrape or synchronise your actual Google Discover
+stream. There is no supported public API for it, and the alternatives —
+scraping the Google app, accessibility hacks, reverse-engineering private
+endpoints — are brittle and inappropriate. The goal is to reproduce the
 *quality of the experience* with sources you control.
 
 ## Building
 
-Requires JDK 17+ and an Android SDK with platform 37 and build-tools 36.
+Requires JDK 21 and an Android SDK with platform 37 and build-tools 36.
 
 ```bash
 echo "sdk.dir=/path/to/android-sdk" > local.properties
 ./gradlew assembleDebug
 ```
 
-The APK lands in `app/build/outputs/apk/debug/`.
+Three build types:
+
+| Build | What it is |
+|---|---|
+| `assembleDebug` | Unminified, `io.zero76.whisper.dev`. Fast to build, and the one to debug with. |
+| `assemblePreview` | **Release, made installable.** Fully minified and shrunk, signed with the repository's test key, and carrying the same `.dev` id as debug so it installs over one. What testers get. |
+| `assembleRelease` | Minified and **unsigned**, on purpose. Signing is a local step with a key that never comes near this repository. |
+
+The APK lands in `app/build/outputs/apk/<type>/`.
+
+`app/debug.keystore` is committed deliberately. It is the standard Android
+debug key — `android` / `androiddebugkey`, the same credentials every SDK
+install ships — so it grants nobody anything, and having it in the repository
+is what makes a build here and a build on your machine interchangeable. It must
+never sign a release.
 
 ### Getting Lawnchair to use it
 
 Lawnchair only accepts feed providers on a hardcoded package whitelist, and
-`io.zero76.whisper` is not on it. To use a local build, unlock Lawnchair's debug
-menu and turn the whitelist check off:
+`io.zero76.whisper` is not on it yet. For a local build, unlock Lawnchair's
+debug menu and turn the check off:
 
-1. Open the App Drawer, tap the search field, and type `/lawnchairdebug`.
-2. Open Lawnchair Settings — a build icon now appears in the overflow area — and go to **Debug menu**.
-3. Enable **Ignore feed whitelist**.
-4. In **Home screen settings → Feed provider**, select **Whisper**.
+1. Open the App Drawer, tap the search field, type `/lawnchairdebug`
+2. Open Lawnchair Settings — a build icon appears in the overflow — and go to
+   **Debug menu**
+3. Enable **Ignore feed whitelist**
+4. In **Home screen settings → Feed provider**, select **Whisper**
 
-No root, LSPosed, or Shizuku is required. The mechanism and the reasoning
-behind it are documented in `UPSTREAM_NOTES.md` §3.
+No root, LSPosed or Shizuku required. The mechanism is documented in
+[`UPSTREAM_NOTES.md`](UPSTREAM_NOTES.md) §3, and the whitelist request is
+drafted in [`docs/LAWNCHAIR_WHITELIST.md`](docs/LAWNCHAIR_WHITELIST.md).
 
 ### Granting "Display over other apps"
 
-The app needs this permission to open articles you tap — the feed itself
-renders without it, but taps do nothing. On a sideloaded build the toggle is
-greyed out, because Android restricts sensitive permissions for apps not
-installed from an app store. Unblock it via **Settings → Apps → Whisper → ⋮
-→ Allow restricted settings**, then grant it. See `UPSTREAM_NOTES.md` §3b for
-why the permission is needed.
+Needed to open articles you tap from the launcher panel — the feed renders
+without it, but taps do nothing. Whisper does not use it to draw anything;
+holding it is what exempts the app from Android's background-activity-launch
+restriction.
 
-## Brand
+Whisper explains this on **Settings → Launcher** rather than demanding it on
+launch. On a sideloaded build the toggle may be greyed out, because Android
+restricts sensitive permissions for apps not installed from a store — unblock
+it via **Settings → Apps → Whisper → ⋮ → Allow restricted settings**, then
+grant it.
 
-Brand assets and the palette live in [`docs/brand/`](docs/brand/). The
-production-ready artwork is in
-[`docs/brand/07_production/`](docs/brand/07_production/) and is what the app
-ships; the other directories are concept-board crops kept for reference and
-show an earlier version of the symbol.
+## Documentation
 
-## Licence and attribution
-
-Whisper is licensed under the **GPLv3+** — see [`LICENSE`](LICENSE).
-
-It is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed), whose
-launcher-overlay implementation it retains. See
-[`ATTRIBUTION.md`](ATTRIBUTION.md) for full upstream copyright and credits.
+| | |
+|---|---|
+| [`ROADMAP.md`](ROADMAP.md) | Where every section stands, and what was left undone on purpose |
+| [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md) | The security, correctness and performance audit |
+| [`UPSTREAM_NOTES.md`](UPSTREAM_NOTES.md) | How the launcher integration actually works |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history |
+| [`ATTRIBUTION.md`](ATTRIBUTION.md) | Upstream copyright and credits |
+| [`docs/FRESHRSS_TEST_SERVER.md`](docs/FRESHRSS_TEST_SERVER.md) | Standing up a server to test sync against |
 
 ## Privacy and terms
 
-- [Privacy](PRIVACY.md) — what leaves your phone, in full. Short version: no
-  servers, no analytics, no accounts.
-- [Disclaimer](DISCLAIMER.md) — Whisper is a reader, not a publisher.
+- **[Privacy](PRIVACY.md)** — the complete list of what leaves your phone.
+  Short version: no servers, no analytics, no accounts, and no location
+  permission.
+- **[Disclaimer](DISCLAIMER.md)** — Whisper is a reader, not a publisher. You
+  choose the sources; nothing is hosted or redistributed here.
+
+## Brand
+
+Assets and the palette are in [`docs/brand/`](docs/brand/). The production
+artwork the app ships is in
+[`docs/brand/07_production/`](docs/brand/07_production/); the other directories
+are concept-board crops kept for reference and show an earlier symbol.
+
+## Licence and attribution
+
+**GPL-3.0-or-later** — see [`LICENSE`](LICENSE).
+
+Whisper is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed),
+which is itself a fork of
+[HomeFeeder](https://github.com/iTaysonLab/HomeFeeder), whose launcher-overlay
+implementation it retains. See [`ATTRIBUTION.md`](ATTRIBUTION.md) for full
+credits.
 
 ## Support
 
-Whisper is free, carries no adverts and collects nothing, and that is not
-going to change. If it has earned it, you can chip in through the Sponsor
-button — nothing in the app is withheld from anyone who does not.
+Whisper is free, carries no adverts and collects nothing, and that is not going
+to change. If it has earned it, there is a Sponsor button — nothing in the app
+is withheld from anyone who ignores it.

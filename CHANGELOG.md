@@ -1,6 +1,34 @@
 CHANGELOG
 =========
 
+Whisper's own history starts at 1.0.0. Everything below that is **Neo Feed's**,
+kept because Whisper is a fork of it and the work is inherited rather than
+replaced — but those are not Whisper releases, and the version numbers are not
+Whisper's. See [`ATTRIBUTION.md`](ATTRIBUTION.md).
+
+1.0.0 — unreleased
+------------------
+
+First Whisper release. Not yet published; in private testing.
+
+Rather than list several hundred commits, the position is documented where it
+is maintained:
+
+- [`ROADMAP.md`](ROADMAP.md) — every section, what is built, and what was left
+  undone on purpose
+- [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md) — the security, correctness
+  and performance audit, and the four items it left open
+
+Two things are knowingly unproven and repeated here so a release note cannot
+be read as a clean bill of health: **Google Reader sync has never spoken to a
+live server**, and **there are no instrumentation or screenshot tests** — the
+176 unit tests cover logic, and every on-device check so far has been manual.
+
+---
+
+Inherited from Neo Feed
+=======================
+
 1.9.0 (09.11.2025) +200 Commits & +30 Translations
 ------------
 
