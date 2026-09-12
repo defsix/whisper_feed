@@ -7,8 +7,8 @@
 
 **Curate. Read. Breathe.**
 
-An RSS reader that takes over your launcher's Discover page, and reads only the
-sources you chose.
+An RSS reader that tells you why it put an article where it did — and lets you
+disagree.
 
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
 ![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
@@ -20,17 +20,19 @@ sources you chose.
 
 ---
 
-Whisper occupies Lawnchair's left-most **minus-one** page — the slot the Pixel
-Launcher reserves for Google Discover. Swipe right from Home and you get a
-continuously scrolling feed built from sources you picked yourself.
+Whisper is a reader for the feeds you chose. It needs no account, keeps
+everything on your phone, and works fully offline.
 
-```
-Home screen → swipe right → Whisper
-```
+What makes it different from the other good readers is the ordering. Most are
+chronological, which is honest but flat; the rest use an algorithm that will
+not tell you what it is doing. Whisper's feed gives more room to some articles
+than others — and every one of those decisions can be inspected per article,
+disagreed with per source, and reset. Chronological order is still there, and
+is still the default.
 
-It is a genuine native launcher overlay, **not** a home-screen widget. It also
-works as an ordinary app, and the two surfaces are deliberately identical —
-same layouts, same cards, same gestures.
+If you run **Lawnchair**, it can also live on your launcher's Discover page.
+That is a bonus rather than the point — see
+[On your launcher's home screen](#on-your-launchers-home-screen-optional).
 
 ## Status
 
@@ -96,11 +98,13 @@ they are not upgradeable to a real release and are not for distribution.
 - Bookmarks, pinning, and full article text fetched per-feed or globally
 - A reader and an in-app browser, matched to each other
 
-**Personalisation you can see**
-- More like this / less like this, and a screen that shows exactly what the app
-  has learned, per source, with a reset
-- Weekly on-device suggestions drawn from what you actually read — never a
-  server, never a recommendation from anyone else
+**Personalisation you can see** — the part nothing else does
+- Tap through to **why** an article was given the size it was: recency, how
+  often you read that source, whether several sources are covering one story
+- More like this / less like this, and a screen showing exactly what the app
+  has learned, per source, with a reset that actually resets
+- Weekly on-device suggestions drawn from what you read — never a server,
+  never someone else's recommendation
 - Chronological order is always available, and is the default
 
 **The glance row**
@@ -114,6 +118,33 @@ they are not upgradeable to a real release and are not for distribution.
 - OPML and settings backup to a folder you choose, on a schedule
 - Android backup, off by default and asked separately for cloud and for
   phone-to-phone transfer
+
+## On your launcher's home screen (optional)
+
+Whisper can occupy **Lawnchair's left-most page** — the slot the Pixel Launcher
+reserves for Google Discover.
+
+```
+Home screen → swipe right → Whisper
+```
+
+It is a genuine native launcher overlay, **not** a home-screen widget, and it
+is the same app: the panel and the app window are deliberately identical, with
+the same layouts, cards and gestures.
+
+**You do not need this.** Most people installing a reader want a reader, and
+Whisper is one whether or not a launcher ever asks it for a page. The setup
+lives on its own screen in Settings and is written as an offer rather than a
+step you have missed.
+
+It works with Lawnchair and, very probably, its forks — they inherit the same
+`FeedBridge`, though nobody has tested one. The Pixel Launcher cannot do this
+and never will: it is hardwired to Google's own app, with no public API and no
+setting. [`ROADMAP.md`](ROADMAP.md) has the launcher-by-launcher position under
+*Replacing Discover: what is actually possible*.
+
+See [Getting Lawnchair to use it](#getting-lawnchair-to-use-it) below for the
+four-step setup.
 
 ## Principles
 
