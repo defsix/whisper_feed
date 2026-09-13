@@ -56,17 +56,24 @@ was deliberately left undone and why.
 
 ## Screenshots
 
-<!--
-  Uncomment when the files land. See docs/screenshots/NEEDED.md for the
-  shortlist. Real screenshots only — the mockups in docs/brand/06_ui_mockups
-  predate the interface and must not stand in for it.
+<div align="center">
 
-| The feed | The launcher panel | Mosaic |
-|---|---|---|
-| <img src="docs/screenshots/01-feed-cards.png" width="240"> | <img src="docs/screenshots/02-overlay.png" width="240"> | <img src="docs/screenshots/03-feed-mosaic.png" width="240"> |
--->
+| The feed | Mosaic |
+|---|---|
+| <img src="docs/screenshots/01-feed-cards.png" width="300" alt="The feed in the Cards layout, light theme"> | <img src="docs/screenshots/03-feed-mosaic.png" width="300" alt="The Mosaic layout, dark theme, showing two stories marked as covered by three sources"> |
 
-*Coming with the first release — see [`docs/screenshots/NEEDED.md`](docs/screenshots/NEEDED.md).*
+| What it has learned | Your sources |
+|---|---|
+| <img src="docs/screenshots/04-what-whisper-learned.png" width="300" alt="A list of sources with, for each, the more/less score, how many articles were read in thirty days, and the resulting weight"> | <img src="docs/screenshots/05-sources.png" width="300" alt="The source list, searchable and filterable by category, each feed showing its address and whether it is updating"> |
+
+</div>
+
+The third image is the one to look at. Every source carries the number of
+articles actually read from it, the effect that has on how prominently it
+appears, and a way to undo any of it. Nothing there is inferred and none of it
+leaves the phone.
+
+*Still to come: the launcher panel.*
 
 ## Download
 

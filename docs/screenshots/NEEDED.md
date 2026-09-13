@@ -9,16 +9,26 @@ uncomment it once the first three are here.
 not be used here: a concept board presented as a screenshot is a claim about
 what the app looks like that the app cannot keep.
 
-## The shortlist, in order of usefulness
+## What is still missing
+
+Only one, and it is the one that matters most:
 
 | File | What to capture |
 |---|---|
-| `01-feed-cards.png` | The feed in the **Cards** layout, scrolled so a hero card and two ordinary cards are visible. Light theme. This is the one that has to sell the app. |
-| `02-overlay.png` | The **launcher panel** — swipe right from the Lawnchair home screen. Shows the thing no other reader does. |
-| `03-feed-mosaic.png` | The **Mosaic** layout, so the gallery shows there is more than one. Dark theme, for contrast with the first. |
-| `04-sources.png` | **Data sources** with a selection running, so the bulk actions are visible in the app bar. |
-| `05-article.png` | An article in the **reader**. |
-| `06-settings.png` | Settings, top of the list. |
+| `02-overlay.png` | The **launcher panel** — swipe right from the Lawnchair home screen. It is the only image that shows the thing no other reader does, and the README currently says "still to come" in its place. |
+
+## Already in
+
+`01-feed-cards`, `03-feed-mosaic`, `04-what-whisper-learned` and `05-sources`.
+All four were sterilised before committing: the status bar's notification icons
+painted out in each, and the place name removed from the glance chip in the two
+feed shots. Half-size, which is crisp at the width the README renders them and
+keeps the whole set around a megabyte.
+
+Kept deliberately, and worth knowing if these are ever replaced: the real
+subscription list, the real reading counts, and the clock and battery. A
+learned-scores screen full of zeroes proves nothing, and a blank status bar
+looks doctored.
 
 ## Practical notes
 
