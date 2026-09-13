@@ -88,6 +88,56 @@ object SafeAddress {
  * that redirects to `192.168.1.1`, which is exactly the trick worth stopping —
  * a bookmark cannot be trusted to stay where it points.
  */
+/**
+ * Asks for https, when a subscription still says http.
+ *
+ * Plaintext is refused outright since the September audit, and that is right —
+ * article HTML is rendered in a WebView, and anyone on the network can rewrite
+ * a page in transit. What it missed is that a great many perfectly healthy
+ * feeds are *stored* with an http address, from before their site moved, and
+ * their server has answered a redirect to https ever since. Nobody noticed
+ * because the redirect did the work.
+ *
+ * Refusing the connection means that redirect never arrives, so those feeds
+ * stopped fetching and appeared as broken — not because the publisher had
+ * done anything, but because of the scheme written down years ago. Three of
+ * them were visible in a single screen of one test device's source list.
+ *
+ * So the scheme is rewritten before the connection is attempted: an
+ * application interceptor, not a network one, because by the time a network
+ * interceptor runs the socket it would have to prevent is already being
+ * opened.
+ *
+ * Nothing is weakened. No plaintext request is made either way; the only
+ * change is that a host willing to serve https gets asked. A host that truly
+ * only speaks http still fails, and should — that is the decision the audit
+ * made, and this does not reverse it.
+ *
+ * The stored address is left alone. It is what the reader typed or imported,
+ * the fetch works regardless, and rewriting somebody's subscription list as a
+ * side effect of a network policy is not this interceptor's business.
+ */
+class UpgradeToHttps : okhttp3.Interceptor {
+    override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+        val request = chain.request()
+        val upgraded = upgradedUrl(request.url)
+        if (upgraded == request.url) return chain.proceed(request)
+        return chain.proceed(request.newBuilder().url(upgraded).build())
+    }
+}
+
+/**
+ * The rewrite itself, kept apart from the interceptor so it can be tested.
+ *
+ * Faking an OkHttp `Chain` means implementing a dozen members that have
+ * nothing to do with what is being checked; the question worth asking is only
+ * ever "what address comes out", and everything else about the request has to
+ * survive — path, query, port. A lost query string turns a working fetch into
+ * a 404, which would be worse than the problem this repairs.
+ */
+internal fun upgradedUrl(url: okhttp3.HttpUrl): okhttp3.HttpUrl =
+    if (url.isHttps) url else url.newBuilder().scheme("https").build()
+
 class BlockPrivateNetworks : okhttp3.Interceptor {
     override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
         val host = chain.request().url.host
