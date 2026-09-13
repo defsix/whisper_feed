@@ -259,5 +259,5 @@ credits.
 ## Support
 
 Whisper is free, carries no adverts and collects nothing, and that is not going
-to change. If it has earned it, there is a Sponsor button — nothing in the app
-is withheld from anyone who ignores it.
+to change. If it has earned it, there is [Ko-fi](https://ko-fi.com/defsix) —
+nothing in the app is withheld from anyone who ignores it.

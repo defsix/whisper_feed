@@ -220,7 +220,7 @@ fun AboutPage() {
                         LinkItem(
                             icon = Phosphor.HeartStraight,
                             label = stringResource(R.string.about_support),
-                            url = SPONSORS_URL,
+                            url = SUPPORT_URL,
                         )
                     }
                 }
@@ -315,8 +315,11 @@ private val links = listOf(
  * withheld from anyone who ignores it, and nothing changes for anyone who
  * does not — which is the only arrangement that leaves the reader free to
  * decide it is not for them.
+ *
+ * Ko-fi rather than GitHub Sponsors: it needed no enrolment queue, and it
+ * takes nothing from a one-off tip.
  */
-private const val SPONSORS_URL = "https://github.com/sponsors/defsix"
+private const val SUPPORT_URL = "https://ko-fi.com/defsix"
 
 /**
  * Whisper's author.

@@ -1,8 +1,6 @@
 # The Sponsor button on the repository.
 #
-# Uncomment and fill in whichever of these you actually enrol in — GitHub
-# Sponsors needs enrolling in before the link works, and a Sponsor button
-# pointing at a page that does not exist is worse than no button.
-github: [defsix]
-# ko_fi:
-# liberapay:
+# Ko-fi rather than GitHub Sponsors: no enrolment queue, and nothing taken
+# from a one-off tip. GitHub still renders its own "Sponsor" button from this
+# file whichever platform is behind it.
+ko_fi: defsix
