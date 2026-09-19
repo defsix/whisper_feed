@@ -460,6 +460,25 @@
     <string name="pref_broken_feeds">Feeds that stopped working</string>
     <string name="pref_broken_feeds_summary">Look for a new address when a feed goes quiet</string>
     <string name="broken_explanation">A feed usually goes quiet because its address moved, not because the site stopped publishing. Whisper can ask the site where its feed lives now.</string>
+    <string name="pref_insecure_feeds">Feeds still on http</string>
+    <string name="pref_insecure_feeds_summary">Move their stored addresses to https where the site supports it</string>
+    <string name="insecure_explanation">Nothing is fetched in the clear — Whisper already asks for https even when a feed is stored as http. What is still wrong is the address itself: it is what the sources list shows and what an OPML export hands to the next reader. Each one is checked before anything is changed.</string>
+    <string name="insecure_none">Every subscription is stored as https. Nothing to do.</string>
+    <string name="insecure_check">Check this one</string>
+    <string name="insecure_checking">Asking…</string>
+    <string name="insecure_checking_progress">Checked %1$d of %2$d</string>
+    <string name="insecure_apply">Use the https address</string>
+    <string name="insecure_applied">Updated</string>
+    <string name="insecure_no_https">This site has no working https. Left as it is — the address is honest about that, and a changed one would not be.</string>
+    <string name="insecure_duplicate">The https version of this feed is already subscribed to separately. Delete whichever of the two you would rather not keep.</string>
+    <plurals name="insecure_check_all">
+        <item quantity="one">Check the one address</item>
+        <item quantity="other">Check all %1$d addresses</item>
+    </plurals>
+    <plurals name="insecure_apply_all">
+        <item quantity="one">Update the one that works</item>
+        <item quantity="other">Update all %1$d that work</item>
+    </plurals>
     <string name="broken_none">Nothing is failing. A feed appears here after three syncs in a row have not worked \u2014 one bad afternoon on somebody\u2019s server is not a broken feed.</string>
     <string name="broken_look">Look for a new address</string>
     <string name="broken_looking">Asking the site\u2026</string>

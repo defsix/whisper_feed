@@ -58,6 +58,7 @@ import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.pages.StarterSourcesPage
 import com.saulhdev.feeder.ui.pages.BookmarkImportPage
 import com.saulhdev.feeder.ui.pages.BrokenFeedsPage
+import com.saulhdev.feeder.ui.pages.InsecureFeedsPage
 import com.saulhdev.feeder.ui.pages.SuggestionsPage
 import com.saulhdev.feeder.ui.pages.SourceAddPage
 import com.saulhdev.feeder.ui.pages.SourceListPage
@@ -130,6 +131,7 @@ fun NavigationManager(
             composable<NavRoute.Suggestions> { SuggestionsPage() }
             composable<NavRoute.BookmarkImport> { BookmarkImportPage() }
             composable<NavRoute.BrokenFeeds> { BrokenFeedsPage() }
+            composable<NavRoute.InsecureFeeds> { InsecureFeedsPage() }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
             composable<NavRoute.MastodonAdd> { MastodonAddPage() }
             composable<NavRoute.MastodonCallback>(
@@ -222,6 +224,9 @@ open class NavRoute {
 
     @Serializable
     data object BrokenFeeds : NavRoute()
+
+    @Serializable
+    data object InsecureFeeds : NavRoute()
 
     @Serializable
     data object BlockedWords : NavRoute()

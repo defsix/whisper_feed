@@ -33,6 +33,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.entity.SORT_CHRONOLOGICAL
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
+import com.saulhdev.feeder.ui.icons.phosphor.Prohibit
 import com.saulhdev.feeder.utils.getFeedLayouts
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
@@ -477,6 +478,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = BROKEN_FEEDS,
         dataStore = dataStore,
         route = NavRoute.BrokenFeeds
+    )
+
+    /** Subscriptions still stored with an http address, and the offer to move them. */
+    var insecureFeeds = StringPref(
+        titleId = R.string.pref_insecure_feeds,
+        summaryId = R.string.pref_insecure_feeds_summary,
+        icon = Phosphor.Prohibit,
+        key = INSECURE_FEEDS,
+        dataStore = dataStore,
+        route = NavRoute.InsecureFeeds
     )
 
     /** The websites the reader already keeps, turned into feeds. */
@@ -964,6 +975,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SUGGESTIONS = stringPreferencesKey("pref_suggestions")
         val IMPORT_BOOKMARKS = stringPreferencesKey("pref_import_bookmarks")
         val BROKEN_FEEDS = stringPreferencesKey("pref_broken_feeds")
+        val INSECURE_FEEDS = stringPreferencesKey("pref_insecure_feeds")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

@@ -43,6 +43,7 @@ import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import com.saulhdev.feeder.viewmodels.ArticleViewModel
 import com.saulhdev.feeder.viewmodels.BookmarkImportViewModel
 import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
+import com.saulhdev.feeder.viewmodels.InsecureFeedsViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
@@ -96,6 +97,7 @@ val modelModule = module {
     viewModelOf(::SuggestionsViewModel)
     viewModelOf(::BookmarkImportViewModel)
     viewModelOf(::BrokenFeedsViewModel)
+    viewModelOf(::InsecureFeedsViewModel)
     viewModelOf(::MastodonAuthViewModel)
 }
 
