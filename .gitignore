@@ -21,3 +21,9 @@ neo/
 
 # Local SDK config (machine-specific, must not be committed)
 local.properties
+
+# Release signing. The keystore itself lives outside the repository; this
+# file only points at it, and still holds its passwords.
+keystore.properties
+*.jks
+!app/debug.keystore

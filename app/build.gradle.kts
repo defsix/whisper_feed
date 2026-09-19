@@ -1,3 +1,24 @@
+import java.util.Properties
+
+/**
+ * The release signing key, if this machine has one.
+ *
+ * `keystore.properties` is gitignored and names a keystore that lives outside
+ * the repository. Absent — on a fresh clone, or in CI — this is null and the
+ * build still works: `assembleRelease` produces an unsigned APK as it always
+ * has, and `assemblePreview` falls back to the debug key.
+ *
+ * The file holds four entries:
+ *
+ *     storeFile=/absolute/path/to/whisper-release.jks
+ *     storePassword=…
+ *     keyAlias=…
+ *     keyPassword=…
+ */
+val releaseKeystore: Properties? = rootProject.file("keystore.properties")
+    .takeIf { it.exists() }
+    ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -71,6 +92,26 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+
+        /**
+         * The real key, declared only when this machine has one.
+         *
+         * Registered conditionally rather than with empty strings, so a clone
+         * without the keystore fails by having no config to reference — which
+         * the build types handle — instead of by trying to sign with nothing
+         * and failing somewhere less obvious.
+         */
+        releaseKeystore?.let { props ->
+            create("release") {
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+                // Both, so the APK verifies on everything from API 26 up.
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
     }
 
     buildTypes {
@@ -83,6 +124,8 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Unsigned when this machine has no keystore, exactly as before.
+            releaseKeystore?.let { signingConfig = signingConfigs.getByName("release") }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -93,22 +136,32 @@ android {
          *
          * Minified and resource-shrunk exactly as release is — so it exercises
          * R8, which is the only thing that can break the reflective Moshi and
-         * Google Reader models, and which a debug build never runs — but signed
-         * with the debug key and carrying the same `.dev` application id as
-         * debug, so it installs straight over a debug build already on the
-         * phone instead of arriving as a second app.
+         * Google Reader models, and which a debug build never runs — while
+         * carrying the `.dev` application id, so it installs alongside a real
+         * Whisper rather than replacing it.
          *
          * A debug APK is 31 MB of unminified dex; this is about 9. That is the
          * difference between a build that can be handed over and one that
          * cannot.
          *
-         * Not a release: the debug signing key is public and every phone
-         * already trusts it. Never distribute one of these.
+         * **Signed with the real key when there is one.** It used to take the
+         * debug key on the reasoning that a preview is not a release, which
+         * was true and beside the point: Google Play Protect blocks the
+         * install of anything signed `CN=Android Debug` outright, so a build
+         * nobody can install is not a build that can be handed over either.
+         * Verified on a Pixel 10 Pro — identical code and permissions, blocked
+         * under the debug key and installed under a real one.
+         *
+         * The fallback is deliberate: without a keystore this is debug-signed
+         * as before, so a clone still produces something that runs on the
+         * machine that built it.
          */
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".dev"
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(
+                if (releaseKeystore != null) "release" else "debug"
+            )
             // The google-gsa module has only debug and release; without this
             // Gradle cannot decide which of them a "preview" app should use.
             matchingFallbacks += listOf("release")
