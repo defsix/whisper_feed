@@ -13,7 +13,7 @@ disagree.
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
 ![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-brightgreen)
-![Tests](https://img.shields.io/badge/tests-176%20passing-success)
+![Tests](https://img.shields.io/badge/tests-186%20passing-success)
 ![No trackers](https://img.shields.io/badge/trackers-none-success)
 
 </div>
@@ -240,11 +240,17 @@ grant it.
 
 ## Privacy and terms
 
+Whisper is published by **[Nyancat Labs](https://nyancatlabs.com)**, a company
+registered in Ireland, which is the data controller — and holds none of your
+data, because there is no server for it to arrive at.
+
 - **[Privacy](PRIVACY.md)** — the complete list of what leaves your phone.
   Short version: no servers, no analytics, no accounts, and no location
   permission.
 - **[Disclaimer](DISCLAIMER.md)** — Whisper is a reader, not a publisher. You
   choose the sources; nothing is hosted or redistributed here.
+
+Anything at all: [hej@nyancatlabs.com](mailto:hej@nyancatlabs.com).
 
 ## Brand
 
@@ -255,7 +261,9 @@ are concept-board crops kept for reference and show an earlier symbol.
 
 ## Licence and attribution
 
-**GPL-3.0-or-later** — see [`LICENSE`](LICENSE).
+**GPL-3.0-or-later** — see [`LICENSE`](LICENSE). Published by
+[Nyancat Labs](https://nyancatlabs.com); the licence is what governs your use
+of it, and it is the same licence whoever publishes it.
 
 Whisper is a fork of [Neo Feed](https://github.com/NeoApplications/Neo-Feed),
 which is itself a fork of

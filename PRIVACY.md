@@ -7,6 +7,10 @@ This document describes what the app actually does, not what it intends to do.
 Everything in it was checked against the source, and the source is here for you
 to check it against too.
 
+Whisper is made by **Nyancat Labs**, a company registered in Ireland, which is
+the data controller for the purposes of the GDPR. Contact:
+[hej@nyancatlabs.com](mailto:hej@nyancatlabs.com).
+
 Last reviewed: September 2026, for Whisper 1.0.0.
 
 ---
@@ -104,10 +108,23 @@ excluded from both routes regardless of what you choose.
 
 ## What Whisper refuses to do
 
-- **Plaintext HTTP is refused**, everywhere. A feed served over `http://` will
-  fail to fetch and appear under Broken feeds. This is deliberate: article HTML
-  is rendered in a WebView, and anyone on the network can rewrite a page in
-  transit.
+- **No plaintext HTTP request ever leaves the device.** Android is told to
+  refuse cleartext traffic outright, at the platform level, so this holds for
+  every request the app makes rather than for the ones we remembered to check.
+  It matters because article HTML is rendered in a WebView, and anyone on the
+  network can rewrite a page in transit.
+
+  What happens to an `http://` address depends on what is at the other end of
+  it, and the difference is deliberate:
+
+  - **Feeds, article pages and images are retried over HTTPS.** Many feeds are
+    still listed with an `http://` address years after the site itself moved,
+    and the scheme is rewritten before any connection is opened. If the server
+    genuinely has no HTTPS, the fetch fails and the source appears under Broken
+    feeds.
+  - **Anything carrying a credential is refused, not upgraded.** A sync server
+    or Mastodon instance given as `http://` simply fails. Guessing at HTTPS is
+    reasonable for a public article and not reasonable for your password.
 - **Private and local network addresses are refused.** A feed or an article link
   pointing at `192.168.x.x`, `10.x.x.x`, `localhost` or similar is not fetched,
   on every redirect hop rather than only the first. A hostile feed cannot use
@@ -129,8 +146,11 @@ There is no location permission, no contacts, no camera, no microphone, and no
 
 ## Your rights
 
-The GDPR gives you rights over personal data a controller holds about you. We
-hold none, so there is nothing for us to disclose, correct, export or delete.
+The GDPR gives you rights over personal data a controller holds about you.
+Nyancat Labs is that controller, and holds none of yours — so there is nothing
+for us to disclose, correct, export or delete. You are welcome to ask, and the
+answer will be that we have nothing, which the rest of this document explains
+how to verify for yourself.
 
 What you can do yourself:
 
@@ -156,6 +176,13 @@ revision is a commit, with a date and a diff.
 
 ## Contact
 
-Through the project's repository. Whisper collects nothing, so there is no
-"data protection request" address to write to; questions and bug reports go to
-the same place.
+**Nyancat Labs** — [hej@nyancatlabs.com](mailto:hej@nyancatlabs.com)
+
+That address reaches us for anything: a data protection question, a bug, or a
+disagreement with something written here. Bug reports are usually better raised
+as an issue on the repository, where other people can see them and where the
+Report a problem button in the app already sends its diagnostics.
+
+We have no data protection officer, because appointing one is required only of
+organisations whose core activity is large-scale monitoring or processing of
+special-category data. Whisper processes neither, and holds nothing.

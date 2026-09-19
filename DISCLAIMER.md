@@ -1,5 +1,10 @@
 # Disclaimer
 
+Whisper is made and published by **Nyancat Labs**, a company registered in
+Ireland. "We" throughout this document means Nyancat Labs.
+
+Contact: [hej@nyancatlabs.com](mailto:hej@nyancatlabs.com)
+
 ## What Whisper is
 
 A reader. You give it addresses of feeds; it fetches them and shows you what
@@ -48,7 +53,9 @@ provided **as is, without warranty of any kind**. Sections 15 and 16 of that
 licence set this out in full and are the governing text; this paragraph is a
 summary, not a substitute.
 
-Practically: it is a reader maintained by one person. It may lose an article,
+Practically: Nyancat Labs is a very small company, and Whisper is maintained by
+one person within it. Naming a company on this page changes who is responsible
+for the app; it does not conjure a support desk. Whisper may lose an article,
 fail to fetch a feed, or stop working after an Android update. Keep a backup of
 anything you would mind losing — the Backup screen exists for exactly that.
 
@@ -57,4 +64,9 @@ anything you would mind losing — the Backup screen exists for exactly that.
 Whisper contacts servers you choose, plus [Open-Meteo](https://open-meteo.com)
 for the optional weather strip. Those services have their own terms and privacy
 practices, and we have no control over them. See [PRIVACY.md](PRIVACY.md) for
-the complete list of what is sent where.
+the complete list of what is sent where, and for who the data controller is.
+
+## Getting in touch
+
+[hej@nyancatlabs.com](mailto:hej@nyancatlabs.com) for anything — including a
+complaint, or a request from a publisher about their feed.
