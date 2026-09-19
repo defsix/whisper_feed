@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.saulhdev.feeder.R
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.utils.sameSiteGroups
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.content.FeedPreferences
@@ -55,6 +56,23 @@ class SourceListViewModel(
     private val _duplicateIds = MutableStateFlow<Set<Long>>(emptySet())
 
     /**
+     * Whether the armed filter is the loose one.
+     *
+     * Two questions share the id-set machinery because they narrow the list
+     * the same way, and differ entirely in what they mean. The exact filter
+     * answers "which of these are literally the same address", and acting on
+     * its answer is safe. This one answers "which of these look like the same
+     * publication", which is a guess — so the banner has to say which is on,
+     * or somebody deletes a Guardian section thinking it is a duplicate.
+     */
+    private val _sameSite = MutableStateFlow(false)
+    val sameSite: StateFlow<Boolean> = _sameSite.asStateFlow()
+
+    /** How many groups the loose filter found, for the banner to report. */
+    private val _sameSiteGroupCount = MutableStateFlow(0)
+    val sameSiteGroupCount: StateFlow<Int> = _sameSiteGroupCount.asStateFlow()
+
+    /**
      * How the list is ordered, read straight from the stored preference.
      *
      * Derived rather than held: a MutableStateFlow seeded from DataStore would
@@ -88,15 +106,22 @@ class SourceListViewModel(
         feedsRepo.getAllTagsFlow(),
         // Three narrowing controls travelling as one value, because combine's
         // typed arity stops at five and these change together anyway.
-        combine(_query, _category, _duplicatesOnly, _duplicateIds) { q, c, d, ids ->
-            Narrowing(q, c, d, ids)
+        combine(_query, _category, _duplicatesOnly, _duplicateIds, _sameSite) { q, c, d, ids, same ->
+            Narrowing(q as String, c as String?, d as Boolean, ids as Set<Long>, same as Boolean)
         },
         combine(sort, ascending) { sort, ascending -> sort to ascending },
         articleRepo.latestArticlePerFeed(),
     ) { allSources, allTags, narrowing, order, latestPosts ->
         val (sort, ascending) = order
-        val base = sort.comparator(latestPosts)
-        val comparator = if (ascending) base else base.reversed()
+        // By name while the loose filter is on, whatever the chosen sort:
+        // members of a group are only recognisable as a group when they sit
+        // next to each other, and they nearly always share a title.
+        val comparator = if (narrowing.sameSite) {
+            compareBy<com.saulhdev.feeder.data.db.models.Feed> { it.title.lowercase() }
+        } else {
+            val base = sort.comparator(latestPosts)
+            if (ascending) base else base.reversed()
+        }
         val matching = allSources
             .filter { narrowing.keeps(it) }
             .sortedWith(comparator)
@@ -155,13 +180,40 @@ class SourceListViewModel(
     fun setDuplicatesOnly(value: Boolean) {
         if (!value) {
             _duplicatesOnly.value = false
+            _sameSite.value = false
             _duplicateIds.value = emptySet()
+            _sameSiteGroupCount.value = 0
             return
         }
         _category.value = null
         _query.value = ""
         ioScope.launch {
             _duplicateIds.value = feedsRepo.duplicateSources().map(Feed::id).toSet()
+            _sameSite.value = false
+            _duplicatesOnly.value = true
+        }
+    }
+
+    /**
+     * Arms the loose filter: sources that look like the same publication.
+     *
+     * Catches what the exact filter cannot, which is most of what a list this
+     * old actually contains — a FeedBurner alias beside a site's own address,
+     * two paths to one feed, a publication subscribed to twice under slightly
+     * different names. It is a suggestion, and the screen says so.
+     */
+    fun setSameSiteOnly() {
+        _category.value = null
+        _query.value = ""
+        ioScope.launch {
+            val groups = sameSiteGroups(
+                feedsRepo.getAllSources(),
+                { it.url },
+                { it.title },
+            )
+            _duplicateIds.value = groups.flatten().map(Feed::id).toSet()
+            _sameSiteGroupCount.value = groups.size
+            _sameSite.value = true
             _duplicatesOnly.value = true
         }
     }
@@ -521,6 +573,7 @@ internal data class Narrowing(
     val category: String? = null,
     val duplicatesOnly: Boolean = false,
     val duplicateIds: Set<Long> = emptySet(),
+    val sameSite: Boolean = false,
 ) {
     fun keeps(feed: Feed): Boolean {
         if (duplicatesOnly && feed.id !in duplicateIds) return false

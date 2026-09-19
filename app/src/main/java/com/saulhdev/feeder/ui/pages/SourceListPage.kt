@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
@@ -111,6 +112,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
 import com.saulhdev.feeder.ui.icons.phosphor.Filtered
+import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
 import com.saulhdev.feeder.ui.icons.phosphor.Power
 import com.saulhdev.feeder.ui.icons.phosphor.Prohibit
@@ -144,6 +146,8 @@ fun SourceListPage(
     val query by viewModel.query.collectAsState()
     val category by viewModel.category.collectAsState()
     val duplicatesOnly by viewModel.duplicatesOnly.collectAsState()
+    val sameSite by viewModel.sameSite.collectAsState()
+    val sameSiteGroupCount by viewModel.sameSiteGroupCount.collectAsState()
     val articlesCleared by viewModel.articlesCleared.collectAsState()
     val sort by viewModel.sort.collectAsState()
     val ascending by viewModel.ascending.collectAsState()
@@ -212,14 +216,18 @@ fun SourceListPage(
         viewModel.forgetArticlesCleared()
     }
 
-    LaunchedEffect(duplicatesOnly, shown.size) {
+    LaunchedEffect(duplicatesOnly, sameSite, shown.size) {
         if (!duplicatesOnly || shown.isNotEmpty()) return@LaunchedEffect
+        // Which filter came back empty, because "no duplicates" and "nothing
+        // looks like a repeat" are different pieces of news.
+        val empty = if (sameSite) R.string.sources_same_site_none
+        else R.string.sources_duplicates_none
         // Disarmed before the message rather than after it, so the list comes
         // straight back: a filter that leaves an empty screen for as long as a
         // snackbar lasts reads as a screen that has broken.
         viewModel.setDuplicatesOnly(false)
         snackbarHostState.showSnackbar(
-            message = context.getString(R.string.sources_duplicates_none),
+            message = context.getString(empty),
             withDismissAction = true,
         )
     }
@@ -378,6 +386,21 @@ fun SourceListPage(
                                     viewModel.setDuplicatesOnly(true)
                                 },
                                 text = { Text(stringResource(R.string.sources_find_duplicates)) },
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(
+                                        Phosphor.Graph,
+                                        contentDescription = stringResource(
+                                            R.string.sources_find_same_site
+                                        ),
+                                    )
+                                },
+                                onClick = {
+                                    hideMenu()
+                                    viewModel.setSameSiteOnly()
+                                },
+                                text = { Text(stringResource(R.string.sources_find_same_site)) },
                             )
                             HorizontalDivider()
                             // Only the chosen row carries an arrow, and the
@@ -547,7 +570,11 @@ fun SourceListPage(
                         }
                         if (duplicatesOnly) {
                             item {
-                                DuplicatesBanner(onClear = { viewModel.setDuplicatesOnly(false) })
+                                DuplicatesBanner(
+                                    sameSite = sameSite,
+                                    groupCount = sameSiteGroupCount,
+                                    onClear = { viewModel.setDuplicatesOnly(false) },
+                                )
                             }
                         } else if (state.allTags.isNotEmpty()) {
                             item {
@@ -780,7 +807,7 @@ private fun CategoryChips(
  * not somewhere anyone would look.
  */
 @Composable
-private fun DuplicatesBanner(onClear: () -> Unit) {
+private fun DuplicatesBanner(sameSite: Boolean, groupCount: Int, onClear: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = MaterialTheme.shapes.large,
@@ -791,7 +818,19 @@ private fun DuplicatesBanner(onClear: () -> Unit) {
             modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
         ) {
             Text(
-                text = stringResource(R.string.sources_duplicates_showing),
+                // The two filters mean different things and the difference
+                // matters: one found identical addresses, the other made a
+                // guess. Saying which is on is what stops somebody deleting a
+                // Guardian section because the screen listed it.
+                text = if (sameSite) {
+                    pluralStringResource(
+                        R.plurals.sources_same_site_showing,
+                        groupCount,
+                        groupCount,
+                    )
+                } else {
+                    stringResource(R.string.sources_duplicates_showing)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )

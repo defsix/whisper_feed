@@ -45,6 +45,12 @@
     <string name="sources_full_text_on">Fetch full articles</string>
     <string name="sources_full_text_off">Summaries only</string>
     <string name="sources_find_duplicates">Find duplicates</string>
+    <string name="sources_find_same_site">Find feeds from the same site</string>
+    <plurals name="sources_same_site_showing">
+        <item quantity="one">One group that may be the same publication. Whisper is guessing here \u2014 check before removing anything.</item>
+        <item quantity="other">%1$d groups that may each be the same publication. Whisper is guessing here \u2014 check before removing anything.</item>
+    </plurals>
+    <string name="sources_same_site_none">Nothing looks like a repeat of anything else.</string>
     <string name="sources_duplicates_showing">Sources sharing an address</string>
     <string name="sources_duplicates_none">No duplicate sources</string>
     <string name="sources_show_all">Show all</string>
