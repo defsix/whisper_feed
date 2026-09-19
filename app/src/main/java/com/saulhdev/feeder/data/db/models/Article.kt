@@ -291,3 +291,12 @@ data class SourceEngagement(
     val opened: Int,
     val seen: Int,
 )
+
+/**
+ * One day's reading: how many articles reached the screen, and how many were
+ * opened. `day` is `YYYY-MM-DD` in the reader's own timezone.
+ */
+data class DayCount(val day: String, val seen: Int, val opened: Int)
+
+/** The same, bucketed by hour of day. `hour` is `00`–`23`, as text from SQLite. */
+data class HourCount(val hour: String, val seen: Int, val opened: Int)

@@ -54,11 +54,40 @@ object ArticleWeight {
     /** Every article with an image starts here. */
     const val BASE = 1f
 
-    /** At or above this an article can take both columns. */
-    const val LARGE_AT = 2.2f
+    /**
+     * At or above this an article can take both columns.
+     *
+     * Two point two put the hero out of reach of anything more than six hours
+     * old. Freshness is the only term here with real range — plus 1.2 down to
+     * minus 0.4, where everything else moves the total by a few tenths — so the
+     * band an article landed in was, in practice, its age. A feed read in the
+     * evening is a feed of afternoon articles, and a probe over a plausible
+     * sixty-article sync produced exactly one large tile, which was the opening
+     * anchor rather than anything the scores had chosen.
+     *
+     * Two point zero brings the whole of today within reach, which hands the
+     * question of how many heroes there are to [LARGE_GAP], where it belongs:
+     * the weight says an article is worth the big slot, the gap says not this
+     * one, not yet. Those are different questions and they were being answered
+     * by the same number.
+     */
+    const val LARGE_AT = 2.0f
 
-    /** At or above this it keeps its own column at full height. */
-    const val MEDIUM_AT = 1.6f
+    /**
+     * At or above this it keeps its own column at full height.
+     *
+     * Low enough that a picture is close to sufficient. An article with an
+     * image, a headline of ordinary length and a line of summary scores 1.3 at
+     * its oldest, and at 1.6 that article was a thumbnail row — so a feed more
+     * than three days stale rendered as a list of rows with pictures beside
+     * them, whatever was in it.
+     *
+     * The judgement is that a picture earns the card and the penalties take it
+     * away again: read is minus 1.5 and drops straight through this, and so
+     * does a twenty-word headline with no summary. Small is for what has been
+     * marked down, not for the ordinary case.
+     */
+    const val MEDIUM_AT = 1.2f
 
     /**
      * How many tiles must pass between two large ones.
@@ -66,8 +95,13 @@ object ArticleWeight {
      * Without it a burst of fresh articles from a favourite source — exactly
      * what a morning sync produces — turns the whole first screen into full
      * width tiles, which is a list, not a mosaic.
+     *
+     * Four rather than six now that [LARGE_AT] is reachable. Six was never the
+     * binding constraint — the scores were — so it was spacing heroes that did
+     * not exist. At one in five, with a hero around 400dp and a card around
+     * 300, roughly every other screenful opens on one.
      */
-    const val LARGE_GAP = 6
+    const val LARGE_GAP = 4
 
     /**
      * The most a reading habit can add.
@@ -83,6 +117,17 @@ object ArticleWeight {
 
     /** How far back reading habits are counted. */
     const val HABIT_WINDOW_DAYS = 30L
+
+    /**
+     * What having already read an article costs it.
+     *
+     * Paired with [MEDIUM_AT]: the whole job of this number is to drop a
+     * read article below that floor whatever else it has going for it, so
+     * the two cannot be tuned apart. A fresh, well-titled article with a
+     * summary scores 2.9, and 2.0 puts it at 0.9 — under the floor with room
+     * to spare, which is the property worth keeping rather than the figure.
+     */
+    const val READ_PENALTY = 2.0f
 
     /*
      * What an encounter with an article is worth, in four bands.
@@ -151,8 +196,14 @@ object ArticleWeight {
      * The first of the two structural diversity rules. A coefficient can be
      * tuned down but it still compounds; this cannot. Whatever the weights
      * say, one source does not own the screen.
+     *
+     * Measured in items, so it has to move with [LARGE_GAP] to keep meaning
+     * the same thing. Twenty-four items when heroes were seven apart meant a
+     * source could hold one hero in about three; sixteen when they are four
+     * apart means the same, which is the ratio that was argued for rather
+     * than the number that expressed it.
      */
-    const val SAME_SOURCE_LARGE_GAP = 24
+    const val SAME_SOURCE_LARGE_GAP = 16
 
     /**
      * The longest run of articles from one source before the rest are
@@ -238,7 +289,14 @@ fun articleWeight(
     weight += (habit[item.feed.id] ?: 0f) * ArticleWeight.HABIT_MAX
 
     // Already read: it has had its turn.
-    if (item.article.readAt != 0L) weight -= 1.5f
+    //
+    // Two rather than the one and a half this started at, because the penalty
+    // has to clear [ArticleWeight.MEDIUM_AT] and that floor came down. At 1.5
+    // against a floor of 1.2, an article read an hour ago still scored 1.4 and
+    // kept its card — so the strongest negative signal there is, the reader
+    // having actually seen the thing, stopped being able to shrink anything
+    // fresh. This is the one term that should beat freshness outright.
+    if (item.article.readAt != 0L) weight -= ArticleWeight.READ_PENALTY
 
     // Saved, and pinned, are the reader saying this one matters.
     if (item.bookmarked) weight += 0.4f
@@ -551,7 +609,7 @@ fun weightReasons(
         WeightReason(R.string.why_has_summary, 0.3f)
     else WeightReason(R.string.why_no_summary, -0.3f)
 
-    if (item.article.readAt != 0L) reasons += WeightReason(R.string.why_read, -1.5f)
+    if (item.article.readAt != 0L) reasons += WeightReason(R.string.why_read, -ArticleWeight.READ_PENALTY)
     if (item.bookmarked) reasons += WeightReason(R.string.why_saved, 0.4f)
     if (item.pinned) reasons += WeightReason(R.string.why_pinned, 1.5f)
 
