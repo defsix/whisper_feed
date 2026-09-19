@@ -154,6 +154,7 @@ fun FeedScaffold(
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
     onArticleSeen: (FeedItem) -> Unit = {},
+    onArticleDwell: (String, Long) -> Unit = { _, _ -> },
     onPin: (FeedItem, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -340,12 +341,13 @@ fun FeedScaffold(
                 val dimRead = rememberDimRead()
                 val clusters = rememberStoryClusters(articles)
                 val held = rememberHeldArticle(articles, clusters)
-                MarkReadWhileScrolling(
+                TrackReading(
                     articles = articles,
                     isGrid = isGrid,
                     listState = listState,
                     gridState = gridState,
                     onRead = onArticleSeen,
+                    onDwell = onArticleDwell,
                 )
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)

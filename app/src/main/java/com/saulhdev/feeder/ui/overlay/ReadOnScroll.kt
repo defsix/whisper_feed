@@ -128,12 +128,13 @@ internal fun gateLog(message: String) {
  * [LocalFeedVisible] for why one gate cannot do both.
  */
 @Composable
-fun MarkReadWhileScrolling(
+fun TrackReading(
     articles: List<FeedItem>,
     isGrid: Boolean,
     listState: LazyListState,
     gridState: LazyStaggeredGridState,
     onRead: (FeedItem) -> Unit,
+    onDwell: (String, Long) -> Unit,
 ) {
     val prefs: FeedPreferences = koinInject()
     val setting by prefs.markReadOnScroll.asState()
@@ -150,8 +151,6 @@ fun MarkReadWhileScrolling(
     // Survives list changes on purpose: a sync rebuilds the list, and without
     // this every visible article would start its clock again from zero.
     val marked = remember { mutableSetOf<String>() }
-
-    if (thresholdMs <= 0L) return
 
     LaunchedEffect(thresholdMs, isGrid, articles, lifecycleOwner, feedVisible) {
         if (!feedVisible) {
@@ -199,6 +198,7 @@ fun MarkReadWhileScrolling(
                     ready = ready,
                     marked = marked,
                     onRead = onRead,
+                    onDwell = onDwell,
                 )
             } finally {
                 if (trace) gateLog("stopped: left the feed")
@@ -223,49 +223,80 @@ private suspend fun tick(
     ready: MutableMap<String, Int>,
     marked: MutableSet<String>,
     onRead: (FeedItem) -> Unit,
+    onDwell: (String, Long) -> Unit,
 ) {
-    while (true) {
-        delay(TICK_MS)
-        val visible = visibleEnoughKeys(isGrid, listState, gridState)
-        val onScreen = visibleKeys(isGrid, listState, gridState)
-        val ids = HashSet<String>(visible.size)
+    // Time on screen, accumulated here and written when an article leaves.
+    // Separate from `dwell` deliberately: that one is cleared the moment its
+    // threshold is crossed, because it answers "has this been looked at long
+    // enough yet". Reusing it would record zero for every article that
+    // qualified — which is to say, the ones looked at longest.
+    val seen = mutableMapOf<String, Long>()
 
-        visible.forEach { id ->
-            val item = byId[id] ?: return@forEach
-            ids += id
-            if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
+    // Most runs of this loop end in cancellation: the reader backgrounds the
+    // app, or shuts the panel, with articles still on screen. Without the
+    // flush in the finally, every article being looked at when they left
+    // would contribute nothing at all.
+    try {
+        while (true) {
+            delay(TICK_MS)
+            val visible = visibleEnoughKeys(isGrid, listState, gridState)
+            val onScreen = visibleKeys(isGrid, listState, gridState)
+            val ids = HashSet<String>(visible.size)
 
-            val soFar = (dwell[id] ?: 0L) + TICK_MS
-            dwell[id] = soFar
-            if (soFar >= thresholdMs) {
-                // Not marked yet. It has been looked at long enough to
-                // count, and now has to be left behind before it counts.
-                dwell -= id
-                ready[id] = position[id] ?: return@forEach
+            visible.forEach { id ->
+                val item = byId[id] ?: return@forEach
+                ids += id
+                seen[id] = (seen[id] ?: 0L) + TICK_MS
+
+                // Everything past here is the mark-read-on-scroll feature,
+                // which is off unless the reader turned it on. The line above
+                // is the measurement, which is not optional — gating the two
+                // together made anybody who left that setting alone invisible
+                // to the weighting.
+                if (thresholdMs <= 0L) return@forEach
+                if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
+
+                val soFar = (dwell[id] ?: 0L) + TICK_MS
+                dwell[id] = soFar
+                if (soFar >= thresholdMs) {
+                    // Not marked yet. It has been looked at long enough to
+                    // count, and now has to be left behind before it counts.
+                    dwell -= id
+                    ready[id] = position[id] ?: return@forEach
+                }
             }
-        }
 
-        // Anything above everything still on screen has been passed.
-        // Non-article keys — a sticky header, the glance row, the chips —
-        // simply have no position and drop out of the comparison.
-        val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
-        passedIds(ready, topmost).forEach { id ->
-            ready -= id
-            marked += id
-            val item = byId[id] ?: return@forEach
-            if (trace) {
-                gateLog("marked: ${item.contentTitle.take(60)}")
+            // Written when an article leaves the screen rather than on every
+            // tick: one write per article per visit, instead of two a second
+            // for everything visible.
+            (seen.keys - ids).toList().forEach { id ->
+                seen.remove(id)?.let { onDwell(id, it) }
             }
-            onRead(item)
-        }
 
-        // An article scrolled away before the threshold starts again next
-        // time it comes past. A glance is a glance, however many of them.
-        // Anything in `ready` keeps what it earned: leaving through the
-        // bottom means the reader scrolled back up, not that they passed
-        // it, and making them dwell on it twice would be a strange thing
-        // to ask.
-        dwell.keys.retainAll(ids)
+            // Anything above everything still on screen has been passed.
+            // Non-article keys — a sticky header, the glance row, the chips —
+            // simply have no position and drop out of the comparison.
+            val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
+            passedIds(ready, topmost).forEach { id ->
+                ready -= id
+                marked += id
+                val item = byId[id] ?: return@forEach
+                if (trace) {
+                    gateLog("marked: ${item.contentTitle.take(60)}")
+                }
+                onRead(item)
+            }
+
+            // An article scrolled away before the threshold starts again next
+            // time it comes past. A glance is a glance, however many of them.
+            // Anything in `ready` keeps what it earned: leaving through the
+            // bottom means the reader scrolled back up, not that they passed
+            // it, and making them dwell on it twice would be a strange thing
+            // to ask.
+            dwell.keys.retainAll(ids)
+        }
+    } finally {
+        seen.forEach { (id, ms) -> onDwell(id, ms) }
     }
 }
 

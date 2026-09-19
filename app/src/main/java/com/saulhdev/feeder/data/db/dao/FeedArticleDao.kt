@@ -149,6 +149,42 @@ interface FeedArticleDao {
     @Query("UPDATE Article SET readAt = :readAt WHERE uuid IN (:ids)")
     suspend fun markReadBatch(ids: List<String>, readAt: Long)
 
+    /**
+     * Records that an article was opened, the first time it is.
+     *
+     * `openedAt = 0` in the WHERE clause so a reopened article keeps the time
+     * of the first opening rather than being rewritten on every visit: this
+     * answers "was this wanted", which is a thing that happened once, and a
+     * moving timestamp would quietly make a re-read look like a new read.
+     *
+     * Marks it read in the same statement, because opening an article is the
+     * least ambiguous way of reading one and leaving it unread would be a lie
+     * the rest of the app then has to work around.
+     */
+    @Query(
+        """
+        UPDATE Article SET openedAt = :at, readAt = CASE WHEN readAt = 0 THEN :at ELSE readAt END
+        WHERE uuid = :id AND openedAt = 0
+        """
+    )
+    suspend fun markOpened(id: String, at: Long): Int
+
+    /**
+     * Adds to an article's time on screen.
+     *
+     * Capped in SQL rather than in Kotlin so a read-modify-write race between
+     * the feed and the overlay cannot lose an increment or exceed the ceiling
+     * — both surfaces run this against the same row, and the arithmetic is the
+     * thing that has to be atomic.
+     */
+    @Query(
+        """
+        UPDATE Article SET dwellMs = MIN(dwellMs + :addMs, :capMs)
+        WHERE uuid = :id
+        """
+    )
+    suspend fun addDwell(id: String, addMs: Long, capMs: Long)
+
     @Query("UPDATE Article SET readAt = 0 WHERE uuid IN (:ids)")
     suspend fun unmarkRead(ids: List<String>)
 

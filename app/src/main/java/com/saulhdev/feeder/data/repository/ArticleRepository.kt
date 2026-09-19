@@ -137,6 +137,26 @@ class ArticleRepository(db: NeoFeedDb) {
     }
 
     /**
+     * Records an article being opened to read in full.
+     *
+     * The strongest signal the app has, and the only unambiguous one:
+     * everything else is inferred from a card going past. Written at the
+     * moment of the tap rather than on the way back, because there may be no
+     * way back — an article opened in the browser from the launcher overlay
+     * often never returns to Whisper at all, and treating that as a failure to
+     * read would punish exactly the articles somebody went furthest to read.
+     */
+    suspend fun markOpened(articleId: String) = withContext(jcc) {
+        articlesDao.markOpened(articleId, System.currentTimeMillis())
+    }
+
+    /** Adds to an article's accumulated time on screen, up to [DWELL_CAP_MS]. */
+    suspend fun addDwell(articleId: String, millis: Long) = withContext(jcc) {
+        if (millis <= 0L) return@withContext
+        articlesDao.addDwell(articleId, millis, DWELL_CAP_MS)
+    }
+
+    /**
      * Marks every unread article read, returning what it changed.
      *
      * The ids come back so the action can be undone: after the write every
@@ -278,3 +298,16 @@ private const val SQLITE_ARG_LIMIT = 500
  * subscribed to.
  */
 const val FEED_WINDOW = 500
+
+/**
+ * The most time on screen any one article can contribute.
+ *
+ * Thirty seconds. Long enough to cover reading a headline, a summary and a
+ * decent extract; short enough that a phone left face-up on a desk with the
+ * feed open cannot turn one article into the most-read thing anybody owns.
+ *
+ * The cap matters more than the number. Time on screen has no natural ceiling
+ * and every other signal here does, so without one a single forgotten session
+ * would dominate every comparison it took part in.
+ */
+const val DWELL_CAP_MS = 30_000L

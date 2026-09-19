@@ -235,6 +235,27 @@ class ArticleListViewModel(
     }
 
     /**
+     * Records an article being opened, which also marks it read.
+     *
+     * The tap handlers used to call [markRead], which recorded the same thing
+     * for an article somebody chose to open as for forty that scrolled past
+     * — and then the ordering learned from the sum of the two as though they
+     * meant the same. They do not, and this is the one that is certain.
+     */
+    fun markOpened(id: String) {
+        viewModelScope.launch {
+            articleRepo.markOpened(id)
+        }
+    }
+
+    /** Adds to an article's time on screen. */
+    fun addDwell(id: String, millis: Long) {
+        viewModelScope.launch {
+            articleRepo.addDwell(id, millis)
+        }
+    }
+
+    /**
      * Records that an article was read by being looked at rather than opened.
      *
      * Kept apart from [markRead] because only this one is worth offering back:

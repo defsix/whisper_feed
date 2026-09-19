@@ -115,8 +115,24 @@ class OverlayView(val context: Context) :
     @Volatile
     private var overlayAlpha = prefs.overlayTransparency.getValue()
 
-    /** See [onClientMessage]: read once rather than per launcher message. */
-    private val debugLogging = prefs.debugging.getValue()
+    /**
+     * Whether to write the debug trace, asked each time rather than kept.
+     *
+     * This was read once, at construction. The overlay is created when the
+     * launcher binds and lives until it unbinds, so turning Debugging on in
+     * settings had no effect on an overlay that already existed — which is
+     * every overlay, since the launcher binds long before anybody goes
+     * looking for a setting. A trace that only works if you enabled it before
+     * the thing you want to trace started is not a trace.
+     *
+     * `peek` reads the in-memory cache and never touches the disk, so this
+     * keeps the property the original caching was there for: onClientMessage
+     * runs on the main thread while the panel is being dragged, and a
+     * blocking DataStore read there was stalling the one frame that must not
+     * stall.
+     */
+    private val debugLogging: Boolean
+        get() = prefs.debugging.peekOrDefault()
 
     /** Last colour handed to the window, so repeat frames do no work. */
     private var lastBackgroundColor: Int? = null
@@ -444,6 +460,7 @@ class OverlayView(val context: Context) :
                             }
                         },
                         onArticleSeen = { viewModel.markReadOnScroll(it.id) },
+                        onArticleDwell = viewModel::addDwell,
                         onPin = { item, pinned -> viewModel.setPinned(item.id, pinned) },
                         onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
                         onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
@@ -482,7 +499,7 @@ class OverlayView(val context: Context) :
     private fun openArticle(item: FeedItem) {
         // Counts on the glance row have to reflect reading done here too, not
         // only in the app — this is the surface most articles are opened from.
-        syncScope.launch { viewModel.markRead(item.id) }
+        syncScope.launch { viewModel.markOpened(item.id) }
         launchKeepingPanel {
             if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
                 context.launchView(item.link)

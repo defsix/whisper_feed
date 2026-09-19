@@ -102,6 +102,38 @@ data class Article constructor(
     val readAt: Long = 0L,
 
     /**
+     * When the article was opened to read in full, in epoch millis; 0 if never.
+     *
+     * Deliberately not the same question as [readAt]. An article is marked
+     * read by being scrolled past, which happens to forty of them in a flick
+     * of the thumb, so `readAt` records that an article went by rather than
+     * that anybody wanted it. This records the one thing that is unambiguous:
+     * somebody tapped it and a reader or a browser opened.
+     *
+     * Set at the moment of opening and never revised afterwards. Whether the
+     * app is ever seen again is not evidence about the article — returning
+     * from the browser is not guaranteed, particularly from the launcher
+     * overlay — and absence of evidence is not evidence.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val openedAt: Long = 0L,
+
+    /**
+     * How long the article's card has been visible on screen, in milliseconds.
+     *
+     * Accumulated across visits, counted only while the feed is actually in
+     * front of somebody, and capped so one article left on screen overnight
+     * cannot outweigh a year of ordinary reading.
+     *
+     * This is the difference between a headline that was scrolled past and one
+     * that was stopped at, which is the distinction the ordering has been
+     * missing — it could tell that forty articles went by and not that one of
+     * them was looked at.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val dwellMs: Long = 0L,
+
+    /**
      * What a Google Reader server calls this article, if one does.
      *
      * Null for every article on an account-less install, which is most of

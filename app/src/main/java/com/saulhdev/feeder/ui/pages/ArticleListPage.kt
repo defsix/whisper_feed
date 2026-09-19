@@ -119,7 +119,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import com.saulhdev.feeder.ui.overlay.feedLayoutIsGrid
 import com.saulhdev.feeder.utils.VolumeScroll
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
-import com.saulhdev.feeder.ui.overlay.MarkReadWhileScrolling
+import com.saulhdev.feeder.ui.overlay.TrackReading
 import com.saulhdev.feeder.ui.overlay.rememberDimRead
 import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.heldFeed
@@ -469,7 +469,7 @@ fun ArticleListPage(
                                             item = item,
                                             index = index,
                                             onClick = {
-                                                viewModel.markRead(item.id)
+                                                viewModel.markOpened(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {
@@ -505,12 +505,13 @@ fun ArticleListPage(
                                 else          -> {
                                     val dimRead = rememberDimRead()
                                     val clusters = rememberStoryClusters(state.articles)
-                                    MarkReadWhileScrolling(
+                                    TrackReading(
                                         articles = state.articles,
                                         isGrid = feedLayoutIsGrid(layout),
                                         listState = listState,
                                         gridState = gridState,
                                         onRead = { viewModel.markReadOnScroll(it.id) },
+                                        onDwell = viewModel::addDwell,
                                     )
                                     val article: @Composable (Int, FeedItem, FeedEmphasis) -> Unit =
                                         { index, item, emphasis ->
@@ -529,7 +530,7 @@ fun ArticleListPage(
                                             cluster = clusters[item.id],
                                             onPin = { viewModel.setPinned(item.id, it) },
                                             onClick = {
-                                                viewModel.markRead(item.id)
+                                                viewModel.markOpened(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
                                                     context.launchView(item.link)
                                                 } else {

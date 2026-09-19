@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_18_19,
     MIGRATION_17_18,
     MIGRATION_16_17,
     MIGRATION_15_16,
@@ -239,6 +240,18 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_18_19 : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Zero everywhere, and honestly so: no install has ever recorded
+        // either of these, so there is no history to reconstruct and nothing
+        // to guess at. Both start accumulating from the next article opened
+        // and the next one looked at.
+        db.execSQL("ALTER TABLE Article ADD COLUMN openedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE Article ADD COLUMN dwellMs INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_17_18 : Migration(17, 18) {
