@@ -22,8 +22,12 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
 import kotlinx.coroutines.delay
@@ -45,6 +49,21 @@ private const val TICK_MS = 500L
  * fast as the one in the middle.
  */
 private const val VISIBLE_ENOUGH = 0.6f
+
+/**
+ * Whether the feed is in front of someone right now.
+ *
+ * The Activity answers this with its own lifecycle, and that is what the
+ * tracker uses there. The launcher overlay cannot: its Compose host holds
+ * RESUMED from creation until the overlay is destroyed, because the upstream
+ * controller exposes no pause, so a panel swiped shut looks exactly like a
+ * panel being read. The overlay therefore supplies this itself from the panel
+ * state the launcher does report.
+ *
+ * Defaults to true, which is the right answer anywhere the lifecycle is the
+ * whole story.
+ */
+val LocalFeedVisible = compositionLocalOf { true }
 
 /**
  * Marks an article read once it has been on screen long enough.
@@ -76,6 +95,14 @@ private const val VISIBLE_ENOUGH = 0.6f
  * is never marked, and the last article in the list cannot be marked at all,
  * because neither has been passed. Both are correct. Nothing dims while it is
  * being looked at.
+ *
+ * **The clock only runs while someone is looking.** [LaunchedEffect] is not
+ * lifecycle-aware, so until this was gated the tick loop kept running with the
+ * phone in a pocket: whatever happened to be on screen when the app was left
+ * accrued dwell, crossed the threshold, and was marked read by the next scroll.
+ * Time the reader was not present is not time spent reading, so the loop is
+ * held below RESUMED and, in the overlay, while the panel is shut — see
+ * [LocalFeedVisible] for why one gate cannot do both.
  */
 @Composable
 fun MarkReadWhileScrolling(
@@ -87,6 +114,8 @@ fun MarkReadWhileScrolling(
 ) {
     val prefs: FeedPreferences = koinInject()
     val setting by prefs.markReadOnScroll.asState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val feedVisible = LocalFeedVisible.current
     // Below a quarter of a second means off: the slider's own bottom stop,
     // and anything shorter would fire during a fling anyway.
     val thresholdMs = remember(setting) { if (setting < 0.25f) 0L else (setting * 1000).toLong() }
@@ -97,7 +126,9 @@ fun MarkReadWhileScrolling(
 
     if (thresholdMs <= 0L) return
 
-    LaunchedEffect(thresholdMs, isGrid, articles) {
+    LaunchedEffect(thresholdMs, isGrid, articles, lifecycleOwner, feedVisible) {
+        if (!feedVisible) return@LaunchedEffect
+
         // Looked up by the key the list was given rather than by layout
         // position. The two are not the same and were being treated as such:
         // a sticky held article occupies a slot of its own, and so does the
@@ -114,44 +145,51 @@ fun MarkReadWhileScrolling(
         // it is gone from the layout there is nothing left to ask.
         val ready = mutableMapOf<String, Int>()
 
-        while (true) {
-            delay(TICK_MS)
-            val visible = visibleEnoughKeys(isGrid, listState, gridState)
-            val onScreen = visibleKeys(isGrid, listState, gridState)
-            val ids = HashSet<String>(visible.size)
+        // The gate. repeatOnLifecycle cancels the loop on pause and starts a
+        // fresh one on resume; below DESTROYED it simply parks here, so there
+        // is nothing to clean up. Partial dwell is dropped along with the loop,
+        // which matches what the feed already does with an article scrolled
+        // away before its threshold: a glance is a glance.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(TICK_MS)
+                val visible = visibleEnoughKeys(isGrid, listState, gridState)
+                val onScreen = visibleKeys(isGrid, listState, gridState)
+                val ids = HashSet<String>(visible.size)
 
-            visible.forEach { id ->
-                val item = byId[id] ?: return@forEach
-                ids += id
-                if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
+                visible.forEach { id ->
+                    val item = byId[id] ?: return@forEach
+                    ids += id
+                    if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
 
-                val soFar = (dwell[id] ?: 0L) + TICK_MS
-                dwell[id] = soFar
-                if (soFar >= thresholdMs) {
-                    // Not marked yet. It has been looked at long enough to
-                    // count, and now has to be left behind before it counts.
-                    dwell -= id
-                    ready[id] = position[id] ?: return@forEach
+                    val soFar = (dwell[id] ?: 0L) + TICK_MS
+                    dwell[id] = soFar
+                    if (soFar >= thresholdMs) {
+                        // Not marked yet. It has been looked at long enough to
+                        // count, and now has to be left behind before it counts.
+                        dwell -= id
+                        ready[id] = position[id] ?: return@forEach
+                    }
                 }
-            }
 
-            // Anything above everything still on screen has been passed.
-            // Non-article keys — a sticky header, the glance row, the chips —
-            // simply have no position and drop out of the comparison.
-            val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
-            passedIds(ready, topmost).forEach { id ->
-                ready -= id
-                marked += id
-                byId[id]?.let(onRead)
-            }
+                // Anything above everything still on screen has been passed.
+                // Non-article keys — a sticky header, the glance row, the chips —
+                // simply have no position and drop out of the comparison.
+                val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
+                passedIds(ready, topmost).forEach { id ->
+                    ready -= id
+                    marked += id
+                    byId[id]?.let(onRead)
+                }
 
-            // An article scrolled away before the threshold starts again next
-            // time it comes past. A glance is a glance, however many of them.
-            // Anything in `ready` keeps what it earned: leaving through the
-            // bottom means the reader scrolled back up, not that they passed
-            // it, and making them dwell on it twice would be a strange thing
-            // to ask.
-            dwell.keys.retainAll(ids)
+                // An article scrolled away before the threshold starts again next
+                // time it comes past. A glance is a glance, however many of them.
+                // Anything in `ready` keeps what it earned: leaving through the
+                // bottom means the reader scrolled back up, not that they passed
+                // it, and making them dwell on it twice would be a strange thing
+                // to ask.
+                dwell.keys.retainAll(ids)
+            }
         }
     }
 }

@@ -15,12 +15,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import com.google.android.libraries.gsa.d.a.OverlayController
+import com.google.android.libraries.gsa.d.a.PanelState
 import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.navigation.Routes
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -29,6 +31,7 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import androidx.compose.ui.platform.LocalDensity
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.overlay.FeedScaffold
+import com.saulhdev.feeder.ui.overlay.LocalFeedVisible
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
@@ -78,6 +81,21 @@ class OverlayView(val context: Context) :
     )
 
     private var feedAdded = false
+
+    /**
+     * Whether the panel is in front of the user, for [LocalFeedVisible].
+     *
+     * The Compose host cannot answer this — see OverlayComposeHost, whose
+     * lifecycle is RESUMED for the overlay's whole lifetime because upstream
+     * gives us no pause to hook. [setState] does report it, so that is where
+     * this comes from.
+     *
+     * Anything other than CLOSED counts as visible, rather than only the two
+     * open states: a drag that the launcher never resolves into an open would
+     * otherwise leave the panel on screen and this stuck false, silently
+     * switching off everything that depends on it.
+     */
+    private val panelVisible = mutableStateOf(false)
 
     /** Feed content, mirrored from the view model into Compose state. */
     private val articlesState = mutableStateOf<List<FeedItem>>(emptyList())
@@ -401,59 +419,61 @@ class OverlayView(val context: Context) :
                 val layout by prefs.feedLayout.get()
                     .collectAsState(initial = LAYOUT_CARDS)
 
-                FeedScaffold(
-                    articles = if (showBookmarks.value) bookmarksState.value
-                    else articlesState.value,
-                    categories = categories,
-                    selectedCategories = selected,
-                    isRefreshing = isSyncingState.value,
-                    isFilterActive = isFilterActive.value,
-                    isShowingBookmarks = showBookmarks.value,
-                    glanceState = glanceState.value,
-                    topInset = with(density) { topInsetPx.value.toDp() },
-                    bottomInset = with(density) { bottomInsetPx.value.toDp() },
-                    // setValue blocks on the datastore write, so keep it off the
-                    // main thread; the feed updates through the existing flow.
-                    onCategoriesChange = { syncScope.launch { prefs.categoryFilter.setValue(it) } },
-                    onRefresh = { refreshNotifications() },
-                    onArticleClick = { openArticle(it) },
-                    onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
-                    onShare = {
-                        launchKeepingPanel {
-                            context.safeShareIntent(it.link, it.contentTitle)
-                        }
-                    },
-                    onArticleSeen = { viewModel.markReadOnScroll(it.id) },
-                    onPin = { item, pinned -> viewModel.setPinned(item.id, pinned) },
-                    onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
-                    onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
-                    onHideSource = { viewModel.hideSource(it) },
-                    hiddenSource = hiddenSourceState.value,
-                    onUndoHideSource = { viewModel.undoHideSource() },
-                    onDismissHideSource = { viewModel.forgetHiddenSource() },
-                    layout = layout,
-                    isFilterSheetOpen = filterSheetOpen.value,
-                    onFilterSheetOpenChange = { filterSheetOpen.value = it },
-                    searchQuery = searchQuery.value,
-                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                    isSearching = searching.value,
-                    onSearchingChange = {
-                        searching.value = it
-                        if (!it) viewModel.setSearchQuery("")
-                    },
-                    // Replaces a click handler that started a new collector on the
-                    // view model every press without ever cancelling the previous
-                    // one; both lists are now collected once and simply chosen
-                    // between here.
-                    onBookmarksClick = { showBookmarks.value = !showBookmarks.value },
-                    onSettings = {
-                        launchKeepingPanel {
-                            context.safeStartActivity(
-                                MainActivity.navigateIntent(context, Routes.SETTINGS)
-                            )
-                        }
-                    },
-                )
+                CompositionLocalProvider(LocalFeedVisible provides panelVisible.value) {
+                    FeedScaffold(
+                        articles = if (showBookmarks.value) bookmarksState.value
+                        else articlesState.value,
+                        categories = categories,
+                        selectedCategories = selected,
+                        isRefreshing = isSyncingState.value,
+                        isFilterActive = isFilterActive.value,
+                        isShowingBookmarks = showBookmarks.value,
+                        glanceState = glanceState.value,
+                        topInset = with(density) { topInsetPx.value.toDp() },
+                        bottomInset = with(density) { bottomInsetPx.value.toDp() },
+                        // setValue blocks on the datastore write, so keep it off the
+                        // main thread; the feed updates through the existing flow.
+                        onCategoriesChange = { syncScope.launch { prefs.categoryFilter.setValue(it) } },
+                        onRefresh = { refreshNotifications() },
+                        onArticleClick = { openArticle(it) },
+                        onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
+                        onShare = {
+                            launchKeepingPanel {
+                                context.safeShareIntent(it.link, it.contentTitle)
+                            }
+                        },
+                        onArticleSeen = { viewModel.markReadOnScroll(it.id) },
+                        onPin = { item, pinned -> viewModel.setPinned(item.id, pinned) },
+                        onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
+                        onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
+                        onHideSource = { viewModel.hideSource(it) },
+                        hiddenSource = hiddenSourceState.value,
+                        onUndoHideSource = { viewModel.undoHideSource() },
+                        onDismissHideSource = { viewModel.forgetHiddenSource() },
+                        layout = layout,
+                        isFilterSheetOpen = filterSheetOpen.value,
+                        onFilterSheetOpenChange = { filterSheetOpen.value = it },
+                        searchQuery = searchQuery.value,
+                        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                        isSearching = searching.value,
+                        onSearchingChange = {
+                            searching.value = it
+                            if (!it) viewModel.setSearchQuery("")
+                        },
+                        // Replaces a click handler that started a new collector on the
+                        // view model every press without ever cancelling the previous
+                        // one; both lists are now collected once and simply chosen
+                        // between here.
+                        onBookmarksClick = { showBookmarks.value = !showBookmarks.value },
+                        onSettings = {
+                            launchKeepingPanel {
+                                context.safeStartActivity(
+                                    MainActivity.navigateIntent(context, Routes.SETTINGS)
+                                )
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -481,6 +501,11 @@ class OverlayView(val context: Context) :
         composeHost.onDestroy()
         super.onDestroy()
         NeoApp.bridge.setCallback(null)
+    }
+
+    override fun setState(newState: PanelState) {
+        super.setState(newState)
+        panelVisible.value = newState != PanelState.CLOSED
     }
 
     override fun onScroll(f: Float) {

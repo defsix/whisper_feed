@@ -213,6 +213,7 @@ dependencies {
     implementation(libs.lifecycle.common.java8)
     implementation(libs.lifecycle.livedata.ktx)
     implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.service)
     implementation(libs.lifecycle.viewmodel.ktx)
 
