@@ -435,34 +435,6 @@ class ArticleListViewModel(
      * article can only ever move later, never earlier and never past one of
      * its own.
      */
-    private fun spreadSources(articles: List<FeedItem>): List<FeedItem> {
-        if (articles.size < MAX_CONSECUTIVE_FROM_SOURCE + 1) return articles
-
-        val result = ArrayList<FeedItem>(articles.size)
-        val deferred = ArrayDeque<FeedItem>()
-        var lastSource: String? = null
-        var run = 0
-
-        fun take(item: FeedItem) {
-            if (item.sourceId == lastSource) run++ else { lastSource = item.sourceId; run = 1 }
-            result += item
-        }
-
-        articles.forEach { item ->
-            // Anything held back that would break the current run goes first:
-            // the whole point is to fill the gap rather than to leave one.
-            val released = deferred.firstOrNull { it.sourceId != lastSource || run < MAX_CONSECUTIVE_FROM_SOURCE }
-            if (released != null && item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) {
-                deferred.remove(released)
-                take(released)
-            }
-            if (item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) deferred += item
-            else take(item)
-        }
-        // Whatever is still held back goes on the end, in the order it arrived.
-        deferred.forEach(result::add)
-        return result
-    }
 }
 
 /**
@@ -502,3 +474,49 @@ data class BookmarksState(
     val bookmarkedArticles: List<FeedItem> = emptyList(),
     val isSyncing: Boolean = false,
 )
+
+/**
+ * Keeps one source from filling the screen, without dropping anything.
+ *
+ * Top level and internal rather than a private method, so the guarantee that
+ * a pin survives it can be tested directly. It is a pure function over a list
+ * and never needed the view model's state.
+ */
+internal fun spreadSources(articles: List<FeedItem>): List<FeedItem> {
+    if (articles.size < MAX_CONSECUTIVE_FROM_SOURCE + 1) return articles
+
+    val result = ArrayList<FeedItem>(articles.size)
+    val deferred = ArrayDeque<FeedItem>()
+    var lastSource: String? = null
+    var run = 0
+
+    fun take(item: FeedItem) {
+        if (item.sourceId == lastSource) run++ else { lastSource = item.sourceId; run = 1 }
+        result += item
+    }
+
+    articles.forEach { item ->
+        // A pin is never deferred. This rule exists to stop one source
+        // filling the screen, and it has no business overruling an
+        // article the reader put at the top on purpose — pin four things
+        // from one source and the last of them was being posted to the
+        // bottom of the feed, which looks exactly like the pin not
+        // working.
+        if (item.pinned) {
+            take(item)
+            return@forEach
+        }
+        // Anything held back that would break the current run goes first:
+        // the whole point is to fill the gap rather than to leave one.
+        val released = deferred.firstOrNull { it.sourceId != lastSource || run < MAX_CONSECUTIVE_FROM_SOURCE }
+        if (released != null && item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) {
+            deferred.remove(released)
+            take(released)
+        }
+        if (item.sourceId == lastSource && run >= MAX_CONSECUTIVE_FROM_SOURCE) deferred += item
+        else take(item)
+    }
+    // Whatever is still held back goes on the end, in the order it arrived.
+    deferred.forEach(result::add)
+    return result
+}

@@ -488,6 +488,12 @@ fun ArticleListPage(
                                                     }
                                                 }
                                             },
+                                            // The overflow menu offers Pin on
+                                            // every card, and this list was
+                                            // the one that wired nothing to
+                                            // it — so pinning from Bookmarks
+                                            // silently did nothing at all.
+                                            onPin = { viewModel.setPinned(item.id, it) },
                                             onBookmark = { viewModel.bookmarkArticle(item.id, it) },
                                             onShare = {
                                                 context.safeShareIntent(item.link, item.contentTitle)

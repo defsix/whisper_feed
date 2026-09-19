@@ -60,17 +60,16 @@ object Held {
      * no control that says "stop showing me this" — so a reader who wants rid
      * of it has only the scroll, and the scroll has to work.
      *
-     * A pin is the opposite case and is not governed by this at all. See
+     * A pin is not governed by this at all — it is not held here. See
      * [heldFeed].
      */
     const val RELEASE_AFTER = 5
 }
 
 /**
- * The article to hold at the top, or null.
+ * The breaking story to hold at the top, or null.
  *
- * @param clusters the current story clusters, so a cluster lead counts as held
- *   in the same way a pin does.
+ * @param clusters the current story clusters; a lead is the only thing held.
  */
 @Composable
 fun rememberHeldArticle(
@@ -82,38 +81,43 @@ fun rememberHeldArticle(
     return remember(articles, clusters, enabled) {
         if (!enabled) return@remember null
         val first = articles.firstOrNull() ?: return@remember null
+        // A pin is deliberately not held here any more. Sorting already puts
+        // it at the top of the list, under the glance row and the chips, and
+        // that is where it should stay — first in the feed, scrolling away
+        // like anything else, still first on the next refresh because the
+        // order comes from the stored flag rather than from anything on
+        // screen. Sticking it to the viewport as well made it follow the
+        // reader down the feed, which is a different thing and not the thing
+        // that was wanted.
         val isLead = clusters[first.id]?.leadId == first.id
-        if (first.pinned || isLead) first else null
+        if (isLead) first else null
     }
 }
 
 /**
  * Lays out the feed with the held article stuck to the top, then let go.
  *
- * **A pin holds for as long as it is pinned. A breaking story lets go.** The
- * two used to be treated identically, releasing after a few articles, on the
- * reasoning that the reader must always be able to scroll a story away. That
- * reasoning is right about one of them and wrong about the other.
+ * **Only a breaking story is held here.** A pin is handled entirely by the
+ * ordering: it sorts to the top of the list, under the glance row and the
+ * chips, and scrolls away like any other card — still first on the next
+ * refresh, because that position comes from the stored flag rather than from
+ * anything on screen.
  *
- * A cluster lead is the app's own guess. Nobody asked for it, no control turns
- * off that particular one, and so the scroll has to be the way out — otherwise
- * an article the reader never chose sits on their screen and cannot be
- * removed.
+ * Holding a pin to the viewport as well was a misreading. "Keep it at the top"
+ * means the top of the list, not a card that follows the reader down the feed
+ * and covers what they are trying to read. The pin's job is to be findable,
+ * not to be unavoidable.
  *
- * A pin is a deliberate act with an obvious undo sitting on the card itself.
- * Releasing it after five articles makes it useless for the thing pins are
- * for: following a story as it develops, checking back through the day,
- * wanting it there every time the feed is opened. "Until you unpin it" is what
- * the reader asked for by pinning, and second-guessing that is not caution but
- * a refusal to do as told.
+ * A cluster lead is the opposite case and does belong here. It is the app's
+ * own guess, nobody asked for it, and no control turns off that particular
+ * one — so it is held briefly, to be noticed, and then let go, because the
+ * scroll has to be the way out of something the reader never chose.
  *
  * Mechanically: `stickyHeader` holds for as long as its section is on screen,
- * so a pin gets one section containing the whole feed and simply stays. A
- * breaking lead gets two — it heads the first, which holds only the next few
- * articles, and then a second, empty header takes the sticky slot and pushes
- * it off the top. That header has no height and nothing in it, so what the
- * reader sees is the card sliding away after a few articles, with no animation
- * to write.
+ * the held article heads a section holding only the next few articles, and
+ * then a second, empty header takes the sticky slot and pushes it off the top.
+ * That header has no height and nothing in it, so what the reader sees is the
+ * card sliding away after a few articles, with no animation to write.
  *
  * When nothing is held this is an ordinary list, with no extra items in it.
  */
@@ -149,17 +153,6 @@ fun LazyListScope.heldFeed(
 
     val rest = articles.drop(1)
 
-    // A pin stays. One section over the whole feed, no release header, so the
-    // card is still there at the bottom of the list and on the next open —
-    // until the reader unpins it, which is the only thing that should end it.
-    if (held.pinned) {
-        itemsIndexed(rest, key = { _, item -> item.id }) { index, item ->
-            Box(modifier = if (animate) Modifier.animateItem() else Modifier) {
-                article(index + 1, item)
-            }
-        }
-        return
-    }
 
     val holding = rest.take(Held.RELEASE_AFTER)
     itemsIndexed(holding, key = { _, item -> item.id }) { index, item ->
