@@ -48,7 +48,10 @@ data class LearnedSource(
     val title: String,
     val iconUrl: String?,
     val affinity: Int,
-    val reads: Int,
+    /** Articles opened in full — the one signal that is not inferred. */
+    val opened: Int,
+    /** Articles that reached the screen, opened or not. */
+    val seen: Int,
     val nudge: Float,
     val hidden: Boolean,
 )
@@ -63,9 +66,14 @@ data class LearnedSource(
  * that throws it away.
  *
  * Nothing here is inferred or modelled. Affinity is the count of More and Less
- * presses; reads is the count of articles opened. Both are plain tallies the
- * reader can check against their own memory, which is the point — a score
- * nobody can audit is one nobody can correct.
+ * presses. The other two are what happened to this source's articles: how many
+ * reached the screen at all, and how many were opened.
+ *
+ * Both are shown rather than the weighted total, and deliberately. The
+ * ordering works from a score that bands those encounters by how much time
+ * each one got, and "score 84" is not something anybody can check against
+ * their own memory. "Nine opened, forty seen" is. A number nobody can audit is
+ * a number nobody can correct, which would defeat the whole screen.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LearnedViewModel(
@@ -82,23 +90,24 @@ class LearnedViewModel(
         // Re-reads on every reset, so the screen empties as soon as the button
         // is pressed rather than at the next time the page is opened.
         prefs.learnedResetAt.get().flatMapLatest { resetAt ->
-            articleRepo.readsPerSource(habitWindowStart(resetAt))
+            articleRepo.engagementPerSource(habitWindowStart(resetAt))
         },
-    ) { feeds, affinityRaw, hidden, reads ->
+    ) { feeds, affinityRaw, hidden, engagement ->
         val affinity = parseAffinity(affinityRaw)
-        val most = reads.values.maxOrNull()?.takeIf { it > 0 }
+        val most = engagement.values.maxOfOrNull { it.score }?.takeIf { it > 0 }
         feeds.map { feed ->
             val id = feed.id
             val score = affinity[id.toString()] ?: 0
-            val read = reads[id] ?: 0
-            val habit = if (most == null) 0f else read.toFloat() / most
+            val row = engagement[id]
+            val habit = if (most == null || row == null) 0f else row.score.toFloat() / most
             LearnedSource(
                 id = id,
                 title = feed.title,
                 iconUrl = feed.feedImage.toString()
                     .takeIf { it.isNotBlank() && it != feed.url.toString() },
                 affinity = score,
-                reads = read,
+                opened = row?.opened ?: 0,
+                seen = row?.seen ?: 0,
                 // The same arithmetic the weighting does, not an approximation
                 // of it: a screen that explains a different sum than the one
                 // being run is worse than no screen.

@@ -13,7 +13,7 @@ disagree.
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
 ![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-brightgreen)
-![Tests](https://img.shields.io/badge/tests-211%20passing-success)
+![Tests](https://img.shields.io/badge/tests-217%20passing-success)
 ![No trackers](https://img.shields.io/badge/trackers-none-success)
 
 </div>

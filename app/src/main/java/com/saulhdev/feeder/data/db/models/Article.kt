@@ -275,3 +275,19 @@ data class SourceReadCount(
     val feedId: Long,
     val reads: Int,
 )
+
+/**
+ * What a source earned from a reader, and the evidence behind it.
+ *
+ * [score] is what the ordering uses: the four engagement bands summed. The
+ * other two are what the Learned screen shows, because a single weighted
+ * number explains nothing to somebody deciding whether to disagree with it —
+ * "nine opened, forty seen" is checkable against their own memory in a way
+ * that "score 84" is not.
+ */
+data class SourceEngagement(
+    val feedId: Long,
+    val score: Int,
+    val opened: Int,
+    val seen: Int,
+)

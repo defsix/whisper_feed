@@ -29,6 +29,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
+import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.data.db.models.SourceReadCount
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
@@ -220,6 +221,43 @@ interface FeedArticleDao {
         """
     )
     fun readsPerSource(since: Long): Flow<List<SourceReadCount>>
+
+    /**
+     * What each source earned, in the four engagement bands.
+     *
+     * The CASE is ordered strongest first, so an opened article is counted as
+     * opened whatever its time on screen — an article read in a browser may
+     * have spent a second in the list on the way there, and that is not the
+     * interesting fact about it.
+     *
+     * Summed in SQL rather than over a list in Kotlin because the alternative
+     * is loading every article of the last thirty days to add up four numbers.
+     */
+    @Query(
+        """
+        SELECT feedId AS feedId,
+            SUM(CASE
+                WHEN openedAt > 0 THEN :opened
+                WHEN dwellMs >= :heldMs THEN :held
+                WHEN dwellMs >= :glancedMs THEN :glanced
+                ELSE :passed
+            END) AS score,
+            SUM(CASE WHEN openedAt > 0 THEN 1 ELSE 0 END) AS opened,
+            COUNT(*) AS seen
+        FROM Article
+        WHERE readAt >= :since
+        GROUP BY feedId
+        """
+    )
+    fun engagementPerSource(
+        since: Long,
+        glancedMs: Long,
+        heldMs: Long,
+        passed: Int,
+        glanced: Int,
+        held: Int,
+        opened: Int,
+    ): Flow<List<SourceEngagement>>
 
     /**
      * Every row in the table, with no join and no condition.

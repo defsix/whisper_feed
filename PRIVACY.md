@@ -11,7 +11,8 @@ Whisper is made by **Nyancat Labs**, a company registered in Ireland, which is
 the data controller for the purposes of the GDPR. Contact:
 [hej@nyancatlabs.com](mailto:hej@nyancatlabs.com).
 
-Last reviewed: September 2026, for Whisper 1.0.0.
+Last reviewed: September 2026, for Whisper 1.0.0. The most recent change was
+the addition of time-on-screen, described under "What stays on your phone".
 
 ---
 
@@ -34,9 +35,17 @@ All of it:
 - The feeds you subscribe to, and the categories you file them under
 - Articles fetched from those feeds, including their text, and the full page
   text where you have asked for that
-- Which articles you have read, saved and pinned
-- Which sources you read most often, which the app uses to decide what to show
-  larger — a count per source, nothing about what you read in them
+- Which articles you have read, saved and pinned, and which you opened in full
+- **How long each article's card was on your screen**, to a resolution of half
+  a second and capped at thirty. This is new, and it is the most personal thing
+  the app records: it is the difference between a headline you hurried past and
+  one you stopped at, which is exactly what the ordering needs and exactly what
+  nobody would expect an RSS reader to know. It is measured only while the feed
+  is actually in front of you — not while the app is in the background or the
+  panel is shut — and never leaves the device
+- Which sources you engage with most, which the app uses to decide what to show
+  larger. Per source, and derived from the above: nothing about *which*
+  articles, or what was in them
 - Sources you have hidden, and words you have blocked
 - Every setting
 

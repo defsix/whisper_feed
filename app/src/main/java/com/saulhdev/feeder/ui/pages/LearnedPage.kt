@@ -163,7 +163,8 @@ private fun LearnedRow(
                     text = stringResource(
                         R.string.learned_detail,
                         source.affinity,
-                        source.reads,
+                        source.opened,
+                        source.seen,
                     ),
                     style = MaterialTheme.typography.bodySmall,
                 )

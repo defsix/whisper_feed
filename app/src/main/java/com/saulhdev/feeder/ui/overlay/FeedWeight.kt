@@ -84,6 +84,51 @@ object ArticleWeight {
     /** How far back reading habits are counted. */
     const val HABIT_WINDOW_DAYS = 30L
 
+    /*
+     * What an encounter with an article is worth, in four bands.
+     *
+     * The habit term used to be a count of articles with readAt set, and an
+     * article gets readAt set by being scrolled past — forty of them in a
+     * flick of the thumb. So the signal the ordering trusted most was mostly a
+     * record of scrolling speed, and a source whose headlines somebody hurried
+     * past looked exactly like one they stopped to read.
+     *
+     * These separate the two. The numbers are relative, not absolute: the sum
+     * per source is divided by the largest, so only the ratios matter, and
+     * they are constants here precisely so they can be argued with.
+     */
+
+    /**
+     * Scrolled past with no time on screen worth counting.
+     *
+     * Zero, and that is the point. Passing something is not evidence of
+     * wanting it, and treating the absence of interest as a small amount of
+     * interest is how the old count went wrong. A source scrolled past a
+     * hundred times scores what a source never seen scores, because that is
+     * what the reader has told us about it: nothing.
+     */
+    const val BAND_PASSED = 0
+
+    /** On screen a second or two. A glance, and worth about as much. */
+    const val BAND_GLANCED = 1
+
+    /** Stopped at for five seconds or more: read in place, or nearly. */
+    const val BAND_HELD = 3
+
+    /**
+     * Opened. The only unambiguous signal there is.
+     *
+     * Eight, so that one article somebody chose to open outweighs a handful
+     * they merely lingered on. Nothing else here required a decision.
+     */
+    const val BAND_OPENED = 8
+
+    /** Time on screen that separates a glance from a look. */
+    const val GLANCED_MS = 1_000L
+
+    /** And a look from having read it where it sat. */
+    const val HELD_MS = 5_000L
+
     /**
      * What a story several sources are covering is worth.
      *
@@ -406,11 +451,16 @@ fun rememberReadingHabits(): Map<Long, Float> {
     // screen while the ordering carries on using what it cleared.
     val resetAt by prefs.learnedResetAt.get().collectAsState(initial = 0L)
     val since = remember(resetAt) { habitWindowStart(resetAt) }
-    val counts by remember(since) { repo.readsPerSource(since) }
+    val scores by remember(since) { repo.engagementPerSource(since) }
         .collectAsState(initial = emptyMap())
-    return remember(counts) {
-        val most = counts.values.maxOrNull()?.takeIf { it > 0 } ?: return@remember emptyMap()
-        counts.mapValues { (_, reads) -> reads.toFloat() / most }
+    return remember(scores) {
+        // Normalised by the largest, so this says "how much of your reading
+        // goes here" rather than "how much do you read" — which is what makes
+        // the term mean the same to somebody with four sources and somebody
+        // with a hundred and thirty.
+        val most = scores.values.maxOfOrNull { it.score }?.takeIf { it > 0 }
+            ?: return@remember emptyMap()
+        scores.mapValues { (_, row) -> row.score.toFloat() / most }
     }
 }
 

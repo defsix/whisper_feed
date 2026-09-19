@@ -27,6 +27,8 @@ import com.saulhdev.feeder.utils.blobInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import com.saulhdev.feeder.data.db.models.SourceEngagement
+import com.saulhdev.feeder.ui.overlay.ArticleWeight
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -185,6 +187,24 @@ class ArticleRepository(db: NeoFeedDb) {
     }
 
     /** Reads per source since [since], for the reading-habit weight term. */
+    /**
+     * What each source earned from the reader, since [since].
+     *
+     * The band constants are passed in rather than written into the query so
+     * that the four numbers live in one place — beside the rest of the
+     * weighting, where anybody arguing with them will be looking.
+     */
+    fun engagementPerSource(since: Long): Flow<Map<Long, SourceEngagement>> =
+        articlesDao.engagementPerSource(
+            since = since,
+            glancedMs = ArticleWeight.GLANCED_MS,
+            heldMs = ArticleWeight.HELD_MS,
+            passed = ArticleWeight.BAND_PASSED,
+            glanced = ArticleWeight.BAND_GLANCED,
+            held = ArticleWeight.BAND_HELD,
+            opened = ArticleWeight.BAND_OPENED,
+        ).map { rows -> rows.associateBy { it.feedId } }
+
     fun readsPerSource(since: Long): Flow<Map<Long, Int>> =
         articlesDao.readsPerSource(since)
             .map { rows -> rows.associate { it.feedId to it.reads } }

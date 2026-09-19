@@ -301,8 +301,8 @@
     <string name="account_what_syncs">Works with FreshRSS, Miniflux, Inoreader and BazQux. Articles are still fetched from the feeds themselves, so Whisper keeps working when your server does not.</string>
     <string name="pref_learned">What Whisper has learned</string>
     <string name="pref_learned_summary">Every score the feed reads from your own behaviour, and the way to undo any of it.</string>
-    <string name="learned_explanation">Nothing here is guessed. These are counts of what you have pressed and opened, and the effect each one has on how prominently a source appears. None of it leaves your phone.</string>
-    <string name="learned_detail">More/Less score %1$d · %2$d reads counted</string>
+    <string name="learned_explanation">Nothing here is guessed. These are counts of what you pressed, what reached your screen, and what you opened — and the effect each has on how prominently a source appears. An article you opened counts for a great deal more than one you scrolled past. None of it leaves your phone.</string>
+    <string name="learned_detail">More/Less score %1$d · %2$d opened of %3$d seen</string>
     <string name="learned_nudge">Weight: %1$+.2f</string>
     <string name="learned_forget">Forget this source\'s score</string>
     <string name="learned_unhide">Show this source again</string>
