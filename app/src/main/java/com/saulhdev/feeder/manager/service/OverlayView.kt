@@ -33,6 +33,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.overlay.FeedScaffold
 import com.saulhdev.feeder.ui.overlay.gateLog
 import com.saulhdev.feeder.ui.overlay.LocalFeedVisible
+import com.saulhdev.feeder.utils.BrowserReadTimer
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
@@ -333,6 +334,11 @@ class OverlayView(val context: Context) :
         // swipe into the overlay does not necessarily do. The attach hook set up
         // in onCreate is what actually drives this; both are idempotent.
         initFeed()
+        // The launcher signalling a resume is the closest thing this surface
+        // has to "the reader is back", and coming back from a browser is
+        // exactly that. setState covers the case where the panel was closed
+        // during the trip; this covers the case where it was left open.
+        settleBrowserRead()
         if (pendingCloseOnResume) {
             pendingCloseOnResume = false
             closePanelIfNeeded(1)
@@ -499,9 +505,16 @@ class OverlayView(val context: Context) :
     private fun openArticle(item: FeedItem) {
         // Counts on the glance row have to reflect reading done here too, not
         // only in the app — this is the surface most articles are opened from.
+        // Tapping a second article is itself proof the reader came back from
+        // the first. Cheap, and it catches the trip that neither resume nor a
+        // panel-state change happened to report.
+        settleBrowserRead()
         syncScope.launch { viewModel.markOpened(item.id) }
         launchKeepingPanel {
             if (prefs.articleOpenMode.getValue() == FeedPreferences.OPEN_MODE_BROWSER) {
+                // No lifecycle to tick against once the browser is in front,
+                // so the trip away is the measurement. See BrowserReadTimer.
+                BrowserReadTimer.left(item.id)
                 context.launchView(item.link)
             } else {
                 context.safeStartActivity(
@@ -525,11 +538,27 @@ class OverlayView(val context: Context) :
         val was = panelState
         super.setState(newState)
         panelVisible.value = newState != PanelState.CLOSED
+        // Coming back to the launcher from a browser reopens the panel, and on
+        // this surface there is no Activity whose resume could notice. Settling
+        // is idempotent, so the app's own hook firing as well costs nothing.
+        if (panelVisible.value) settleBrowserRead()
         // The other half of the read-on-scroll gate, under the same tag as
         // ReadOnScroll's own trace. If a launcher never calls this, that gate
         // is stuck shut and the tracker silently does nothing — which a
         // diagnostics report with no panel lines in it says plainly.
         if (debugLogging) gateLog("panel $was -> $newState")
+    }
+
+    /**
+     * Records a read that happened in an external browser, if one did.
+     *
+     * Everything uncertain — no trip outstanding, one longer than the limit,
+     * one already settled by the other hook — comes back null from the timer
+     * and writes nothing.
+     */
+    private fun settleBrowserRead() {
+        val (id, millis) = BrowserReadTimer.settle() ?: return
+        syncScope.launch { viewModel.addReading(id, millis) }
     }
 
     override fun onScroll(f: Float) {

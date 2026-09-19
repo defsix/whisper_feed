@@ -246,9 +246,9 @@ val allMigrations = arrayOf(
 object MIGRATION_19_20 : Migration(19, 20) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Zero, and it means "never measured" rather than "read for no time".
-        // Nothing before this release could have recorded it, and an article
-        // opened in an external browser will keep reading zero afterwards,
-        // because the app is not on screen to time anything.
+        // Nothing before this release could have recorded it, and there is no
+        // history to reconstruct: the app has never had a clock to reconstruct
+        // it from.
         db.execSQL("ALTER TABLE Article ADD COLUMN readMs INTEGER NOT NULL DEFAULT 0")
     }
 }

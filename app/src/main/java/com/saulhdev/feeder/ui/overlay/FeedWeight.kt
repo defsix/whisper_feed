@@ -176,10 +176,12 @@ object ArticleWeight {
     /**
      * Opened and stayed a while: read, rather than merely opened.
      *
-     * The first band that needs the reading clock, so it is also the first
-     * that reads zero for an article opened in an external browser. That is
-     * not a penalty — such an article still scores [BAND_OPENED] — it is the
-     * honest limit of what can be measured from outside the app.
+     * Reached by either clock: the in-app one that ticks while the article is
+     * on screen, or the coarser browser one that measures how long the app was
+     * away. An article whose reading could not be measured at all — a browser
+     * trip too long to trust, or a process killed mid-read — scores
+     * [BAND_OPENED] rather than less. Unmeasured is not the same as read for
+     * no time, and must not be punished as though it were.
      */
     const val BAND_READ = 14
 

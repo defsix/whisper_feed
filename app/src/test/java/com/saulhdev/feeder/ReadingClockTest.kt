@@ -18,9 +18,13 @@
 package com.saulhdev.feeder
 
 import com.saulhdev.feeder.data.repository.READ_CAP_MS
+import com.saulhdev.feeder.utils.BROWSER_READ_MAX_MS
+import com.saulhdev.feeder.utils.BrowserReadTimer
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import kotlin.math.min
 
@@ -177,5 +181,105 @@ class ReadingClockTest {
     @Test
     fun `passing is worth nothing at all`() {
         assertEquals(0, ArticleWeight.BAND_PASSED)
+    }
+
+    /* ------------------------------------------------- the browser round trip -- */
+
+    @Before
+    fun clearAnyPendingTrip() = BrowserReadTimer.forget()
+
+    @Test
+    fun `a trip away is measured from leaving to coming back`() {
+        BrowserReadTimer.left("a", now = 1_000L)
+        assertEquals("a" to 60_000L, BrowserReadTimer.settle(now = 61_000L))
+    }
+
+    @Test
+    fun `nothing outstanding records nothing`() {
+        assertNull(BrowserReadTimer.settle(now = 5_000L))
+    }
+
+    /**
+     * The rule this was asked for. Above the limit the absence tells us
+     * nothing — read for twenty minutes, or read for two and then had lunch —
+     * so nothing is what gets recorded. Clamping would turn "no idea" into a
+     * confident claim of fifteen minutes.
+     */
+    @Test
+    fun `a trip longer than the limit is discarded, not clamped`() {
+        BrowserReadTimer.left("a", now = 0L)
+        assertNull(BrowserReadTimer.settle(now = BROWSER_READ_MAX_MS + 1))
+    }
+
+    @Test
+    fun `a trip exactly at the limit still counts`() {
+        BrowserReadTimer.left("a", now = 0L)
+        assertEquals("a" to BROWSER_READ_MAX_MS, BrowserReadTimer.settle(now = BROWSER_READ_MAX_MS))
+    }
+
+    /** Three days in the browser is the exact case this exists to refuse. */
+    @Test
+    fun `an overnight absence records nothing at all`() {
+        BrowserReadTimer.left("a", now = 0L)
+        assertNull(BrowserReadTimer.settle(now = 3L * 24 * 60 * 60 * 1000))
+    }
+
+    /**
+     * Two hooks fire on a return — an Activity resuming and the launcher panel
+     * reopening — and one read must not be recorded twice.
+     */
+    @Test
+    fun `settling twice records once`() {
+        BrowserReadTimer.left("a", now = 0L)
+        assertEquals("a" to 5_000L, BrowserReadTimer.settle(now = 5_000L))
+        assertNull(BrowserReadTimer.settle(now = 6_000L))
+    }
+
+    /** A clock that went backwards is not a negative read. */
+    @Test
+    fun `a duration that comes back negative is refused`() {
+        BrowserReadTimer.left("a", now = 10_000L)
+        assertNull(BrowserReadTimer.settle(now = 9_000L))
+    }
+
+    @Test
+    fun `a second departure replaces the first rather than queueing`() {
+        BrowserReadTimer.left("a", now = 0L)
+        BrowserReadTimer.left("b", now = 1_000L)
+        assertEquals("b" to 4_000L, BrowserReadTimer.settle(now = 5_000L))
+    }
+
+    /**
+     * Nothing is persisted, so a process killed mid-trip forgets it. This
+     * stands in for that: the alternative — a start time surviving on disk —
+     * is the whole bug the in-app clock is shaped to avoid.
+     */
+    @Test
+    fun `a forgotten trip settles to nothing`() {
+        BrowserReadTimer.left("a", now = 0L)
+        BrowserReadTimer.forget()
+        assertNull(BrowserReadTimer.settle(now = 5_000L))
+    }
+
+    /** A bounce out and straight back is a real answer: it lands in "opened". */
+    @Test
+    fun `a two second trip is recorded and lands below the reading band`() {
+        BrowserReadTimer.left("a", now = 0L)
+        val (_, millis) = BrowserReadTimer.settle(now = 2_000L)!!
+        assertEquals(ArticleWeight.BAND_OPENED, band(readMs = millis, opened = true, dwellMs = 0))
+    }
+
+    /** And a genuine browser read reaches the same band an in-app one would. */
+    @Test
+    fun `a four minute trip earns the finished band`() {
+        BrowserReadTimer.left("a", now = 0L)
+        val (_, millis) = BrowserReadTimer.settle(now = 4L * 60 * 1000)!!
+        assertEquals(ArticleWeight.BAND_FINISHED, band(readMs = millis, opened = true, dwellMs = 0))
+    }
+
+    /** The discard limit has to sit above the band it is meant to let through. */
+    @Test
+    fun `the limit is longer than a finished read`() {
+        assertTrue(BROWSER_READ_MAX_MS > ArticleWeight.FINISHED_MS)
     }
 }

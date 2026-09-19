@@ -82,13 +82,14 @@ private const val FLUSH_EVERY_MS = 5_000L
  * would punish slow readers and long articles, which are exactly the reading
  * worth counting.
  *
- * ## What is not measured
+ * ## What this one does not cover
  *
- * An article opened in an external browser. Whisper is not on screen, has no
- * lifecycle to read, and would be reduced to timing its own absence — which is
- * the three-day-read bug wearing a different hat. Those articles keep
- * `readMs = 0`, and the weighting treats that as "opened, nothing further
- * known" rather than as "read for no time".
+ * An article opened in an external browser, where Whisper is not on screen and
+ * has no lifecycle to tick against. That case is measured differently and much
+ * more coarsely, by how long the app was away — see [BrowserReadTimer], which
+ * has to subtract and therefore carries its own defences. Both write to the
+ * same column through the same capped increment, so nothing downstream needs
+ * to know which of the two produced a figure.
  *
  * @param articleId the article being read, or null for nothing to time.
  * @param onRead handed each accumulated chunk, in milliseconds, as an amount

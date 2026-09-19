@@ -249,6 +249,16 @@ class ArticleListViewModel(
     }
 
     /** Adds to an article's time on screen. */
+    /**
+     * Records time spent reading an article, in milliseconds.
+     *
+     * Used by the browser-trip timer rather than the in-app clock, which
+     * reports through ArticleViewModel on the article's own screen.
+     */
+    fun addReading(id: String, millis: Long) {
+        ioScope.launch { articleRepo.addReading(id, millis) }
+    }
+
     fun addDwell(id: String, millis: Long) {
         viewModelScope.launch {
             articleRepo.addDwell(id, millis)

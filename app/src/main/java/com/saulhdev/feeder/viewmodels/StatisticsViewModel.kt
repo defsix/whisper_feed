@@ -82,9 +82,10 @@ data class StatisticsState(
      * Time spent inside articles, as hours and minutes.
      *
      * Null when nothing was measured at all, which is a different statement
-     * from "no time" and has to be said differently on the screen — an
-     * article opened in an external browser records nothing, so a reader who
-     * uses that mode would otherwise be told they read for zero minutes.
+     * from "no time" and has to be said differently on the screen. Reads can
+     * go unmeasured for honest reasons — a browser trip too long to be
+     * trusted, a process killed mid-article — and telling somebody they read
+     * for zero minutes because of one would be worse than saying nothing.
      */
     val readingHoursMinutes: Pair<Long, Long>?
         get() {

@@ -56,8 +56,18 @@ All of it:
   the reading you actually did and then stops, rather than leaving a start time
   that a later resume turns into a three-day read.
 
-  Nothing is recorded at all for an article opened in an external browser,
-  because Whisper is not on screen to measure it.
+  For an article you open in your **own browser**, Whisper is not on screen
+  and cannot time anything directly, so it records how long it was away
+  instead — from the moment it hands the link over to the moment you come
+  back. That is a weaker measurement and is treated as one: it is held in
+  memory only and lost if the app is closed in the meantime, and anything over
+  fifteen minutes is **thrown away entirely** rather than rounded down,
+  because a long absence is not evidence of a long read and recording it as
+  one would be a guess wearing a number's clothes.
+
+  Whisper never learns which page you were on, what you did while you were
+  away, or whether you were reading at all — only how long it was until you
+  returned to it.
 - Which sources you engage with most, which the app uses to decide what to show
   larger. Per source, and derived from the above: nothing about *which*
   articles, or what was in them

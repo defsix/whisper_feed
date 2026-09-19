@@ -48,6 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import com.saulhdev.feeder.utils.VolumeScroll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import com.saulhdev.feeder.utils.BrowserReadTimer
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -148,6 +149,21 @@ class MainActivity : ComponentActivity() {
         // the app's life to do it. Nothing on screen depends on the result.
         lifecycleScope.launch(Dispatchers.IO) { configurePeriodicSync() }
         handleDeepLink(intent)
+    }
+
+    /**
+     * Closes off a read that happened in an external browser.
+     *
+     * Resume rather than anything finer-grained, because coming back from the
+     * browser is precisely a resume and there is no more specific event to
+     * hook. The timer discards anything it is not sure about — no trip
+     * outstanding, a trip longer than the limit, one the launcher panel
+     * already settled — so this writes nothing in every case but the one it
+     * is for.
+     */
+    override fun onResume() {
+        super.onResume()
+        BrowserReadTimer.settle()?.let { (id, millis) -> viewModel.addReading(id, millis) }
     }
 
     override fun onNewIntent(intent: Intent) {

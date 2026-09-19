@@ -235,8 +235,8 @@ private fun Summary(state: StatisticsState) {
             val spent = state.readingHoursMinutes
             Stat(
                 // A dash rather than "0m": nothing measured is not the same
-                // statement as no time spent, and an external browser records
-                // nothing however long the reading took.
+                // statement as no time spent, and a read can go unmeasured for
+                // honest reasons.
                 value = spent?.let { (h, m) ->
                     if (h > 0) stringResource(R.string.stats_hours_minutes, h, m)
                     else stringResource(R.string.stats_minutes, m)

@@ -155,9 +155,15 @@ data class Article constructor(
      * unlocked on a desk with an article open is awake, is resumed, and is not
      * being read.
      *
-     * Zero does not mean "not read". It means nothing was measured — which is
-     * also what an article opened in an external browser reads, because the
-     * app is not on screen to measure it.
+     * Two clocks write here. In the app, time is ticked while the article is
+     * on screen. For an article opened in an external browser there is no
+     * lifecycle to tick against, so the measurement is how long Whisper was
+     * away, which is coarser and is thrown away entirely above a limit rather
+     * than trusted — see `BrowserReadTimer`.
+     *
+     * Zero therefore does not mean "not read". It means nothing was measured,
+     * and the weighting treats it as "opened, nothing further known" rather
+     * than as evidence against the article.
      */
     @ColumnInfo(defaultValue = "0")
     val readMs: Long = 0L,

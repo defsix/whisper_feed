@@ -127,6 +127,7 @@ import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
 import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
+import com.saulhdev.feeder.utils.BrowserReadTimer
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
@@ -471,6 +472,11 @@ fun ArticleListPage(
                                             onClick = {
                                                 viewModel.markOpened(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                    // Whisper is about to stop
+                                                    // being on screen, so the
+                                                    // only clock left is how
+                                                    // long until it is again.
+                                                    BrowserReadTimer.left(item.id)
                                                     context.launchView(item.link)
                                                 } else {
                                                     scope.launch {
@@ -532,6 +538,11 @@ fun ArticleListPage(
                                             onClick = {
                                                 viewModel.markOpened(item.id)
                                                 if (openMode == FeedPreferences.OPEN_MODE_BROWSER) {
+                                                    // Whisper is about to stop
+                                                    // being on screen, so the
+                                                    // only clock left is how
+                                                    // long until it is again.
+                                                    BrowserReadTimer.left(item.id)
                                                     context.launchView(item.link)
                                                 } else {
                                                     scope.launch {
