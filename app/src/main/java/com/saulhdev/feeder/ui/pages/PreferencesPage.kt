@@ -107,30 +107,33 @@ fun PreferencesPage(
         prefs.fullTextForAllFeeds,
     )
 
-    /** What appears in the feed and in what order. */
+    /**
+     * What appears in the feed, and in what order.
+     *
+     * Absorbed the one-row "Filters" group and the two-row "Glance row"
+     * group. A heading over a single preference is a heading that only makes
+     * the list longer, and both were answering the same question this one
+     * does: what shows up when you open Whisper.
+     */
     val feedPrefs = listOf(
         prefs.breakingNews,
         prefs.stickyTop,
         prefs.removeDuplicates,
-        prefs.readVisibility,
+        prefs.blockedWords,
+        prefs.glanceEnabled,
+        prefs.glancePlaceName,
         prefs.learned,
     )
 
     /** What happens while reading it. */
     val readingPrefs = listOf(
         prefs.articleOpenMode,
+        prefs.readVisibility,
         prefs.markReadOnScroll,
         prefs.markAllRead,
         prefs.volumeKeyScroll,
     )
 
-    val filterPrefs = listOf(
-        prefs.blockedWords,
-    )
-    val glancePrefs = listOf(
-        prefs.glanceEnabled,
-        prefs.glancePlaceName,
-    )
     val themePrefs = listOf(
         prefs.feedLayout,
         prefs.overlayTheme,
@@ -139,17 +142,31 @@ fun PreferencesPage(
         prefs.dynamicColor,
         prefs.overlayTransparency,
     )
+
+    /**
+     * Adding and finding sources.
+     *
+     * The two repair tools — feeds that stopped working, and feeds still on
+     * http — used to sit here. They are maintenance on a list rather than
+     * preferences about it, and the moment you want either is while looking
+     * at that list, so they are in Data sources' own menu now.
+     */
     val sourcePrefs = listOf(
         prefs.sources,
         prefs.starterSources,
         prefs.importBookmarks,
         prefs.suggestions,
-        prefs.brokenFeeds,
-        prefs.insecureFeeds,
     )
-    val syncPrefs = listOf(
-        prefs.backupFolder,
+
+    /**
+     * Where the reader's data comes from and goes to.
+     *
+     * A sync account and a backup folder were in separate groups, one of them
+     * alone. They are the same question asked twice.
+     */
+    val dataPrefs = listOf(
         prefs.account,
+        prefs.backupFolder,
     )
 
     /** Everything that explains the app rather than changing it. */
@@ -276,20 +293,6 @@ fun PreferencesPage(
                     onPrefDialog = onPrefDialog
                 )
             }
-            item(key = R.string.pref_cat_filters) {
-                PreferenceGroup(
-                    stringResource(id = R.string.pref_cat_filters),
-                    prefs = filterPrefs,
-                    onPrefDialog = onPrefDialog
-                )
-            }
-            item(key = R.string.pref_glance_row) {
-                PreferenceGroup(
-                    stringResource(id = R.string.pref_glance_row),
-                    prefs = glancePrefs,
-                    onPrefDialog = onPrefDialog
-                )
-            }
             item(key = R.string.pref_cat_overlay) {
                 PreferenceGroup(
                     stringResource(id = R.string.pref_cat_overlay),
@@ -319,10 +322,10 @@ fun PreferencesPage(
                     }
                 }
             }
-            item(key = R.string.pref_account) {
+            item(key = R.string.pref_cat_data) {
                 PreferenceGroup(
-                    stringResource(id = R.string.pref_account),
-                    prefs = syncPrefs,
+                    stringResource(id = R.string.pref_cat_data),
+                    prefs = dataPrefs,
                     onPrefDialog = onPrefDialog
                 )
             }

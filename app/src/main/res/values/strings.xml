@@ -401,6 +401,7 @@
     <string name="pref_cat_fetching">Fetching</string>
     <string name="pref_cat_feed">Your feed</string>
     <string name="pref_cat_reading">Reading</string>
+    <string name="pref_cat_data">Your data</string>
     <string name="pref_cat_help">Help</string>
     <string name="pref_cat_filters">Filters</string>
     <string name="pref_blocked_words">Blocked words</string>

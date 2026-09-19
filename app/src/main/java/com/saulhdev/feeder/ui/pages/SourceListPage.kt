@@ -402,6 +402,42 @@ fun SourceListPage(
                                 },
                                 text = { Text(stringResource(R.string.sources_find_same_site)) },
                             )
+                            // The two repair tools, moved off the settings
+                            // screen. They are maintenance on this list
+                            // rather than preferences about it, and the
+                            // moment anybody wants either is while looking at
+                            // the list — which is here, not two screens away
+                            // under a heading about sources in general.
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(
+                                        Phosphor.ArrowCounterClockwise,
+                                        contentDescription = stringResource(
+                                            R.string.pref_broken_feeds
+                                        ),
+                                    )
+                                },
+                                onClick = {
+                                    hideMenu()
+                                    navController.navigate(NavRoute.BrokenFeeds)
+                                },
+                                text = { Text(stringResource(R.string.pref_broken_feeds)) },
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(
+                                        Phosphor.Prohibit,
+                                        contentDescription = stringResource(
+                                            R.string.pref_insecure_feeds
+                                        ),
+                                    )
+                                },
+                                onClick = {
+                                    hideMenu()
+                                    navController.navigate(NavRoute.InsecureFeeds)
+                                },
+                                text = { Text(stringResource(R.string.pref_insecure_feeds)) },
+                            )
                             HorizontalDivider()
                             // Only the chosen row carries an arrow, and the
                             // arrow is the direction rather than a tick. Every
