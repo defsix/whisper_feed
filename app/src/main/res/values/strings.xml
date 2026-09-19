@@ -520,6 +520,25 @@
     <string name="suggestions_explanation">Feeds you could subscribe to \u2014 never articles to read. Worked out on this phone, from links in articles you actually read. Nothing about your reading is sent anywhere, and nothing here reaches your feed unless you add it.</string>
     <string name="suggestions_none">Nothing yet. Once a week Whisper looks at the articles you have read, notices which publications they keep linking to, and checks whether those publish a feed. Give it a few weeks of reading.</string>
     <string name="suggestion_dismiss">Not interested</string>
+    <!-- Statistics -->
+    <string name="pref_statistics">Your reading</string>
+    <string name="pref_statistics_summary">How much you read, and when</string>
+    <string name="stats_seen">Articles seen</string>
+    <string name="stats_opened">Opened</string>
+    <string name="stats_passed">Passed over</string>
+    <string name="stats_per_day">A day</string>
+    <string name="stats_by_day">Reading over time</string>
+    <string name="stats_by_day_caption">Articles that reached your screen, over the last %1$d days.</string>
+    <string name="stats_by_hour">Time of day</string>
+    <string name="stats_by_hour_caption">When you read, summed across the whole month.</string>
+    <string name="stats_by_day_description">%1$d articles seen and %2$d opened over %3$d days.</string>
+    <string name="stats_by_hour_description">Busiest around %1$s:00.</string>
+    <string name="stats_by_hour_empty">No reading recorded yet.</string>
+    <string name="stats_example_title">This is an example</string>
+    <string name="stats_example_body">There is not enough reading yet to draw your own, so the charts below show made-up figures to give you an idea of the shape. They will be replaced by yours once you have read a little more.</string>
+    <string name="stats_opening_new_title">Nothing opened yet</string>
+    <string name="stats_opening_new_body">Whisper has only counted opened articles since a recent update, so days before that show none even if you read them. This will fill in from here.</string>
+    <string name="stats_footnote">Worked out on your phone from what Whisper already stores \u2014 when an article reached your screen, and when you opened one. Nothing here is collected for this screen and nothing leaves the device.</string>
     <string name="pref_feed_library">Browse the feed library</string>
     <string name="pref_feed_library_summary">Hundreds of feeds by topic and country, bundled with the app</string>
     <string name="library_explanation">A directory that ships with Whisper, so nothing is fetched and no one is told what you are looking for. Open a collection to see what is in it \u2014 everything starts ticked, and nothing is added until you say so.</string>

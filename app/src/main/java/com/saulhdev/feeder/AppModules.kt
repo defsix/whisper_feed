@@ -45,6 +45,7 @@ import com.saulhdev.feeder.viewmodels.BookmarkImportViewModel
 import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
 import com.saulhdev.feeder.viewmodels.InsecureFeedsViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
+import com.saulhdev.feeder.viewmodels.StatisticsViewModel
 import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
@@ -88,6 +89,7 @@ val modelModule = module {
     single { SavedStateHandle() }
     viewModelOf(::SourceEditViewModel)
     viewModelOf(::LearnedViewModel)
+    viewModelOf(::StatisticsViewModel)
     viewModelOf(::AccountViewModel)
     viewModelOf(::SearchFeedViewModel)
     viewModelOf(::ArticleListViewModel)

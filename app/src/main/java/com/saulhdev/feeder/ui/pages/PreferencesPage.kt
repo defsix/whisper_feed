@@ -120,6 +120,7 @@ fun PreferencesPage(
         prefs.glanceEnabled,
         prefs.glancePlaceName,
         prefs.learned,
+        prefs.statistics,
     )
 
     /** What happens while reading it. */

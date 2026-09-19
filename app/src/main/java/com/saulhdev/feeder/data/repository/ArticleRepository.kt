@@ -27,6 +27,8 @@ import com.saulhdev.feeder.utils.blobInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import com.saulhdev.feeder.data.db.models.DayCount
+import com.saulhdev.feeder.data.db.models.HourCount
 import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +39,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleRepository(db: NeoFeedDb) {
@@ -205,6 +209,38 @@ class ArticleRepository(db: NeoFeedDb) {
             opened = ArticleWeight.BAND_OPENED,
         ).map { rows -> rows.associateBy { it.feedId } }
 
+    /**
+     * Reading per day over a window, with the quiet days included.
+     *
+     * The query can only return days that have rows in them, and a chart drawn
+     * from those alone lies twice over: a fortnight away from the app closes
+     * up into nothing, and the bars either side of the gap end up adjacent, so
+     * a break in reading reads as continuous reading. The zeroes are as much
+     * of the answer as the counts are, so they are filled in here.
+     *
+     * [today] is a parameter so a test can pin the window; nothing else passes
+     * it. The dates are formatted the same way SQLite's
+     * `date(..., 'localtime')` formats them, and both run in the device's own
+     * zone, so the keys line up without any parsing on either side.
+     */
+    fun readingByDay(
+        since: Long,
+        days: Int,
+        today: LocalDate = LocalDate.now(),
+    ): Flow<List<DayCount>> =
+        articlesDao.readingByDay(since).map { rows -> fillDays(rows, days, today) }
+
+    /**
+     * Reading by hour of the day, with all twenty-four buckets present.
+     *
+     * Filled for the same reason and with more force: an hour nobody reads in
+     * is the shape of the chart. Somebody who reads at breakfast and on the
+     * commute home has two peaks and a trough, and the trough is only visible
+     * if the empty hours are drawn.
+     */
+    fun readingByHour(since: Long): Flow<List<HourCount>> =
+        articlesDao.readingByHour(since).map(::fillHours)
+
     fun readsPerSource(since: Long): Flow<Map<Long, Int>> =
         articlesDao.readsPerSource(since)
             .map { rows -> rows.associate { it.feedId to it.reads } }
@@ -336,3 +372,34 @@ const val FEED_WINDOW = 500
  * would dominate every comparison it took part in.
  */
 const val DWELL_CAP_MS = 30_000L
+
+/**
+ * The window's days in order, with the ones the query had nothing for.
+ *
+ * Separated from the flow so it can be tested without a database: the part
+ * that can be wrong here is the date arithmetic and the key format, neither of
+ * which needs Room to demonstrate. Dates are formatted exactly as SQLite's
+ * `date(..., 'localtime')` writes them, and both run in the device's zone, so
+ * the two sides meet without either having to parse the other.
+ */
+internal fun fillDays(
+    rows: List<DayCount>,
+    days: Int,
+    today: LocalDate,
+): List<DayCount> {
+    val byDay = rows.associateBy { it.day }
+    return (days - 1 downTo 0).map { back ->
+        val key = today.minusDays(back.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        byDay[key] ?: DayCount(day = key, seen = 0, opened = 0)
+    }
+}
+
+/** All twenty-four buckets, in order, whether or not anything was read in them. */
+internal fun fillHours(rows: List<HourCount>): List<HourCount> {
+    // Keyed on the integer rather than the text: SQLite gives "07", and a
+    // chart indexing on 7 would silently miss every morning.
+    val byHour = rows.associateBy { it.hour.toIntOrNull() ?: -1 }
+    return (0..23).map { hour ->
+        byHour[hour] ?: HourCount(hour = "%02d".format(hour), seen = 0, opened = 0)
+    }
+}

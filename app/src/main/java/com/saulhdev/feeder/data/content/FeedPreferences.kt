@@ -53,6 +53,7 @@ import com.saulhdev.feeder.utils.READ_KEEP
 import com.saulhdev.feeder.utils.getReadVisibility
 import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
+import com.saulhdev.feeder.ui.icons.phosphor.BookOpenUser
 import com.saulhdev.feeder.ui.icons.phosphor.Graph
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
@@ -414,7 +415,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     var learned = StringPref(
         titleId = R.string.pref_learned,
         summaryId = R.string.pref_learned_summary,
-        icon = Phosphor.Graph,
+        icon = Phosphor.BookOpenUser,
         key = LEARNED,
         dataStore = dataStore,
         route = NavRoute.Learned
@@ -478,6 +479,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = BROKEN_FEEDS,
         dataStore = dataStore,
         route = NavRoute.BrokenFeeds
+    )
+
+    /** What the reader's own reading looks like, from what is already stored. */
+    var statistics = StringPref(
+        titleId = R.string.pref_statistics,
+        summaryId = R.string.pref_statistics_summary,
+        icon = Phosphor.Graph,
+        key = STATISTICS,
+        dataStore = dataStore,
+        route = NavRoute.Statistics
     )
 
     /** The bundled directory, for somebody who does not know what to follow yet. */
@@ -983,6 +994,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
         val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
+        val STATISTICS = stringPreferencesKey("pref_statistics")
         val ACCOUNT = stringPreferencesKey("pref_account")
         val BACKUP_FOLDER = stringPreferencesKey("pref_backup_folder")
         val BACKUP_LAST_RUN = stringPreferencesKey("pref_backup_last_run")
