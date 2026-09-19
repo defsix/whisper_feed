@@ -144,7 +144,21 @@ fun BackupPage(
                     text = stringResource(R.string.backup_explanation),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            // What a backup actually contains, said before any button rather
+            // than in a footnote below the Android section — which is where
+            // this used to sit, so the screen announced itself as being about
+            // subscriptions and only mentioned the settings file at the very
+            // bottom, after everything it could be used for.
+            item {
+                Text(
+                    text = stringResource(R.string.backup_what),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
             }
 
@@ -168,9 +182,14 @@ fun BackupPage(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
+                                // Its own string rather than the screen's
+                                // title, which it used to borrow. That read
+                                // as a status while the title was a sentence
+                                // about subscriptions; as a section name it
+                                // would say nothing about what is happening.
                                 text = stringResource(
                                     if (folder.isEmpty()) R.string.backup_off
-                                    else R.string.pref_backup
+                                    else R.string.backup_on
                                 ),
                                 style = MaterialTheme.typography.titleSmall,
                             )
@@ -206,6 +225,14 @@ fun BackupPage(
             }
 
             item {
+                Text(
+                    text = stringResource(R.string.backup_heading_where),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+            }
+
+            item {
                 ActionButton(
                     text = stringResource(
                         if (folder.isEmpty()) R.string.backup_choose else R.string.backup_change
@@ -234,6 +261,22 @@ fun BackupPage(
                         },
                     )
                 }
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.backup_heading_restore),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.backup_restore_what),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             item {
@@ -298,14 +341,6 @@ fun BackupPage(
                 SwitchPreference(pref = prefs.platformBackupCloud, index = 2, groupSize = 2)
             }
 
-            item {
-                Text(
-                    text = stringResource(R.string.backup_what),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-            }
         }
     }
 }

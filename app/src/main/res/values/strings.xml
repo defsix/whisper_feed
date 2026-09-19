@@ -248,11 +248,12 @@
     <string name="empty_nothing_fetched_hint">Your sources are set up but no articles arrived. Pull down to try again, or check Sources for a feed marked as failing.</string>
     <string name="empty_filtered">Nothing matches</string>
     <string name="empty_filtered_hint">Every article is filtered out by the category or filter you have chosen. Tap All, or open the filter to change it.</string>
-    <string name="pref_backup">Back up your subscriptions</string>
-    <string name="pref_backup_summary">All off until you turn something on. The only part of Whisper that can send your data anywhere.</string>
-    <string name="backup_explanation">Your subscription list took a long time to build and exists only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day, over Wi-Fi.</string>
+    <string name="pref_backup">Backup and restore</string>
+    <string name="pref_backup_summary">Your subscriptions and your settings, kept somewhere you choose. All off until you turn something on \u2014 the only part of Whisper that can send your data anywhere.</string>
+    <string name="backup_explanation">Two things here are worth keeping: the subscription list you spent a long time building, and the settings you arranged to suit you. Both exist only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day, over Wi-Fi.</string>
     <string name="backup_only_time">Nothing on this screen happens unless you ask for it.\n\nWhisper has no server and no account of its own, so this is the only part of the app that can send your data anywhere. Everything here is off until you turn it on: no folder is chosen, and Android\u2019s own backup hands over nothing. Turn on what suits you \u2014 and nothing else will leave this phone.</string>
     <string name="backup_off">Everything here is off. Nothing is leaving this phone.</string>
+    <string name="backup_on">Your subscriptions and settings are being copied to the folder below.</string>
     <string name="pref_platform_device">Include in phone-to-phone transfer</string>
     <string name="pref_platform_device_summary">When you set up a new phone next to this one. A direct copy \u2014 no server involved.</string>
     <string name="pref_platform_cloud">Include in Google cloud backup</string>
@@ -260,6 +261,9 @@
     <string name="backup_platform_heading">Android\u2019s own backup</string>
     <string name="backup_platform_body">Android can carry apps to a new phone by itself. Whisper hands over nothing unless you switch it on here, and the two are asked separately because they are different things. Your sign-in tokens are never included either way \u2014 they cannot survive the trip, and restoring them would stop the app starting.</string>
     <string name="backup_choose">Choose where backups go</string>
+    <string name="backup_heading_where">Where backups go</string>
+    <string name="backup_heading_restore">Restore from a backup</string>
+    <string name="backup_restore_what">Sources are added without removing anything you already have. Settings replace what is on this phone, which is why the two are asked separately.</string>
     <string name="backup_change">Choose a different folder</string>
     <string name="backup_now">Back up now</string>
     <string name="backup_restore">Restore sources from a backup</string>
@@ -273,7 +277,7 @@
     <string name="backup_restored_none">Everything in that backup is already here</string>
     <string name="backup_lost">Whisper can no longer write to that folder. Choose it again.</string>
     <string name="backup_failed">That did not work</string>
-    <string name="backup_what">Two files are saved: your sources and their categories as OPML, which any other reader can open, and your settings alongside it. No articles, and nothing about what you have read. Restoring sources adds them without removing anything; restoring settings replaces what you have, so it is a separate choice.</string>
+    <string name="backup_what">A backup is two files. Your sources and their categories go into an OPML file, which any other reader can open; your settings go into a JSON file beside it. Neither contains articles, and neither records what you have read.</string>
     <string name="pref_account">Account</string>
     <string name="pref_account_summary">Optional. Keep your subscriptions and read state in step across devices.</string>
     <string name="account_explanation">Whisper works completely without an account — everything stays on this phone. Connecting one keeps your subscriptions and what you have read in step with another device, through a service you choose or run yourself.</string>
