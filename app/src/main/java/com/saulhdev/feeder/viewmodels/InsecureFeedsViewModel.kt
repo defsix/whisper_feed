@@ -159,7 +159,13 @@ class InsecureFeedsViewModel(
         // Before the network, because a collision is not something a
         // successful fetch would tell us about and the answer is the same
         // either way: this one cannot simply be rewritten.
-        if (sources.findSourceByUrl(https) != null) {
+        //
+        // Excluding this feed. findSourceByUrl matches on the normalised
+        // address, which ignores the scheme — so asked whether the https form
+        // is taken, it returned the http feed doing the asking. Every single
+        // address came back Duplicate and the screen could not upgrade
+        // anything at all.
+        if (sources.findOtherSourceByUrl(https, feed.id) != null) {
             set(feed.id, Upgrade.Duplicate)
             return
         }
@@ -181,7 +187,13 @@ class InsecureFeedsViewModel(
      */
     private suspend fun apply(feed: Feed, url: String) {
         val strict = runCatching { sloppyLinkToStrictURL(url) }.getOrNull() ?: return
-        sources.updateSource(feed.copy(url = strict))
+        // A clash can appear between the check and the apply — two http feeds
+        // whose https forms are the same address, where upgrading the first
+        // creates the collision for the second.
+        if (!sources.updateSource(feed.copy(url = strict))) {
+            set(feed.id, Upgrade.Duplicate)
+            return
+        }
         // A feed that failed only because its address was http has no reason
         // to still be counted as failing once that is fixed.
         sources.clearFailures(feed.id)

@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import android.database.sqlite.SQLiteConstraintException
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import org.koin.java.KoinJavaComponent.inject
 import java.net.URL
@@ -76,14 +77,48 @@ class SourcesRepository(db: NeoFeedDb) {
             ?: feedsDao.loadAllFeeds().firstOrNull { isSameFeedUrl(it.url, url) }
     }
 
-    suspend fun updateSource(feed: Feed, resync: Boolean = false) {
-        withContext(jcc) {
-            if (feedsDao.existsById(feed.id)) {
-                feedsDao.update(feed)
-                if (resync) requestFeedSync(feed.id)
-                if (feed.fullTextByDefault) scheduleFullTextParse()
-            }
+    /**
+     * A *different* subscription that already holds this address.
+     *
+     * [findSourceByUrl] matches on the normalised address, which ignores the
+     * scheme — so asking it whether `https://x/feed` is taken while holding
+     * `http://x/feed` gets back the very feed doing the asking. Anything
+     * deciding whether it may move a feed to a new address has to exclude
+     * that feed, or it concludes every move is a collision.
+     */
+    suspend fun findOtherSourceByUrl(url: URL, excludingId: Long): Feed? = withContext(jcc) {
+        feedsDao.loadAllFeeds().firstOrNull { it.id != excludingId && isSameFeedUrl(it.url, url) }
+    }
+
+    /**
+     * Writes a changed subscription back, reporting a clash rather than dying.
+     *
+     * `Feeds.url` is uniquely indexed and Room's `@Update` defaults to ABORT,
+     * so moving a feed onto an address another feed already holds threw
+     * SQLiteConstraintException straight out of a tap handler and took the
+     * process with it. That is reachable from ordinary use: "Feeds that
+     * stopped working" offers the address a site advertises, and a site's
+     * current feed is quite often one the reader is already subscribed to
+     * under a different entry.
+     *
+     * @return false if another subscription already holds that address, in
+     *   which case nothing was written. Callers that cannot meaningfully
+     *   react may ignore it; what none of them may do is crash.
+     */
+    suspend fun updateSource(feed: Feed, resync: Boolean = false): Boolean = withContext(jcc) {
+        if (!feedsDao.existsById(feed.id)) return@withContext false
+        // Asked first, so the ordinary case reports rather than relying on an
+        // exception to notice. The catch is the backstop for the race between
+        // this check and the write.
+        if (findOtherSourceByUrl(feed.url, feed.id) != null) return@withContext false
+        val written = runCatching { feedsDao.update(feed) }.getOrElse {
+            if (it is SQLiteConstraintException) return@withContext false else throw it
         }
+        if (written > 0) {
+            if (resync) requestFeedSync(feed.id)
+            if (feed.fullTextByDefault) scheduleFullTextParse()
+        }
+        true
     }
 
     fun getAllSourcesFlow(): Flow<List<Feed>> = feedsDao.getAllFeeds()

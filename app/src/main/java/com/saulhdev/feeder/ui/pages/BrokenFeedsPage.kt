@@ -49,6 +49,7 @@ import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.Check
+import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
 import com.saulhdev.feeder.viewmodels.Recovery
@@ -109,6 +110,7 @@ fun BrokenFeedsPage(
                     onLook = { viewModel.look(feed) },
                     onUse = { url -> scope.launch { viewModel.useNewAddress(feed, url) } },
                     onForget = { scope.launch { viewModel.forget(feed) } },
+                    onDelete = { scope.launch { viewModel.delete(feed) } },
                 )
             }
         }
@@ -122,6 +124,7 @@ private fun BrokenRow(
     onLook: () -> Unit,
     onUse: (String) -> Unit,
     onForget: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -189,6 +192,12 @@ private fun BrokenRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
+                Recovery.AlreadySubscribed -> Text(
+                    text = stringResource(R.string.broken_already_subscribed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 Recovery.NothingFound -> Column {
                     Text(
                         text = stringResource(R.string.broken_nothing),
@@ -211,6 +220,21 @@ private fun BrokenRow(
                     onClick = onLook,
                 )
             }
+
+            // On every row, not only on the ones that came back with nothing.
+            // A feed can be gone for reasons looking will not settle — the
+            // site is dead, the replacement is already subscribed to, or the
+            // reader has simply stopped wanting it — and until now the only
+            // way out was to leave this screen and hunt for the source in the
+            // main list.
+            Spacer(Modifier.height(10.dp))
+            OutlinedActionButton(
+                text = stringResource(R.string.broken_delete),
+                icon = Phosphor.TrashSimple,
+                positive = false,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDelete,
+            )
         }
     }
 }

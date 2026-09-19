@@ -43,6 +43,17 @@ sealed interface Recovery {
     /** The site still advertises the address already subscribed to. */
     data object Unchanged : Recovery
 
+    /**
+     * The address the site advertises belongs to a different subscription.
+     *
+     * Common rather than exotic: a feed goes quiet because the site moved it,
+     * and the address it moved to is one the reader already has under another
+     * entry. `Feeds.url` is unique, so this cannot be applied — and until it
+     * was reported, attempting it threw out of the tap handler and killed the
+     * app. The way out is to delete this one.
+     */
+    data object AlreadySubscribed : Recovery
+
     /** Nothing there. The site may be gone, and only the reader can judge that. */
     data object NothingFound : Recovery
 }
@@ -103,13 +114,28 @@ class BrokenFeedsViewModel(
      */
     suspend fun useNewAddress(feed: Feed, newUrl: String) {
         val url = runCatching { sloppyLinkToStrictURL(newUrl) }.getOrNull() ?: return
-        sources.updateSource(feed.copy(url = url), resync = true)
+        if (!sources.updateSource(feed.copy(url = url), resync = true)) {
+            set(feed.id, Recovery.AlreadySubscribed)
+            return
+        }
         sources.clearFailures(feed.id)
         set(feed.id, Recovery.Unchanged)
     }
 
     /** Stops asking about this one without unsubscribing from it. */
     suspend fun forget(feed: Feed) = sources.clearFailures(feed.id)
+
+    /**
+     * Unsubscribes, with its articles.
+     *
+     * The screen offered to find a feed a new home and to stop asking about
+     * it, and nothing else — so a feed that is simply gone, or one whose
+     * replacement is already subscribed to, could only be dealt with by
+     * leaving here and hunting for it in the sources list.
+     */
+    suspend fun delete(feed: Feed) {
+        sources.deleteFeed(feed.id)
+    }
 
     private fun set(id: Long, value: Recovery) {
         _recovery.value = _recovery.value + (id to value)
