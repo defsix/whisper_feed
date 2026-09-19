@@ -334,6 +334,20 @@ data class SourceEngagement(
 data class DayCount(val day: String, val seen: Int, val opened: Int)
 
 /**
+ * How often one source publishes, as the raw figures to derive it from.
+ *
+ * Deliberately not a rate: the division and every judgement about what to do
+ * with a source that has published twice live in Kotlin, where they can be
+ * argued with and tested, rather than inside a query.
+ */
+data class SourcePace(
+    val feedId: Long,
+    val articles: Int,
+    val newest: Long,
+    val oldest: Long,
+)
+
+/**
  * Time spent reading over a window.
  *
  * @param articles how many articles it is spread over — only those with time

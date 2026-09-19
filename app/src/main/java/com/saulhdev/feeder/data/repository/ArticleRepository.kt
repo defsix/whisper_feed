@@ -32,6 +32,7 @@ import com.saulhdev.feeder.data.db.models.HourCount
 import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
+import com.saulhdev.feeder.ui.overlay.sourcePaceHours
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -255,6 +256,15 @@ class ArticleRepository(db: NeoFeedDb) {
      * commute home has two peaks and a trough, and the trough is only visible
      * if the empty hours are drawn.
      */
+    /**
+     * How often each source publishes, in hours between articles.
+     *
+     * The arithmetic is in [sourcePaceHours] rather than the query, so what
+     * counts as too few articles to judge can be argued with in a test.
+     */
+    fun sourcePace(): Flow<Map<Long, Float>> =
+        articlesDao.sourcePace().map(::sourcePaceHours)
+
     /** Time spent inside articles over a window, and how many it covers. */
     fun readingTime(since: Long): Flow<ReadingTime> = articlesDao.readingTime(since)
 

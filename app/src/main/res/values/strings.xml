@@ -228,6 +228,7 @@
     <string name="why_fresh">Published in the last six hours</string>
     <string name="why_today">Published today</string>
     <string name="why_old">More than three days old</string>
+    <string name="why_fresh_for_source">New for this source</string>
     <string name="why_affinity">Your More / Less choices for this source</string>
     <string name="why_read_often">You read this source often</string>
     <string name="why_title_short">Very short headline</string>
@@ -242,7 +243,7 @@
     <string name="pref_breaking_news_summary">When several of your News sources cover the same story within a few hours, give it the largest card. Uses sources filed under a News category only.</string>
     <string name="why_breaking">Several sources are covering this story</string>
     <string name="pref_sticky_top">Hold it there while you scroll</string>
-    <string name="pref_sticky_top_summary">A pinned article, or a breaking story, stays at the top of the screen until you have scrolled a few articles past it.</string>
+    <string name="pref_sticky_top_summary">A pinned article stays at the top of the feed until you unpin it \u2014 for following a story as it develops. A breaking story is held there too, but lets go once you have scrolled a few articles past it.</string>
     <string name="empty_bookmarks">Nothing saved yet</string>
     <string name="empty_bookmarks_hint">Tap the save mark on any article and it is kept here, readable offline.</string>
     <string name="empty_no_sources">No sources yet</string>

@@ -33,6 +33,7 @@ import com.saulhdev.feeder.data.db.models.DayCount
 import com.saulhdev.feeder.data.db.models.HourCount
 import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.db.models.SourceEngagement
+import com.saulhdev.feeder.data.db.models.SourcePace
 import com.saulhdev.feeder.data.db.models.SourceReadCount
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
@@ -292,6 +293,27 @@ interface FeedArticleDao {
         """
     )
     fun readingTime(since: Long): Flow<ReadingTime>
+
+    /**
+     * How much ground each source's articles cover in time, and how many there
+     * are, which is everything needed to work out how often it publishes.
+     *
+     * Rows with no usable date are excluded rather than counted as 1970: a
+     * single one of those would stretch a source's span to fifty years and
+     * make everything it publishes look impossibly rare.
+     */
+    @Query(
+        """
+        SELECT feedId AS feedId,
+            COUNT(*) AS articles,
+            MAX(primarySortTime) AS newest,
+            MIN(primarySortTime) AS oldest
+        FROM Article
+        WHERE primarySortTime > 0
+        GROUP BY feedId
+        """
+    )
+    fun sourcePace(): Flow<List<SourcePace>>
 
     @Query("UPDATE Article SET readAt = 0 WHERE uuid IN (:ids)")
     suspend fun unmarkRead(ids: List<String>)

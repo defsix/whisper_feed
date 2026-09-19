@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.data.db.models.SourcePace
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.READ_DIM
 import org.koin.compose.koinInject
@@ -117,6 +118,66 @@ object ArticleWeight {
 
     /** How far back reading habits are counted. */
     const val HABIT_WINDOW_DAYS = 30L
+
+    /*
+     * Freshness measured against the source's own pace.
+     *
+     * The absolute curve below is right for news and wrong for everything
+     * else. It gives its largest step to the first two hours and turns
+     * negative after three days, which describes a wire service exactly and a
+     * weekly blog not at all: Hackaday, Quanta and most of what anybody
+     * actually subscribes to publish on a rhythm where three days old is the
+     * newest thing there is. Under the absolute curve alone those sources
+     * could not reach the hero band at any hour of any day, and a feed of them
+     * drew as a list of rows however well it scored on everything else.
+     *
+     * So freshness is asked twice — how old is this, and how old is this *for
+     * this source* — and the better answer wins. Taking the better rather than
+     * replacing the first is what makes this a lift for slow feeds instead of
+     * a demotion for fast ones: a wire story an hour old still scores what it
+     * always did.
+     */
+
+    /**
+     * The fastest a source is allowed to be considered.
+     *
+     * Without a floor, a firehose posting every few minutes would have a pace
+     * so short that an article an hour old was dozens of intervals stale, and
+     * the relative answer would start pulling news *down* — which is the
+     * opposite of the point. Two hours.
+     */
+    const val PACE_MIN_HOURS = 2f
+
+    /**
+     * And the slowest. A month between posts is treated as a week.
+     *
+     * A monthly publication would otherwise have a fortnight-old article
+     * scoring as brand new, and a feed surface that gives its biggest slot to
+     * something from a fortnight ago is not one anybody would trust — however
+     * defensible the arithmetic behind it.
+     */
+    const val PACE_MAX_HOURS = 168f
+
+    /**
+     * Past this, the relative answer cannot claim more than "today".
+     *
+     * The backstop on the whole idea. A slow source's newest article is worth
+     * promoting; it is not worth promoting *as breaking*, and three days is
+     * where the difference stops being arguable.
+     */
+    const val RELATIVE_CAP_HOURS = 72f
+
+    /** And past this it cannot claim anything at all. */
+    const val RELATIVE_STALE_HOURS = 168f
+
+    /**
+     * How many articles a source needs before its pace is worth estimating.
+     *
+     * Three, which is two intervals. One article gives no interval and two
+     * give a single gap that a public holiday would distort; below this the
+     * source simply has no relative answer and is scored the old way.
+     */
+    const val PACE_MIN_ARTICLES = 3
 
     /**
      * What having already read an article costs it.
@@ -266,6 +327,78 @@ object ArticleWeight {
 }
 
 /**
+ * Freshness on the clock, which is the right question for news.
+ *
+ * Unchanged from what this has always done, and still the only answer for a
+ * source whose pace is unknown.
+ */
+fun absoluteFreshness(ageHours: Float): Float = when {
+    ageHours < 2f  -> 1.2f
+    ageHours < 6f  -> 0.8f
+    ageHours < 24f -> 0.4f
+    ageHours < 72f -> 0f
+    else           -> -0.4f
+}
+
+/**
+ * Freshness measured in how many of this source's own intervals have passed.
+ *
+ * A post half an interval old is the newest thing that source has, whether
+ * that is twenty minutes on a wire or four days on a blog. Six intervals is
+ * old by the same reasoning.
+ *
+ * Returns null when there is nothing to say — no pace known — so the caller
+ * can tell "not fresh" from "no opinion", which matters because the two are
+ * combined by taking the better and null must not win.
+ */
+fun relativeFreshness(ageHours: Float, paceHours: Float?): Float? {
+    if (paceHours == null || paceHours <= 0f) return null
+    val pace = paceHours.coerceIn(ArticleWeight.PACE_MIN_HOURS, ArticleWeight.PACE_MAX_HOURS)
+    val intervals = ageHours / pace
+    val score = when {
+        intervals < 0.25f -> 1.2f
+        intervals < 0.75f -> 0.8f
+        intervals < 2f    -> 0.4f
+        intervals < 6f    -> 0f
+        else              -> -0.4f
+    }
+    // The backstops. However slow the source, the calendar still applies.
+    return when {
+        ageHours > ArticleWeight.RELATIVE_STALE_HOURS -> minOf(score, 0f)
+        ageHours > ArticleWeight.RELATIVE_CAP_HOURS   -> minOf(score, 0.4f)
+        else                                          -> score
+    }
+}
+
+/**
+ * The freshness term: the better of the two readings.
+ *
+ * Better rather than blended, and better rather than replaced. A blend would
+ * dilute both answers into one that is right for neither kind of source, and
+ * replacing the absolute answer would mark down the news feeds that the
+ * absolute answer was correct about all along.
+ */
+fun freshnessFor(ageHours: Float, paceHours: Float?): Float =
+    maxOf(absoluteFreshness(ageHours), relativeFreshness(ageHours, paceHours) ?: -Float.MAX_VALUE)
+
+/**
+ * How often each source publishes, in hours, from the spans the query returns.
+ *
+ * The mean interval, not the median: the median would mean carrying every
+ * timestamp out of the database to sort them, and the clamping either side of
+ * this makes the difference between the two academic. A source whose whole
+ * history arrived in one backfill has a span near zero and lands on the floor,
+ * which is the old behaviour and the right fallback.
+ */
+fun sourcePaceHours(rows: List<SourcePace>): Map<Long, Float> =
+    rows.mapNotNull { row ->
+        if (row.articles < ArticleWeight.PACE_MIN_ARTICLES) return@mapNotNull null
+        val span = (row.newest - row.oldest).coerceAtLeast(0L)
+        val gaps = (row.articles - 1).coerceAtLeast(1)
+        row.feedId to (span.toFloat() / gaps / 3_600_000f)
+    }.toMap()
+
+/**
  * The weight for one article.
  *
  * @param affinity "more like this" scores by source id, as recorded by the
@@ -280,21 +413,19 @@ fun articleWeight(
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
     clusters: Map<String, StoryCluster> = emptyMap(),
+    pace: Map<Long, Float> = emptyMap(),
 ): Float {
     if (item.article.imageUrl.isNullOrBlank()) return ArticleWeight.NO_IMAGE
 
     var weight = ArticleWeight.BASE
 
-    // Freshness. A news surface that gives its biggest slot to something from
-    // Tuesday is not a news surface.
+    // Freshness, asked both ways: how old is this, and how old is this for the
+    // source it came from. A news surface that gives its biggest slot to
+    // something from Tuesday is not a news surface — unless Tuesday is the
+    // last time that source published anything, which is the case the second
+    // reading exists for.
     val ageHours = ((nowMs - item.timeMillis).coerceAtLeast(0L)) / 3_600_000f
-    weight += when {
-        ageHours < 2f  -> 1.2f
-        ageHours < 6f  -> 0.8f
-        ageHours < 24f -> 0.4f
-        ageHours < 72f -> 0f
-        else           -> -0.4f
-    }
+    weight += freshnessFor(ageHours, pace[item.feed.id])
 
     // What the reader has said about the source, clamped so a dozen taps on
     // one source cannot make every one of its articles large for ever.
@@ -357,8 +488,9 @@ fun feedEmphasisFor(
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
     clusters: Map<String, StoryCluster> = emptyMap(),
+    pace: Map<Long, Float> = emptyMap(),
 ): List<FeedEmphasis> {
-    val weights = items.map { articleWeight(it, affinity, nowMs, habit, clusters) }
+    val weights = items.map { articleWeight(it, affinity, nowMs, habit, clusters, pace) }
     val sizes = MutableList(items.size) { FeedEmphasis.Small }
 
     var lastLarge = -ArticleWeight.LARGE_GAP - 1
@@ -424,6 +556,7 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     val affinity = remember(raw) { parseAffinity(raw) }
     val habit = rememberReadingHabits()
     val clusters = rememberStoryClusters(articles)
+    val pace = rememberSourcePace()
 
     // An article keeps the size it was first given. Without this the feed
     // reflows under the reader's finger: marking an article read subtracts
@@ -436,10 +569,10 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
     // rewrites the reading-habit counts and re-runs the clustering, so all
     // three inputs change identity at once and keying a cache on any of them
     // would defeat it.
-    return remember(articles, affinity, habit, clusters) {
+    return remember(articles, affinity, habit, clusters, pace) {
         FeedEmphasisMemory.settle(
             articles,
-            feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters),
+            feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters, pace),
         )
     }
 }
@@ -539,6 +672,22 @@ fun habitWindowStart(
     now: Long = System.currentTimeMillis(),
 ): Long = maxOf(now - ArticleWeight.HABIT_WINDOW_DAYS * 24 * 60 * 60 * 1000, resetAt)
 
+/**
+ * How often each subscribed source publishes, in hours between articles.
+ *
+ * Read once here and handed to both the sizing and the explanation, so the
+ * two cannot disagree about how quickly a source moves. Unwindowed on
+ * purpose: a slow source has few articles by definition, and asking only
+ * about the last month is how you conclude a quarterly journal publishes
+ * once ever.
+ */
+@Composable
+fun rememberSourcePace(): Map<Long, Float> {
+    val repo: ArticleRepository = koinInject()
+    val rows by remember { repo.sourcePace() }.collectAsState(initial = emptyMap())
+    return rows
+}
+
 @Composable
 fun rememberReadingHabits(): Map<Long, Float> {
     val repo: ArticleRepository = koinInject()
@@ -607,6 +756,7 @@ fun weightReasons(
     nowMs: Long,
     habit: Map<Long, Float> = emptyMap(),
     clusters: Map<String, StoryCluster> = emptyMap(),
+    pace: Map<Long, Float> = emptyMap(),
 ): List<WeightReason> {
     if (item.article.imageUrl.isNullOrBlank()) {
         return listOf(WeightReason(R.string.why_no_image, 0f))
@@ -623,11 +773,18 @@ fun weightReasons(
         }
     }
 
+    // The freshness line has to name which of the two readings actually won,
+    // or the explanation says "published today" beside a four-day-old article
+    // and reads as a bug in the app rather than a feature of the weighting.
     val ageHours = ((nowMs - item.timeMillis).coerceAtLeast(0L)) / 3_600_000f
-    when {
-        ageHours < 2f  -> reasons += WeightReason(R.string.why_very_fresh, 1.2f)
-        ageHours < 6f  -> reasons += WeightReason(R.string.why_fresh, 0.8f)
-        ageHours < 24f -> reasons += WeightReason(R.string.why_today, 0.4f)
+    val absolute = absoluteFreshness(ageHours)
+    val relative = relativeFreshness(ageHours, pace[item.feed.id])
+    if (relative != null && relative > absolute) {
+        reasons += WeightReason(R.string.why_fresh_for_source, relative)
+    } else when {
+        ageHours < 2f   -> reasons += WeightReason(R.string.why_very_fresh, 1.2f)
+        ageHours < 6f   -> reasons += WeightReason(R.string.why_fresh, 0.8f)
+        ageHours < 24f  -> reasons += WeightReason(R.string.why_today, 0.4f)
         ageHours >= 72f -> reasons += WeightReason(R.string.why_old, -0.4f)
     }
 
@@ -672,7 +829,8 @@ fun rememberWeightReasons(
     val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
     val affinity = remember(raw) { parseAffinity(raw) }
     val habit = rememberReadingHabits()
-    return remember(item.id, affinity, habit, clusters) {
-        weightReasons(item, affinity, System.currentTimeMillis(), habit, clusters)
+    val pace = rememberSourcePace()
+    return remember(item.id, affinity, habit, clusters, pace) {
+        weightReasons(item, affinity, System.currentTimeMillis(), habit, clusters, pace)
     }
 }
