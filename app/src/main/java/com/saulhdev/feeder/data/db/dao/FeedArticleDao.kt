@@ -150,6 +150,23 @@ interface FeedArticleDao {
     suspend fun markReadBatch(ids: List<String>, readAt: Long)
 
     /**
+     * The address of a recent article from this feed.
+     *
+     * The only record of *whose* feed it is when the feed's own address does
+     * not say. A FeedBurner or YouTube URL names the service, not the
+     * publication; an article's link names the publisher, because that is
+     * where the article lives.
+     */
+    @Query(
+        """
+        SELECT link FROM Article
+        WHERE feedId = :feedId AND link IS NOT NULL AND link != ''
+        ORDER BY primarySortTime DESC LIMIT 1
+        """
+    )
+    suspend fun latestArticleLink(feedId: Long): String?
+
+    /**
      * Records that an article was opened, the first time it is.
      *
      * `openedAt = 0` in the WHERE clause so a reopened article keeps the time

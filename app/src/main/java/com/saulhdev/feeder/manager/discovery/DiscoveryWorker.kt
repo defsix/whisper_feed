@@ -31,6 +31,7 @@ import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.utils.blobFile
 import com.saulhdev.feeder.utils.blobInputStream
+import com.saulhdev.feeder.utils.isFeedHost
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURLNoThrows
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,8 +87,18 @@ class DiscoveryWorker(
 
         // Everything already subscribed to, and everything already offered —
         // including what was refused, because saying no once should mean no.
+        // A hosted feed's own address names the service, not the publisher, so
+        // a FeedBurner subscription to Android Authority would register as
+        // "feedburner.com" and leave androidauthority.com looking unfollowed
+        // — and then be suggested, as a site the reader already reads. The
+        // articles know where they live even when the feed address does not.
         val subscribed = feeds.loadAllFeeds()
-            .mapNotNull { runCatching { it.url.host }.getOrNull() }
+            .flatMap { feed ->
+                val own = runCatching { feed.url.host }.getOrNull()
+                if (own != null && !isFeedHost(own)) return@flatMap listOf(own)
+                val link = articles.latestArticleLink(feed.id)
+                listOfNotNull(own, runCatching { URL(link ?: "").host }.getOrNull())
+            }
             .map(LinkHarvest::registrable)
             .toSet()
         val known = suggestions.knownHosts().map(LinkHarvest::registrable).toSet()

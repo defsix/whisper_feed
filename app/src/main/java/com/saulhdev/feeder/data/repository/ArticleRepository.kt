@@ -150,6 +150,11 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.markOpened(articleId, System.currentTimeMillis())
     }
 
+    /** Where a recent article from this feed actually lives; see the DAO. */
+    suspend fun publisherLink(feedId: Long): String? = withContext(jcc) {
+        articlesDao.latestArticleLink(feedId)
+    }
+
     /** Adds to an article's accumulated time on screen, up to [DWELL_CAP_MS]. */
     suspend fun addDwell(articleId: String, millis: Long) = withContext(jcc) {
         if (millis <= 0L) return@withContext

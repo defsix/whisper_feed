@@ -19,9 +19,11 @@ package com.saulhdev.feeder.viewmodels
 
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.bookmarks.FeedDiscovery
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
+import com.saulhdev.feeder.utils.isFeedHost
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,7 @@ sealed interface Recovery {
 class BrokenFeedsViewModel(
     private val sources: SourcesRepository,
     private val discovery: FeedDiscovery,
+    private val articles: ArticleRepository,
 ) : NeoViewModel() {
 
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
@@ -81,9 +84,12 @@ class BrokenFeedsViewModel(
      * head. Nobody looks, so nobody finds it.
      */
     fun look(feed: Feed) {
-        val host = runCatching { feed.url.host }.getOrNull() ?: return
         ioScope.launch {
             set(feed.id, Recovery.Looking)
+            val host = publisherHost(feed) ?: run {
+                set(feed.id, Recovery.NothingFound)
+                return@launch
+            }
             val found = discovery.discover(host.removePrefix("www."))
             set(
                 feed.id,
@@ -124,6 +130,27 @@ class BrokenFeedsViewModel(
 
     /** Stops asking about this one without unsubscribing from it. */
     suspend fun forget(feed: Feed) = sources.clearFailures(feed.id)
+
+    /**
+     * Whose feed this is, which its own address does not always say.
+     *
+     * A FeedBurner or YouTube address names the service. Asking
+     * `feeds.feedburner.com` where Hackaday's feed moved to gets FeedBurner's
+     * answer about FeedBurner — and the screen would then offer that as a
+     * replacement for a Hackaday subscription, which is worse than finding
+     * nothing. An article's link names the publisher, because that is where
+     * the article lives, so for those hosts this asks the articles instead.
+     *
+     * Null when a hosted feed has no stored article to learn from. Reported
+     * as nothing found, which is honest: there is no way to ask.
+     */
+    private suspend fun publisherHost(feed: Feed): String? {
+        val own = runCatching { feed.url.host }.getOrNull() ?: return null
+        if (!isFeedHost(own)) return own
+        val link = articles.publisherLink(feed.id) ?: return null
+        return runCatching { sloppyLinkToStrictURL(link).host }.getOrNull()
+            ?.takeUnless(::isFeedHost)
+    }
 
     /**
      * Unsubscribes, with its articles.

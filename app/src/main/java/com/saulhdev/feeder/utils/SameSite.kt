@@ -57,6 +57,43 @@ fun registrableDomain(host: String): String {
 }
 
 /**
+ * Domains that host other people's feeds.
+ *
+ * FeedBurner is the reason this exists. It is a feed *service*, not a
+ * publication: sixteen of the feeds in one ordinary subscription list sit
+ * behind `feeds.feedburner.com`, and they are TorrentFreak, PetaPixel,
+ * Hackaday and thirteen other unrelated things. Grouping by registrable
+ * domain would offer all sixteen as one another's duplicates, which is not a
+ * flawed suggestion so much as a flood that buries the real ones.
+ *
+ * YouTube is the same shape — three channel feeds share `youtube.com` and
+ * have nothing else in common — and so are the rest of these.
+ *
+ * A domain here contributes no grouping key at all, rather than a cleverer
+ * one. FeedBurner's identity lives in the path and YouTube's in a query
+ * parameter, so there is no single rule that extracts it; and leaving these
+ * feeds to be joined by title alone under-groups, which is the direction this
+ * screen is already built to fail in.
+ */
+private val FEED_HOSTS = setOf(
+    "feedburner.com", "feedburner.google.com", "feedproxy.google.com",
+    "youtube.com", "youtu.be",
+    "feedpress.me", "feedpress.com", "rss.app", "fetchrss.com",
+    "rsshub.app", "politepol.com", "feed43.com", "feedity.com",
+    "medium.com", "substack.com", "blogspot.com", "tumblr.com",
+    "wordpress.com", "livejournal.com", "typepad.com",
+    "reddit.com", "stackexchange.com", "github.com",
+)
+
+/**
+ * Whether a host merely carries somebody else's feed.
+ *
+ * Shared so that everything asking "which site is this feed from" agrees, and
+ * so that adding a service to the list fixes every one of them at once.
+ */
+fun isFeedHost(host: String): Boolean = registrableDomain(host) in FEED_HOSTS
+
+/**
  * Words too generic to mean two feeds are related.
  *
  * A title segment like "News" or "Blog" appears across unrelated
@@ -129,7 +166,13 @@ fun <T> sameSiteGroups(items: List<T>, url: (T) -> URL, title: (T) -> String): L
 
     val firstSeen = HashMap<String, Int>()
     items.forEachIndexed { i, item ->
-        val domain = runCatching { registrableDomain(url(item).host) }.getOrNull().orEmpty()
+        // Nothing from a feed service: see FEED_HOSTS. Sixteen publications
+        // behind one FeedBurner domain are sixteen publications.
+        val domain = runCatching { url(item).host }
+            .getOrNull()
+            ?.takeUnless(::isFeedHost)
+            ?.let(::registrableDomain)
+            .orEmpty()
         // Prefixed so a domain can never collide with a title that happens
         // to read the same once punctuation is stripped.
         val keys = buildList {

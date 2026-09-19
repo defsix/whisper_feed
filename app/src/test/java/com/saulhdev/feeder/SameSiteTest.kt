@@ -17,10 +17,12 @@
  */
 package com.saulhdev.feeder
 
+import com.saulhdev.feeder.utils.isFeedHost
 import com.saulhdev.feeder.utils.registrableDomain
 import com.saulhdev.feeder.utils.sameSiteGroups
 import com.saulhdev.feeder.utils.titleKeys
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.URL
@@ -145,22 +147,63 @@ class SameSiteTest {
     }
 
     /**
-     * FeedBurner hosts everybody. Two unrelated publications behind it share a
-     * domain and must not be offered as one another's duplicate.
+     * FeedBurner hosts everybody, so its domain identifies nobody.
+     *
+     * This used to group them, on the reasoning that a screen which suggests
+     * rather than acts can afford a bad suggestion. It cannot afford this
+     * one: sixteen of the feeds in one real subscription list sit behind
+     * feeds.feedburner.com, and offering all sixteen as one another's
+     * duplicates does not produce a flawed group so much as bury every
+     * genuine one underneath it.
      */
     @Test
-    fun `two unrelated feedburner feeds are grouped only by their shared host`() {
+    fun `unrelated feeds behind one feed service are not grouped`() {
+        assertTrue(
+            group(
+                F("Torrentfreak", "https://feeds.feedburner.com/Torrentfreak"),
+                F("PetaPixel", "https://feeds.feedburner.com/PetaPixel"),
+                F("Geeky Gadgets", "https://feeds.feedburner.com/geeky-gadgets"),
+            ).isEmpty()
+        )
+    }
+
+    /** YouTube is the same shape: one domain, unrelated channels. */
+    @Test
+    fun `unrelated youtube channel feeds are not grouped`() {
+        assertTrue(
+            group(
+                F("Associated Press", "https://www.youtube.com/feeds/videos.xml?channel_id=UC52"),
+                F("National Geographic", "https://www.youtube.com/feeds/videos.xml?channel_id=UCpV"),
+            ).isEmpty()
+        )
+    }
+
+    /**
+     * And the pairing that has to keep working: dropping the domain key for a
+     * feed service must not cost the one case the title key was added for.
+     */
+    @Test
+    fun `a feedburner alias still joins its own site through the title`() {
         val g = group(
-            F("Torrentfreak", "https://feeds.feedburner.com/Torrentfreak"),
+            F("Android Authority", "https://feeds.feedburner.com/androidauthority"),
+            F("Android Authority", "https://www.androidauthority.com/feed/"),
             F("PetaPixel", "https://feeds.feedburner.com/PetaPixel"),
         )
-        // They do land together — the domain is genuinely the same — which is
-        // precisely why this screen suggests rather than acts.
         assertEquals(1, g.size)
+        assertEquals(2, g.first().size)
     }
 
     @Test
     fun `a lone feed is never a group`() {
         assertTrue(group(F("Only one", "https://example.com/feed")).isEmpty())
+    }
+
+    @Test
+    fun `a feed service is recognised however it is spelled`() {
+        assertTrue(isFeedHost("feeds.feedburner.com"))
+        assertTrue(isFeedHost("feeds2.feedburner.com"))
+        assertTrue(isFeedHost("www.youtube.com"))
+        assertFalse(isFeedHost("www.androidauthority.com"))
+        assertFalse(isFeedHost("feeds.arstechnica.com"))
     }
 }
