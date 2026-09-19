@@ -31,6 +31,7 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import androidx.compose.ui.platform.LocalDensity
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.overlay.FeedScaffold
+import com.saulhdev.feeder.ui.overlay.gateLog
 import com.saulhdev.feeder.ui.overlay.LocalFeedVisible
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
@@ -504,8 +505,14 @@ class OverlayView(val context: Context) :
     }
 
     override fun setState(newState: PanelState) {
+        val was = panelState
         super.setState(newState)
         panelVisible.value = newState != PanelState.CLOSED
+        // The other half of the read-on-scroll gate, under the same tag as
+        // ReadOnScroll's own trace. If a launcher never calls this, that gate
+        // is stuck shut and the tracker silently does nothing — which a
+        // diagnostics report with no panel lines in it says plainly.
+        if (debugLogging) gateLog("panel $was -> $newState")
     }
 
     override fun onScroll(f: Float) {

@@ -385,13 +385,27 @@ fun rememberStoryClusters(articles: List<FeedItem>): Map<String, StoryCluster> {
  * Normalised rather than absolute so the term means the same thing to someone
  * who reads four articles a week and someone who reads four hundred.
  */
+/**
+ * Where the habit window starts, given the last "Forget everything".
+ *
+ * The plain thirty days, unless the reader reset more recently than that — in
+ * which case counting starts at the reset. Shared so the feed's ordering and
+ * the Learned screen cannot disagree about which articles are being counted.
+ */
+fun habitWindowStart(
+    resetAt: Long,
+    now: Long = System.currentTimeMillis(),
+): Long = maxOf(now - ArticleWeight.HABIT_WINDOW_DAYS * 24 * 60 * 60 * 1000, resetAt)
+
 @Composable
 fun rememberReadingHabits(): Map<Long, Float> {
     val repo: ArticleRepository = koinInject()
-    val since = remember {
-        System.currentTimeMillis() -
-                ArticleWeight.HABIT_WINDOW_DAYS * 24 * 60 * 60 * 1000
-    }
+    val prefs: FeedPreferences = koinInject()
+    // The feed has to agree with the Learned screen about what the counts are,
+    // including after a reset — otherwise "Forget everything" empties that
+    // screen while the ordering carries on using what it cleared.
+    val resetAt by prefs.learnedResetAt.get().collectAsState(initial = 0L)
+    val since = remember(resetAt) { habitWindowStart(resetAt) }
     val counts by remember(since) { repo.readsPerSource(since) }
         .collectAsState(initial = emptyMap())
     return remember(counts) {

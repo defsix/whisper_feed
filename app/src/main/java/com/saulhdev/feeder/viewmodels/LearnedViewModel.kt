@@ -22,12 +22,15 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
+import com.saulhdev.feeder.ui.overlay.habitWindowStart
 import com.saulhdev.feeder.ui.overlay.parseAffinity
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -64,6 +67,7 @@ data class LearnedSource(
  * reader can check against their own memory, which is the point — a score
  * nobody can audit is one nobody can correct.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LearnedViewModel(
     private val articleRepo: ArticleRepository,
     private val sourcesRepo: SourcesRepository,
@@ -71,14 +75,15 @@ class LearnedViewModel(
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
 
-    private val since = System.currentTimeMillis() -
-            ArticleWeight.HABIT_WINDOW_DAYS * 24 * 60 * 60 * 1000
-
     val sources: StateFlow<List<LearnedSource>> = combine(
         sourcesRepo.getAllSourcesFlow(),
         prefs.sourceAffinity.get(),
         prefs.hiddenSources.get(),
-        articleRepo.readsPerSource(since),
+        // Re-reads on every reset, so the screen empties as soon as the button
+        // is pressed rather than at the next time the page is opened.
+        prefs.learnedResetAt.get().flatMapLatest { resetAt ->
+            articleRepo.readsPerSource(habitWindowStart(resetAt))
+        },
     ) { feeds, affinityRaw, hidden, reads ->
         val affinity = parseAffinity(affinityRaw)
         val most = reads.values.maxOrNull()?.takeIf { it > 0 }
@@ -128,12 +133,20 @@ class LearnedViewModel(
      * Read state is deliberately not cleared. It is a record of what happened
      * rather than an opinion about it — clearing it would mark a year of read
      * articles unread, which is not what "forget what you have learned" means
-     * to anyone who presses it.
+     * to anyone who presses it. What is cleared is the *use* made of it: the
+     * habit window restarts from now, so the counts this screen shows go to
+     * zero and the weight they carried goes with them.
      */
     fun resetAll() {
         ioScope.launch {
             prefs.sourceAffinity.setValue(emptySet())
             prefs.hiddenSources.setValue(emptySet())
+            // Without this the button cleared the smaller half of what the
+            // screen shows and left the larger one: every source kept its read
+            // count and most of its weight, so "Forget everything" visibly did
+            // not. See FeedPreferences.learnedResetAt for why the counts are
+            // restarted rather than the articles unmarked.
+            prefs.learnedResetAt.setValue(System.currentTimeMillis())
         }
     }
 }

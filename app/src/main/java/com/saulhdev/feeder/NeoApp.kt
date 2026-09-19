@@ -24,6 +24,7 @@ import com.saulhdev.feeder.manager.glance.GlanceStateHolder
 import com.saulhdev.feeder.manager.glance.WeatherRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.bookmarks.FeedDiscovery
+import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.mastodon.MastodonApi
 import com.saulhdev.feeder.manager.mastodon.MastodonAuth
@@ -103,6 +104,14 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         singleOf(::MastodonStorage)
         singleOf(::MastodonAuth)
         singleOf(::MastodonApi)
+        // Two things resolve this from Koin — FeedDiscovery and
+        // DiscoveryWorker — and nothing ever registered it, so "Feeds that
+        // stopped working" crashed the app the moment it was opened and the
+        // suggestion worker threw on every run. A singleton rather than a
+        // factory because each instance builds its own OkHttpClient, with its
+        // own connection and thread pools, for a class that holds no other
+        // state.
+        singleOf(::FeedParser)
         singleOf(::FeedDiscovery)
         single { SyncAccount(this@NeoApp) }
         single { BackupStore(this@NeoApp, get(), get()) }

@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -809,6 +810,25 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * start anyway so that the menu entries do something real from the day they
      * appear, rather than being two buttons that lie until the ranking arrives.
      */
+    /**
+     * When the reader last pressed "Forget everything", in epoch millis.
+     *
+     * Read counts are the other half of what the Learned screen shows, and the
+     * larger half — they carry ArticleWeight.HABIT_MAX, where More/Less
+     * carries 0.35 at full tilt. Clearing them by unmarking articles is not an
+     * option: read state is a record of what happened, and "forget what you
+     * have learned" does not mean "mark a month of articles unread". So the
+     * habit window starts here instead. Nothing is deleted; the counting
+     * simply begins again, and the articles stay read.
+     *
+     * 0 means never reset, which leaves the plain 30-day window in force.
+     */
+    var learnedResetAt = LongPref(
+        key = LEARNED_RESET_AT,
+        dataStore = dataStore,
+        defaultValue = 0L,
+    )
+
     var sourceAffinity = StringSetPref(
         titleId = R.string.title_sources,
         icon = Phosphor.Info,
@@ -970,6 +990,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         // Filter & Sort
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
         val HIDDEN_SOURCES = stringSetPreferencesKey("pref_hidden_sources")
+val LEARNED_RESET_AT = longPreferencesKey("pref_learned_reset_at")
         val SOURCE_AFFINITY = stringSetPreferencesKey("pref_source_affinity")
         val FILTER_TAGS = stringSetPreferencesKey("filter_tags")
         val FILTER_SORT = stringPreferencesKey("filter_sorting")

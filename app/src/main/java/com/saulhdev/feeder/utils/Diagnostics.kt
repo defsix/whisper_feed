@@ -141,7 +141,10 @@ object Diagnostics : KoinComponent {
      */
     private fun readOwnLogcat(): String = runCatching {
         val process = Runtime.getRuntime().exec(
-            arrayOf("logcat", "-d", "-v", "time", "-t", LOG_LINE_LIMIT.toString())
+            // "*:V" explicitly, rather than relying on the default filter:
+            // the gate trace and anything else written at DEBUG is the point
+            // of reading this at all, and a default of *:I would drop it.
+            arrayOf("logcat", "-d", "-v", "time", "-t", LOG_LINE_LIMIT.toString(), "*:V")
         )
         process.inputStream.bufferedReader().use { it.readText() }
             .ifBlank { "(no log entries)" }

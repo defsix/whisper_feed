@@ -287,13 +287,13 @@
     <string name="pref_learned">What Whisper has learned</string>
     <string name="pref_learned_summary">Every score the feed reads from your own behaviour, and the way to undo any of it.</string>
     <string name="learned_explanation">Nothing here is guessed. These are counts of what you have pressed and opened, and the effect each one has on how prominently a source appears. None of it leaves your phone.</string>
-    <string name="learned_detail">More/Less score %1$d · %2$d read in 30 days</string>
+    <string name="learned_detail">More/Less score %1$d · %2$d reads counted</string>
     <string name="learned_nudge">Weight: %1$+.2f</string>
     <string name="learned_forget">Forget this source\'s score</string>
     <string name="learned_unhide">Show this source again</string>
     <string name="learned_reset_all">Forget everything</string>
     <string name="covered_by_sources">Covered by %1$d sources</string>
-    <string name="learned_reset_all_desc">Clears every More/Less score and shows any hidden sources again. Your subscriptions, saved articles and read history are not touched.</string>
+    <string name="learned_reset_all_desc">Clears every More/Less score, restarts the reading counts from zero, and shows any hidden sources again. Your subscriptions, saved articles and what you have already read are not touched.</string>
     <string name="pref_mark_all_read">Mark everything as read</string>
     <string name="pref_mark_all_read_summary">Clears the unread count. The feed offers it back until you leave it.</string>
     <string name="pref_mark_read_on_scroll">Mark as read while scrolling</string>

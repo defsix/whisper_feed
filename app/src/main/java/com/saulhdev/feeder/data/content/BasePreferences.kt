@@ -68,6 +68,22 @@ class StringSetPref(
     val onClick: (() -> Unit)? = null,
 ) : PrefDelegate<Set<String>>(titleId, summaryId, dataStore, key, defaultValue)
 
+/**
+ * A stored number with no settings row of its own.
+ *
+ * [titleId] and [icon] are required by [PrefDelegate] for preferences the
+ * settings screen renders; this is for values the app keeps but never shows,
+ * so they default to something harmless rather than making every caller
+ * invent one.
+ */
+class LongPref(
+    @StringRes titleId: Int = -1,
+    @StringRes summaryId: Int = -1,
+    val key: Preferences.Key<Long>,
+    val dataStore: DataStore<Preferences>,
+    val defaultValue: Long = 0L,
+) : PrefDelegate<Long>(titleId, summaryId, dataStore, key, defaultValue)
+
 class BooleanPref(
     @StringRes titleId: Int,
     @StringRes summaryId: Int = -1,

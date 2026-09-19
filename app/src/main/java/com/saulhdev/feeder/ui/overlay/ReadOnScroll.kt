@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.ui.overlay
 
+import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.Composable
@@ -64,6 +65,28 @@ private const val VISIBLE_ENOUGH = 0.6f
  * whole story.
  */
 val LocalFeedVisible = compositionLocalOf { true }
+
+/**
+ * Tag for the debug trace, shared with [OverlayView]'s panel-state line so one
+ * grep of a diagnostics report shows both halves of the gate in order.
+ */
+private const val GATE_TAG = "ReadGate"
+
+/**
+ * Writes one line of the gate's trace.
+ *
+ * Deliberately not `Log.d`. Preview and release are both minified, and
+ * proguard-rules.pro strips `Log.d`/`v`/`i` outright — so a trace written with
+ * it exists only in a debug build, which is the one build where the question
+ * this answers cannot come up. `println` is not on that list and logs at the
+ * same DEBUG priority.
+ *
+ * Callers gate this on the Debugging preference; nothing is written unless the
+ * reader has turned it on.
+ */
+internal fun gateLog(message: String) {
+    Log.println(Log.DEBUG, GATE_TAG, message)
+}
 
 /**
  * Marks an article read once it has been on screen long enough.
@@ -116,6 +139,10 @@ fun MarkReadWhileScrolling(
     val setting by prefs.markReadOnScroll.asState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val feedVisible = LocalFeedVisible.current
+    // Read from the cache rather than the datastore. This is a diagnostic, and
+    // blocking composition on a disk read to decide whether to write a log line
+    // would cost more than the line is worth.
+    val trace = remember { prefs.debugging.peekOrDefault() }
     // Below a quarter of a second means off: the slider's own bottom stop,
     // and anything shorter would fire during a fling anyway.
     val thresholdMs = remember(setting) { if (setting < 0.25f) 0L else (setting * 1000).toLong() }
@@ -127,7 +154,10 @@ fun MarkReadWhileScrolling(
     if (thresholdMs <= 0L) return
 
     LaunchedEffect(thresholdMs, isGrid, articles, lifecycleOwner, feedVisible) {
-        if (!feedVisible) return@LaunchedEffect
+        if (!feedVisible) {
+            if (trace) gateLog("panel not visible — tracker idle")
+            return@LaunchedEffect
+        }
 
         // Looked up by the key the list was given rather than by layout
         // position. The two are not the same and were being treated as such:
@@ -151,46 +181,91 @@ fun MarkReadWhileScrolling(
         // which matches what the feed already does with an article scrolled
         // away before its threshold: a glance is a glance.
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            while (true) {
-                delay(TICK_MS)
-                val visible = visibleEnoughKeys(isGrid, listState, gridState)
-                val onScreen = visibleKeys(isGrid, listState, gridState)
-                val ids = HashSet<String>(visible.size)
-
-                visible.forEach { id ->
-                    val item = byId[id] ?: return@forEach
-                    ids += id
-                    if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
-
-                    val soFar = (dwell[id] ?: 0L) + TICK_MS
-                    dwell[id] = soFar
-                    if (soFar >= thresholdMs) {
-                        // Not marked yet. It has been looked at long enough to
-                        // count, and now has to be left behind before it counts.
-                        dwell -= id
-                        ready[id] = position[id] ?: return@forEach
-                    }
-                }
-
-                // Anything above everything still on screen has been passed.
-                // Non-article keys — a sticky header, the glance row, the chips —
-                // simply have no position and drop out of the comparison.
-                val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
-                passedIds(ready, topmost).forEach { id ->
-                    ready -= id
-                    marked += id
-                    byId[id]?.let(onRead)
-                }
-
-                // An article scrolled away before the threshold starts again next
-                // time it comes past. A glance is a glance, however many of them.
-                // Anything in `ready` keeps what it earned: leaving through the
-                // bottom means the reader scrolled back up, not that they passed
-                // it, and making them dwell on it twice would be a strange thing
-                // to ask.
-                dwell.keys.retainAll(ids)
+            if (trace) {
+                gateLog("running: ${articles.size} articles, threshold ${thresholdMs}ms")
+            }
+            // A cancelled loop leaves through here, so the stop is logged in
+            // the same place as the start rather than inferred from its absence.
+            try {
+                tick(
+                    trace = trace,
+                    thresholdMs = thresholdMs,
+                    isGrid = isGrid,
+                    listState = listState,
+                    gridState = gridState,
+                    byId = byId,
+                    position = position,
+                    dwell = dwell,
+                    ready = ready,
+                    marked = marked,
+                    onRead = onRead,
+                )
+            } finally {
+                if (trace) gateLog("stopped: left the feed")
             }
         }
+    }
+}
+
+/**
+ * The tick loop, lifted out of [MarkReadWhileScrolling] only so that starting
+ * and stopping it reads as one statement at the call site.
+ */
+private suspend fun tick(
+    trace: Boolean,
+    thresholdMs: Long,
+    isGrid: Boolean,
+    listState: LazyListState,
+    gridState: LazyStaggeredGridState,
+    byId: Map<String, FeedItem>,
+    position: Map<String, Int>,
+    dwell: MutableMap<String, Long>,
+    ready: MutableMap<String, Int>,
+    marked: MutableSet<String>,
+    onRead: (FeedItem) -> Unit,
+) {
+    while (true) {
+        delay(TICK_MS)
+        val visible = visibleEnoughKeys(isGrid, listState, gridState)
+        val onScreen = visibleKeys(isGrid, listState, gridState)
+        val ids = HashSet<String>(visible.size)
+
+        visible.forEach { id ->
+            val item = byId[id] ?: return@forEach
+            ids += id
+            if (id in marked || id in ready || item.article.readAt != 0L) return@forEach
+
+            val soFar = (dwell[id] ?: 0L) + TICK_MS
+            dwell[id] = soFar
+            if (soFar >= thresholdMs) {
+                // Not marked yet. It has been looked at long enough to
+                // count, and now has to be left behind before it counts.
+                dwell -= id
+                ready[id] = position[id] ?: return@forEach
+            }
+        }
+
+        // Anything above everything still on screen has been passed.
+        // Non-article keys — a sticky header, the glance row, the chips —
+        // simply have no position and drop out of the comparison.
+        val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
+        passedIds(ready, topmost).forEach { id ->
+            ready -= id
+            marked += id
+            val item = byId[id] ?: return@forEach
+            if (trace) {
+                gateLog("marked: ${item.contentTitle.take(60)}")
+            }
+            onRead(item)
+        }
+
+        // An article scrolled away before the threshold starts again next
+        // time it comes past. A glance is a glance, however many of them.
+        // Anything in `ready` keeps what it earned: leaving through the
+        // bottom means the reader scrolled back up, not that they passed
+        // it, and making them dwell on it twice would be a strange thing
+        // to ask.
+        dwell.keys.retainAll(ids)
     }
 }
 

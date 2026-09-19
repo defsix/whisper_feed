@@ -6,6 +6,7 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
 import com.saulhdev.feeder.ui.overlay.FeedEmphasis
 import com.saulhdev.feeder.ui.overlay.articleWeight
+import com.saulhdev.feeder.ui.overlay.habitWindowStart
 import com.saulhdev.feeder.ui.overlay.feedEmphasisFor
 import com.saulhdev.feeder.ui.overlay.parseAffinity
 import org.junit.Assert.assertEquals
@@ -269,5 +270,40 @@ class FeedEmphasisMemoryTest {
             listOf(FeedEmphasis.Medium),
             FeedEmphasisMemory.settle(listOf(a), emptyList()),
         )
+    }
+}
+
+/**
+ * The habit window, which "Forget everything" moves.
+ *
+ * The button used to clear only the More/Less scores, leaving every source its
+ * read count and most of its weight — so the screen still showed non-zero
+ * weights immediately after being told to forget everything.
+ */
+class HabitWindowTest {
+
+    private val day = 24 * 60 * 60 * 1000L
+    private val thirtyDays = ArticleWeight.HABIT_WINDOW_DAYS * day
+
+    @Test
+    fun `never reset means the plain thirty day window`() {
+        assertEquals(NOW - thirtyDays, habitWindowStart(resetAt = 0L, now = NOW))
+    }
+
+    @Test
+    fun `a recent reset starts the count there`() {
+        val yesterday = NOW - day
+        assertEquals(yesterday, habitWindowStart(resetAt = yesterday, now = NOW))
+    }
+
+    @Test
+    fun `a reset just now counts nothing before it`() {
+        assertEquals(NOW, habitWindowStart(resetAt = NOW, now = NOW))
+    }
+
+    @Test
+    fun `a reset older than the window does not widen it`() {
+        val longAgo = NOW - 400 * day
+        assertEquals(NOW - thirtyDays, habitWindowStart(resetAt = longAgo, now = NOW))
     }
 }
