@@ -17,7 +17,6 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.net.toUri
 import com.google.android.material.color.DynamicColors
-import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.utils.isViewable
@@ -37,13 +36,6 @@ interface ToastMaker {
 
 fun Context.makeToast(text: String) {
     Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-}
-
-fun Context.restartApp() {
-    val intent = Intent(this, MainActivity::class.java)
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-    startActivity(intent)
-    exitProcess(0)
 }
 
 private fun Context.restartFeed() {

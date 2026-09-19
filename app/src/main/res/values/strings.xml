@@ -168,8 +168,6 @@
     <string name="pref_syscolors">Use system wallpaper colors</string>
     <string name="pref_syscolors_desc">instead of \"Launcher:\" options</string>
     <string name="pref_syscolors_disabled">Requires Android 8.1 or newer</string>
-    <string name="action_reload">Reload</string>
-    <string name="action_restart">Restart app</string>
     <string name="pm_empty">No sources installed</string>
     <string name="pm_desc">HomeFeeder uses them to display data</string>
     <string name="add_feed_category">File it under</string>

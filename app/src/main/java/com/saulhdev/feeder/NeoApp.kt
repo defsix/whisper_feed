@@ -21,7 +21,6 @@ import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.service.OverlayBridge
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.MainThreadWatch
-import com.saulhdev.feeder.utils.extensions.restartApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
@@ -139,14 +138,6 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
     override fun onTerminate() {
         super.onTerminate()
         GlobalContext.get().close()
-    }
-
-    fun restart(recreate: Boolean = false) {
-        if (recreate) {
-            activityHandler.finishAll(true)
-        } else {
-            restartApp()
-        }
     }
 
     companion object {

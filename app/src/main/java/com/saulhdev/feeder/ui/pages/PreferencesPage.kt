@@ -63,9 +63,7 @@ import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Row
 import com.saulhdev.feeder.NeoApp
-import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.components.ActionButton
-import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
@@ -84,7 +82,6 @@ fun PreferencesPage(
     val scope = rememberCoroutineScope()
     val navController = LocalNavController.current
     val backupStoppedAt by prefs.backupStoppedAt.get().collectAsState(initial = 0L)
-    val syncClient: SyncRestClient = koinInject()
     val title = stringResource(id = R.string.title_settings)
     // The row acts on the feed, which lives in a view model this screen does
     // not otherwise touch; see FeedPreferences.markEverythingRead.
@@ -238,30 +235,6 @@ fun PreferencesPage(
                             )
                         }
                     }
-                }
-            }
-
-            // Reload and Restart, which used to be in the feed's overflow
-            // menu. They are actions rather than settings, so they are buttons
-            // at the top rather than rows in a group pretending to be
-            // preferences.
-            item(key = "actions") {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    OutlinedActionButton(
-                        text = stringResource(R.string.action_reload),
-                        icon = Phosphor.ArrowCounterClockwise,
-                        modifier = Modifier.weight(1f),
-                        onClick = { scope.launch { syncClient.syncAllFeeds() } },
-                    )
-                    OutlinedActionButton(
-                        text = stringResource(R.string.action_restart),
-                        icon = Phosphor.Power,
-                        modifier = Modifier.weight(1f),
-                        onClick = { NeoApp.instance?.restart(false) },
-                    )
                 }
             }
 

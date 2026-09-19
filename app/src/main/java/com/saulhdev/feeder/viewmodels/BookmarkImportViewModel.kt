@@ -21,7 +21,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.utils.isFeedHost
 import com.saulhdev.feeder.manager.bookmarks.BookmarkFile
 import com.saulhdev.feeder.manager.bookmarks.BookmarkFolder
 import com.saulhdev.feeder.manager.bookmarks.DiscoveredFeed
@@ -50,6 +52,7 @@ sealed interface ImportStage {
 class BookmarkImportViewModel(
     private val sources: SourcesRepository,
     private val discovery: FeedDiscovery,
+    private val articles: ArticleRepository,
 ) : NeoViewModel() {
 
     private val _stage = MutableStateFlow<ImportStage>(ImportStage.PickFile)
@@ -106,8 +109,19 @@ class BookmarkImportViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _stage.value = ImportStage.Scanning(0, 0)
 
+            // A hosted feed's address names the service, not the publisher, so
+            // a FeedBurner subscription to Android Authority registered as
+            // "feeds.feedburner.com" and left androidauthority.com looking
+            // unfollowed — which this then helpfully offered to add again.
+            // The articles know where they live; see isFeedHost.
             val subscribed = sources.getAllSources()
-                .mapNotNull { runCatching { it.url.host?.lowercase()?.removePrefix("www.") }.getOrNull() }
+                .flatMap { feed ->
+                    val own = runCatching { feed.url.host }.getOrNull()
+                    if (own != null && !isFeedHost(own)) return@flatMap listOf(own)
+                    val link = articles.publisherLink(feed.id)
+                    listOfNotNull(own, runCatching { URL(link ?: "").host }.getOrNull())
+                }
+                .map { it.lowercase().removePrefix("www.") }
                 .toSet()
 
             // Site to folder, so a feed found can be filed where its bookmark
