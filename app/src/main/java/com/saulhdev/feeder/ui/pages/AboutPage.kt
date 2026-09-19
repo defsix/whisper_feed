@@ -78,6 +78,9 @@ import com.saulhdev.feeder.ui.components.PagePreference
 import com.saulhdev.feeder.ui.components.PreferenceGroupHeading
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.Browser
+import com.saulhdev.feeder.ui.icons.phosphor.Info
+import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.GithubLogo
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
@@ -163,6 +166,16 @@ fun AboutPage() {
                                 )
                                 Text(
                                     text = BuildConfig.APPLICATION_ID,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                // Who is answerable for the app, which until
+                                // now appeared nowhere in it. The contributor
+                                // rows below name the people who wrote it;
+                                // this names the party the privacy notice
+                                // makes the data controller.
+                                Text(
+                                    text = stringResource(id = R.string.about_publisher),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -285,6 +298,27 @@ private val links = listOf(
         icon = Phosphor.GithubLogo,
         labelResId = R.string.about_source_code,
         url = "https://github.com/defsix/whisper_feed"
+    ),
+    // The app had no route to either of these at all: a reader who wanted to
+    // know what Whisper does with their reading had to find the repository
+    // and go looking. They lead the rest of the row for that reason, and
+    // point at the files in the repository rather than a copy on a website,
+    // so the text cannot drift from the version the source was checked
+    // against.
+    Link(
+        icon = Phosphor.EyeSlash,
+        labelResId = R.string.about_privacy,
+        url = "https://github.com/defsix/whisper_feed/blob/main/PRIVACY.md"
+    ),
+    Link(
+        icon = Phosphor.Info,
+        labelResId = R.string.about_disclaimer,
+        url = "https://github.com/defsix/whisper_feed/blob/main/DISCLAIMER.md"
+    ),
+    Link(
+        icon = Phosphor.Browser,
+        labelResId = R.string.about_website,
+        url = "https://nyancatlabs.com"
     ),
     Link(
         icon = Phosphor.GithubLogo,

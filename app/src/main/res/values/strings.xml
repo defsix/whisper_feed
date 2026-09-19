@@ -97,6 +97,10 @@
     <string name="about_open_source">Open Source Libraries</string>
     <string name="pref_tg">Telegram channel</string>
     <string name="about_source_code">Source code</string>
+    <string name="about_privacy">Privacy</string>
+    <string name="about_disclaimer">Disclaimer</string>
+    <string name="about_publisher">Published by Nyancat Labs</string>
+    <string name="about_website">nyancatlabs.com</string>
     <string name="about_upstream">Neo Feed on GitHub</string>
     <string name="about_origin">HomeFeeder on GitHub</string>
     <string name="about_support">Support Whisper</string>
