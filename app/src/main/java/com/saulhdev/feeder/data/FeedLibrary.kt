@@ -1,0 +1,158 @@
+/*
+ * This file is part of Whisper
+ * Copyright (c) 2026   Whisper contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+package com.saulhdev.feeder.data
+
+import android.content.Context
+import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.manager.models.xmlSafe
+import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.xml.sax.Attributes
+import org.xml.sax.InputSource
+import org.xml.sax.helpers.DefaultHandler
+import javax.xml.parsers.SAXParserFactory
+
+/** One bundled collection: a topic like Photography, or a country like Ireland. */
+data class LibraryPack(
+    val slug: String,
+    val name: String,
+    /** "topic" or "country", which is the only grouping the screen needs. */
+    val kind: String,
+    val count: Int,
+)
+
+/** One feed inside a pack. */
+data class LibraryFeed(
+    val title: String,
+    val url: String,
+    /** The pack's own grouping, which becomes the category if it is subscribed. */
+    val category: String,
+)
+
+/**
+ * A directory of feeds to browse, bundled with the app.
+ *
+ * Whisper can already add a feed by address, import OPML, read a browser's
+ * bookmarks and notice what the reader's own articles link to. What it could
+ * not do was answer "what is there?" for somebody who does not already know —
+ * which is the question a reader has on their first day and never again.
+ *
+ * **Bundled, not fetched, and for the same reason the starter list is.** A
+ * directory served over the network would mean the app asking somewhere what
+ * feeds exist, and a query like "photography" or "Irish politics" says quite a
+ * lot about a person. The privacy notice lists exactly one developer-initiated
+ * third-party call, and a feed catalogue is not worth making it two.
+ *
+ * The contents come from plenaryapp/awesome-rss-feeds, which is CC0 — public
+ * domain, no attribution required, no licence friction with GPL-3.0. Every
+ * address was fetched and parsed before it shipped, and the ones that no
+ * longer serve a feed were dropped rather than passed on; see
+ * docs/FEED_LIBRARY.md for what that removed and what it could not check.
+ */
+object FeedLibrary {
+
+    private const val DIR = "library"
+
+    /** The packs, in the order the manifest lists them. */
+    suspend fun packs(context: Context): List<LibraryPack> = withContext(Dispatchers.IO) {
+        val json = runCatching {
+            context.assets.open("$DIR/index.json").bufferedReader().use { it.readText() }
+        }.getOrNull() ?: return@withContext emptyList()
+
+        runCatching {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val o = array.getJSONObject(i)
+                LibraryPack(
+                    slug = o.getString("slug"),
+                    name = o.getString("name"),
+                    kind = o.getString("kind"),
+                    count = o.getInt("count"),
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * The feeds in one pack.
+     *
+     * Read through the same ampersand fixer the importer uses. The files here
+     * were repaired before bundling, so this is belt and braces — but the
+     * alternative is two parsers with different tolerances, and the one that
+     * gets exercised least is the one that breaks quietly.
+     */
+    suspend fun feeds(context: Context, pack: LibraryPack): List<LibraryFeed> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val handler = PackHandler()
+                context.assets.open("$DIR/${pack.slug}.opml").use { stream ->
+                    SAXParserFactory.newInstance().newSAXParser()
+                        .parse(InputSource(xmlSafe(stream)), handler)
+                }
+                handler.feeds
+            }.getOrDefault(emptyList())
+        }
+
+    /**
+     * Subscribes to the chosen feeds, skipping any already followed.
+     *
+     * Deliberately the same shape as StarterSources.subscribe: description and
+     * icon are left for the first sync to fill in from the feed itself, rather
+     * than shipping somebody else's guess at both.
+     */
+    suspend fun subscribe(
+        repository: SourcesRepository,
+        chosen: Collection<LibraryFeed>,
+    ): Int {
+        var added = 0
+        chosen.forEach { feed ->
+            val url = runCatching { sloppyLinkToStrictURL(feed.url) }.getOrNull() ?: return@forEach
+            if (repository.findSourceByUrl(url) != null) return@forEach
+            repository.insertSource(Feed(title = feed.title, url = url, tag = feed.category))
+            added++
+        }
+        return added
+    }
+}
+
+/**
+ * Pulls feeds out of a pack, remembering which group they sat under.
+ *
+ * The OPML nests one level: a category outline with no address, holding the
+ * feeds. That outer title is worth keeping — it is what the feed's category
+ * becomes, so importing the Ireland pack files its feeds under News and Sport
+ * rather than all under "Ireland".
+ */
+private class PackHandler : DefaultHandler() {
+    val feeds = mutableListOf<LibraryFeed>()
+    private var group = ""
+
+    override fun startElement(uri: String?, localName: String?, qName: String?, a: Attributes?) {
+        if (localName != "outline" && qName != "outline") return
+        val url = a?.getValue("xmlUrl")
+        val title = a?.getValue("title") ?: a?.getValue("text") ?: return
+        if (url.isNullOrBlank()) {
+            group = title
+        } else {
+            feeds += LibraryFeed(title = title, url = url, category = group)
+        }
+    }
+}

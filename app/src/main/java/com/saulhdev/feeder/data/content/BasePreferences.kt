@@ -165,6 +165,25 @@ internal object PrefCache {
         }
         scope.launch { dataStore.data.collect { snapshots[dataStore] = it } }
     }
+
+    /**
+     * Takes the state a write just committed, without waiting to be told.
+     *
+     * The collector below is how the cache normally learns, and it learns
+     * whenever the coroutine it runs on next gets scheduled — which is not
+     * before the line after a write. So `setValue(x)` followed immediately by
+     * `getValue()` could return the old value: the store was authoritative
+     * and the cache, which is what peek reads, had not caught up.
+     *
+     * That is a race a test found only because adding an unrelated file
+     * changed the order the suite ran in, and it is the kind that in the app
+     * shows as a setting that did not take until the screen was reopened.
+     * Recording it here closes the window; the collector still runs, for
+     * writes made anywhere else.
+     */
+    fun record(dataStore: DataStore<Preferences>, preferences: Preferences) {
+        snapshots[dataStore] = preferences
+    }
 }
 
 abstract class PrefDelegate<T>(
@@ -235,7 +254,11 @@ abstract class PrefDelegate<T>(
     }
 
     private suspend fun write(value: T) {
-        dataStore.edit { it[key] = value }
+        // The result of the edit, not a second read: DataStore hands back the
+        // Preferences it just committed, so this is the state of the file
+        // rather than a guess at it.
+        val written = dataStore.edit { it[key] = value }
+        PrefCache.record(dataStore, written)
     }
 
     private companion object {

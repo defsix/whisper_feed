@@ -480,6 +480,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.BrokenFeeds
     )
 
+    /** The bundled directory, for somebody who does not know what to follow yet. */
+    var feedLibrary = StringPref(
+        titleId = R.string.pref_feed_library,
+        summaryId = R.string.pref_feed_library_summary,
+        icon = Phosphor.BookBookmark,
+        key = FEED_LIBRARY,
+        dataStore = dataStore,
+        route = NavRoute.FeedLibrary
+    )
+
     /** Subscriptions still stored with an http address, and the offer to move them. */
     var insecureFeeds = StringPref(
         titleId = R.string.pref_insecure_feeds,
@@ -994,6 +1004,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val IMPORT_BOOKMARKS = stringPreferencesKey("pref_import_bookmarks")
         val BROKEN_FEEDS = stringPreferencesKey("pref_broken_feeds")
         val INSECURE_FEEDS = stringPreferencesKey("pref_insecure_feeds")
+        val FEED_LIBRARY = stringPreferencesKey("pref_feed_library")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 

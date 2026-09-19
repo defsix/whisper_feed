@@ -92,9 +92,34 @@ class PrefCacheTest {
         pref.setValue("mosaic")
 
         // setValue waits for the write, so the store is authoritative
-        // immediately; the cache follows from its collector.
+        // immediately — and the cache is too, because the write records what
+        // it committed rather than waiting for the collector to be scheduled.
         assertEquals("mosaic", runBlocking { pref.get().first() })
         assertEquals("mosaic", pref.getValue())
+    }
+
+    /**
+     * Read-after-write, through the cache alone.
+     *
+     * This is what the test above was really asserting and could not, because
+     * getValue falls back to the store when the cache has no answer — so a
+     * stale cache was hidden by the fallback everywhere except the one case
+     * where the cache held a *previous* value. peek is the cache with no
+     * fallback, which is where the race was visible, and where it is not any
+     * more.
+     */
+    @Test
+    fun `a write is visible through the cache with no fallback`() {
+        val (ds, _) = store()
+        PrefCache.start(ds)
+        val pref = stringPref(ds, "layout", default = "cards")
+        assertEquals("cards", pref.getValue())
+
+        repeat(20) { n ->
+            val value = if (n % 2 == 0) "mosaic" else "list"
+            pref.setValue(value)
+            assertEquals(value, pref.peek())
+        }
     }
 
     @Test

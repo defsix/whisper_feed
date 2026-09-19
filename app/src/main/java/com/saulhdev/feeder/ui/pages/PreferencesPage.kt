@@ -151,6 +151,7 @@ fun PreferencesPage(
     val sourcePrefs = listOf(
         prefs.sources,
         prefs.starterSources,
+        prefs.feedLibrary,
         prefs.importBookmarks,
         prefs.suggestions,
     )

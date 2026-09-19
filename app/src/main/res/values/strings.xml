@@ -520,6 +520,24 @@
     <string name="suggestions_explanation">Feeds you could subscribe to \u2014 never articles to read. Worked out on this phone, from links in articles you actually read. Nothing about your reading is sent anywhere, and nothing here reaches your feed unless you add it.</string>
     <string name="suggestions_none">Nothing yet. Once a week Whisper looks at the articles you have read, notices which publications they keep linking to, and checks whether those publish a feed. Give it a few weeks of reading.</string>
     <string name="suggestion_dismiss">Not interested</string>
+    <string name="pref_feed_library">Browse the feed library</string>
+    <string name="pref_feed_library_summary">Hundreds of feeds by topic and country, bundled with the app</string>
+    <string name="library_explanation">A directory that ships with Whisper, so nothing is fetched and no one is told what you are looking for. Open a collection to see what is in it \u2014 everything starts ticked, and nothing is added until you say so.</string>
+    <string name="library_topics">By topic</string>
+    <string name="library_countries">By country</string>
+    <plurals name="library_count">
+        <item quantity="one">1 feed</item>
+        <item quantity="other">%1$d feeds</item>
+    </plurals>
+    <plurals name="library_add">
+        <item quantity="one">Add the one chosen</item>
+        <item quantity="other">Add the %1$d chosen</item>
+    </plurals>
+    <plurals name="library_added">
+        <item quantity="zero">Nothing added \u2014 you already follow all of those</item>
+        <item quantity="one">Added one source</item>
+        <item quantity="other">Added %1$d sources</item>
+    </plurals>
     <string name="pref_starter_sources">Starter feeds</string>
     <string name="pref_starter_sources_summary">A short list that ships with Whisper, to take or leave</string>
 
