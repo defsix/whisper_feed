@@ -50,6 +50,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.DayCount
@@ -57,6 +58,7 @@ import com.saulhdev.feeder.data.db.models.HourCount
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.STATS_WINDOW_DAYS
+import com.saulhdev.feeder.viewmodels.SourceShare
 import com.saulhdev.feeder.viewmodels.StatisticsState
 import com.saulhdev.feeder.viewmodels.StatisticsViewModel
 import java.time.LocalDate
@@ -126,8 +128,19 @@ fun StatisticsPage() {
                 ChartCard(
                     title = stringResource(R.string.stats_by_hour),
                     caption = stringResource(R.string.stats_by_hour_caption),
+                    legend = { DayBandLegend() },
                 ) {
                     HourChart(state.byHour)
+                }
+            }
+
+            if (state.sources.isNotEmpty()) item {
+                ChartCard(
+                    title = stringResource(R.string.stats_by_source),
+                    caption = stringResource(R.string.stats_by_source_caption),
+                    legend = {},
+                ) {
+                    SourceChart(state.sources)
                 }
             }
 
@@ -182,6 +195,7 @@ private fun LegendKey(color: Color, label: String) {
 private fun ChartCard(
     title: String,
     caption: String,
+    legend: @Composable () -> Unit = { Legend() },
     chart: @Composable () -> Unit,
 ) {
     Surface(
@@ -198,7 +212,7 @@ private fun ChartCard(
                 modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
             )
             chart()
-            Legend()
+            legend()
         }
     }
 }
@@ -218,17 +232,19 @@ private fun Summary(state: StatisticsState) {
                 value = state.seen.toString(),
                 label = stringResource(R.string.stats_seen),
                 modifier = Modifier.weight(1f),
+                tone = StatTone.Neutral,
             )
             Stat(
                 value = state.opened.toString(),
                 label = stringResource(R.string.stats_opened),
                 modifier = Modifier.weight(1f),
-                emphasised = true,
+                tone = StatTone.Primary,
             )
             Stat(
                 value = state.perActiveDay.toString(),
                 label = stringResource(R.string.stats_per_day),
                 modifier = Modifier.weight(1f),
+                tone = StatTone.Neutral,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -243,7 +259,7 @@ private fun Summary(state: StatisticsState) {
                 } ?: stringResource(R.string.stats_unmeasured),
                 label = stringResource(R.string.stats_time_reading),
                 modifier = Modifier.weight(1f),
-                emphasised = spent != null,
+                tone = if (spent != null) StatTone.Secondary else StatTone.Neutral,
             )
             Stat(
                 value = state.busiestHour
@@ -251,6 +267,7 @@ private fun Summary(state: StatisticsState) {
                     ?: stringResource(R.string.stats_unmeasured),
                 label = stringResource(R.string.stats_busiest),
                 modifier = Modifier.weight(1f),
+                tone = StatTone.Tertiary,
             )
             Stat(
                 value = pluralStringResource(
@@ -258,34 +275,58 @@ private fun Summary(state: StatisticsState) {
                 ),
                 label = stringResource(R.string.stats_streak),
                 modifier = Modifier.weight(1f),
+                tone = StatTone.Secondary,
             )
         }
     }
 }
+
+/**
+ * How much a tile should stand out, and in which of the theme's families.
+ *
+ * Theme containers rather than the chart palette, and the distinction is the
+ * whole reason there are two sets of colour on this screen. A tile's colour
+ * does not encode anything — the number is the number whatever shade sits
+ * behind it — so it is chrome, and chrome follows the reader's scheme,
+ * including whatever Material You built from their wallpaper. The chart marks
+ * do encode something, so they come from a palette that was checked.
+ */
+private enum class StatTone { Neutral, Primary, Secondary, Tertiary }
 
 @Composable
 private fun Stat(
     value: String,
     label: String,
     modifier: Modifier = Modifier,
-    emphasised: Boolean = false,
+    tone: StatTone = StatTone.Neutral,
 ) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = modifier,
-    ) {
+    val container = when (tone) {
+        StatTone.Neutral   -> MaterialTheme.colorScheme.surfaceContainer
+        StatTone.Primary   -> MaterialTheme.colorScheme.primaryContainer
+        StatTone.Secondary -> MaterialTheme.colorScheme.secondaryContainer
+        StatTone.Tertiary  -> MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val ink = when (tone) {
+        StatTone.Neutral   -> MaterialTheme.colorScheme.onSurface
+        StatTone.Primary   -> MaterialTheme.colorScheme.onPrimaryContainer
+        StatTone.Secondary -> MaterialTheme.colorScheme.onSecondaryContainer
+        StatTone.Tertiary  -> MaterialTheme.colorScheme.onTertiaryContainer
+    }
+    Surface(shape = MaterialTheme.shapes.large, color = container, modifier = modifier) {
         Column(modifier = Modifier.padding(vertical = 14.dp, horizontal = 12.dp)) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall,
-                color = if (emphasised) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                color = ink,
+                maxLines = 1,
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Paired with its own container rather than the page surface,
+                // or a label on a tinted tile fails contrast in one theme and
+                // looks washed out in the other.
+                color = ink.copy(alpha = 0.75f),
             )
         }
     }
@@ -433,6 +474,13 @@ private fun HourChart(hours: List<HourCount>) {
     val description = if (busiest == null) stringResource(R.string.stats_by_hour_empty)
     else stringResource(R.string.stats_by_hour_description, busiest)
 
+    // One colour per part of the day. The height already carries the value, so
+    // this is not encoding it twice — it answers a different question, and the
+    // one people actually ask of this chart: what kind of reader am I. A wall
+    // of identical bars makes you count gridlines to find out; four blocks of
+    // colour make "evenings, mostly" readable at a glance.
+    val bandColors = (0..3).map { ChartPalette.band(it) }
+
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
@@ -443,14 +491,18 @@ private fun HourChart(hours: List<HourCount>) {
         val slot = size.width / hours.size
         val barWidth = (slot - gap).coerceAtLeast(1f)
         hours.forEachIndexed { index, hour ->
+            val band = bandColors[dayBandOf(index)]
             drawStack(
                 x = index * slot + gap / 2f,
                 width = barWidth,
                 seen = hour.seen,
                 opened = hour.opened,
                 max = max,
-                openedColor = opened,
-                passedColor = passed,
+                // Opened keeps the band's own colour; the rest of the bar is
+                // the same hue held back, so the part of the day still reads
+                // as one block while the opened share stays legible inside it.
+                openedColor = band,
+                passedColor = band.copy(alpha = 0.4f),
                 segmentGap = gap,
                 radius = 4.dp.toPx(),
             )
@@ -464,6 +516,31 @@ private fun HourChart(hours: List<HourCount>) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         listOf("00", "06", "12", "18", "23").forEach { AxisLabel(it) }
+    }
+}
+
+/**
+ * Names the four blocks of colour.
+ *
+ * Required rather than decorative. Three of these hues sit below 3:1 against a
+ * light surface, which the palette is allowed to do only where the marks are
+ * labelled rather than left to colour alone — see [ChartPalette].
+ */
+@Composable
+private fun DayBandLegend() {
+    val labels = listOf(
+        R.string.stats_band_night,
+        R.string.stats_band_morning,
+        R.string.stats_band_afternoon,
+        R.string.stats_band_evening,
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.padding(top = 12.dp),
+    ) {
+        labels.forEachIndexed { index, label ->
+            LegendKey(ChartPalette.band(index), stringResource(label))
+        }
     }
 }
 
@@ -549,3 +626,83 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTopRounded(
 /** `YYYY-MM-DD` as SQLite wrote it, or null if a filled gap left it blank. */
 private fun String.toLocalDateOrNull(): LocalDate? =
     runCatching { LocalDate.parse(this) }.getOrNull()
+
+
+/**
+ * Where the feed's volume actually comes from.
+ *
+ * Horizontal, because the labels are source names and a name under a vertical
+ * bar is either rotated or truncated, and both are worse than turning the
+ * chart on its side. Each source keeps its own colour, which is the one use of
+ * colour on this screen that carries identity rather than emphasis — and the
+ * reason a validated categorical palette exists here at all.
+ *
+ * Every bar is labelled with its source and its count, so nothing depends on
+ * telling two hues apart. That is also what lets the palette use steps which
+ * sit below 3:1 on a light surface; see [ChartPalette].
+ */
+@Composable
+private fun SourceChart(sources: List<SourceShare>) {
+    val max = sources.maxOf { it.seen }.coerceAtLeast(1)
+    val otherColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val otherLabel = stringResource(R.string.stats_other_sources)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        sources.forEachIndexed { index, row ->
+            // The folded remainder is not one source, so it does not take a
+            // categorical slot — a colour that says "identity" over a bar that
+            // has none would be the chart telling a small lie.
+            val color = if (row.other) otherColor else ChartPalette.slot(index)
+            val name = when {
+                row.other -> otherLabel
+                row.title.isBlank() -> stringResource(R.string.stats_removed_source)
+                else -> row.title
+            }
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = row.seen.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp),
+                ) {
+                    val full = size.width * (row.seen.toFloat() / max)
+                    val r = size.height / 2f
+                    // The track, so a short bar still reads as a share of
+                    // something rather than as a stray mark.
+                    drawRoundRect(
+                        color = color.copy(alpha = 0.15f),
+                        cornerRadius = CornerRadius(r, r),
+                    )
+                    if (full > 0f) {
+                        drawRoundRect(
+                            color = color,
+                            size = androidx.compose.ui.geometry.Size(
+                                width = full.coerceAtLeast(size.height),
+                                height = size.height,
+                            ),
+                            cornerRadius = CornerRadius(r, r),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

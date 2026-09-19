@@ -541,6 +541,14 @@
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
     </plurals>
+    <string name="stats_by_source">Where your reading comes from</string>
+    <string name="stats_by_source_caption">Your busiest sources, by articles that reached your screen.</string>
+    <string name="stats_other_sources">Everything else</string>
+    <string name="stats_removed_source">A source you have removed</string>
+    <string name="stats_band_night">Night</string>
+    <string name="stats_band_morning">Morning</string>
+    <string name="stats_band_afternoon">Afternoon</string>
+    <string name="stats_band_evening">Evening</string>
     <string name="stats_by_day">Reading over time</string>
     <string name="stats_by_day_caption">Articles that reached your screen, over the last %1$d days.</string>
     <string name="stats_by_hour">Time of day</string>

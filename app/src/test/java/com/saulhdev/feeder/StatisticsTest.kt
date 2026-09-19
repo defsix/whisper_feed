@@ -23,6 +23,10 @@ import com.saulhdev.feeder.viewmodels.STATS_WINDOW_DAYS
 import com.saulhdev.feeder.viewmodels.StatisticsState
 import com.saulhdev.feeder.viewmodels.exampleDays
 import com.saulhdev.feeder.data.db.models.ReadingTime
+import com.saulhdev.feeder.data.db.models.SourceEngagement
+import com.saulhdev.feeder.ui.pages.ChartPalette
+import com.saulhdev.feeder.ui.pages.dayBandOf
+import com.saulhdev.feeder.viewmodels.topSources
 import com.saulhdev.feeder.data.repository.fillDays
 import com.saulhdev.feeder.data.repository.fillHours
 import com.saulhdev.feeder.viewmodels.exampleHours
@@ -285,5 +289,83 @@ class StatisticsTest {
     @Test
     fun `no articles read averages zero rather than dividing by it`() {
         assertEquals(0, StatisticsState(readingTime = ReadingTime(0, 0), loading = false).minutesPerArticle)
+    }
+
+    /* ------------------------------------------------------------ sources -- */
+
+    private fun eng(id: Long, seen: Int, opened: Int = 0) =
+        SourceEngagement(feedId = id, score = seen, opened = opened, seen = seen)
+
+    @Test
+    fun `the busiest sources come back in order`() {
+        val rows = topSources(
+            titles = mapOf(1L to "A", 2L to "B", 3L to "C"),
+            engagement = mapOf(1L to eng(1, 10), 2L to eng(2, 30), 3L to eng(3, 20)),
+        )
+        assertEquals(listOf("B", "C", "A"), rows.map { it.title })
+    }
+
+    /**
+     * The tail is folded, not dropped.
+     *
+     * A chart of the top five that discards the rest answers "which are my
+     * biggest sources" and silently refuses "and how much of my reading is
+     * that" — which is the half somebody with a hundred subscriptions wants.
+     */
+    @Test
+    fun `everything past the top few is folded into one bar`() {
+        val engagement = (1L..9L).associateWith { eng(it, (10 - it).toInt() * 10) }
+        val rows = topSources((1L..9L).associateWith { "S$it" }, engagement)
+        assertEquals(ChartPalette.MAX_SLOTS + 1, rows.size)
+        assertTrue(rows.last().other)
+        // The fold keeps the totals honest.
+        assertEquals(engagement.values.sumOf { it.seen }, rows.sumOf { it.seen })
+    }
+
+    @Test
+    fun `a short list has no folded bar at all`() {
+        val rows = topSources(mapOf(1L to "A", 2L to "B"), mapOf(1L to eng(1, 5), 2L to eng(2, 3)))
+        assertEquals(2, rows.size)
+        assertTrue(rows.none { it.other })
+    }
+
+    /** Articles outlive the subscription they came from; the row still counts. */
+    @Test
+    fun `a removed source keeps its reading`() {
+        val rows = topSources(titles = emptyMap(), engagement = mapOf(7L to eng(7, 40)))
+        assertEquals(1, rows.size)
+        assertEquals(40, rows.first().seen)
+        assertTrue(rows.first().title.isBlank())
+    }
+
+    @Test
+    fun `a source nothing was seen from is left out`() {
+        assertTrue(topSources(mapOf(1L to "A"), mapOf(1L to eng(1, 0))).isEmpty())
+    }
+
+    @Test
+    fun `nothing read at all is an empty chart rather than a crash`() {
+        assertTrue(topSources(emptyMap(), emptyMap()).isEmpty())
+    }
+
+    /* -------------------------------------------------------- time bands -- */
+
+    @Test
+    fun `hours fall into the four parts of the day`() {
+        assertEquals(0, dayBandOf(0))
+        assertEquals(0, dayBandOf(5))
+        assertEquals(1, dayBandOf(6))
+        assertEquals(1, dayBandOf(11))
+        assertEquals(2, dayBandOf(12))
+        assertEquals(2, dayBandOf(17))
+        assertEquals(3, dayBandOf(18))
+        assertEquals(3, dayBandOf(23))
+    }
+
+    /** Every hour of the day has a band, and no band is skipped. */
+    @Test
+    fun `the bands cover the whole day`() {
+        assertEquals(setOf(0, 1, 2, 3), (0..23).map(::dayBandOf).toSet())
+        assertTrue((0..23).map(::dayBandOf).zipWithNext().all { (a, b) -> b >= a })
     }
 }
