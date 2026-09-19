@@ -23,6 +23,7 @@
     <string name="layout_list">List</string>
     <string name="layout_mosaic">Mosaic</string>
     <string name="source_not_updating">Not updating</string>
+    <string name="sources_clear_search">Clear the search</string>
     <string name="sources_search">Search sources</string>
     <string name="sources_selected">%1$d selected</string>
     <string name="sources_select_all">Select all</string>

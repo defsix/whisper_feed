@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -107,7 +107,6 @@ import androidx.compose.ui.Alignment
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.ui.icons.phosphor.Check
 import com.saulhdev.feeder.ui.icons.phosphor.Sort
-import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.BracketsSquare
 import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
@@ -324,12 +323,18 @@ fun SourceListPage(
                         // act on is not a thing anyone is doing, and the FAB
                         // sits over the last row of the list.
                         if (!selecting) {
-                            ExtendedFloatingActionButton(
+                            // A plain FAB, not an extended one. The extended
+                            // variant is for a button carrying a label, and
+                            // this one never had text — so it drew as a wide
+                            // pill with a single + adrift in the middle of it,
+                            // which is why it read as something other than a
+                            // button to add a source.
+                            FloatingActionButton(
                                 onClick = {
                                     navController.navigate(NavRoute.SourceAdd)
                                 },
                                 modifier = Modifier.padding(16.dp),
-                                shape = MaterialTheme.shapes.extraLarge
+                                shape = MaterialTheme.shapes.large,
                             ) {
                                 Icon(
                                     imageVector = Phosphor.Plus,
@@ -522,7 +527,19 @@ fun SourceListPage(
                                 trailingIcon = {
                                     if (query.isNotEmpty()) {
                                         IconButton(onClick = { viewModel.setQuery("") }) {
-                                            Icon(Phosphor.SubtractSquare, null)
+                                            // An X. This was SubtractSquare, a
+                                            // minus in a box, which at icon
+                                            // size reads as two stacked
+                                            // squares — so the control for
+                                            // emptying the field looked like a
+                                            // copy button, and nothing about
+                                            // it suggested clearing anything.
+                                            Icon(
+                                                Phosphor.X,
+                                                contentDescription = stringResource(
+                                                    R.string.sources_clear_search
+                                                ),
+                                            )
                                         }
                                     }
                                 },
