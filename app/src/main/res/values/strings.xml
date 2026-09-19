@@ -259,6 +259,8 @@
     <string name="pref_backup_summary">Your subscriptions and your settings, kept somewhere you choose. All off until you turn something on \u2014 the only part of Whisper that can send your data anywhere.</string>
     <string name="backup_explanation">Two things here are worth keeping: the subscription list you spent a long time building, and the settings you arranged to suit you. Both exist only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day, over Wi-Fi.</string>
     <string name="backup_only_time">Nothing on this screen happens unless you ask for it.\n\nWhisper has no server and no account of its own, so this is the only part of the app that can send your data anywhere. Everything here is off until you turn it on: no folder is chosen, and Android\u2019s own backup hands over nothing. Turn on what suits you \u2014 and nothing else will leave this phone.</string>
+    <string name="backup_stopped_title">Backups have stopped</string>
+    <string name="backup_stopped_body">Whisper could not reach the folder you chose, so the daily backup stopped on %1$s. Choose a folder again to start it.</string>
     <string name="backup_off">Everything here is off. Nothing is leaving this phone.</string>
     <string name="backup_on">Your subscriptions and settings are being copied to the folder below.</string>
     <string name="pref_platform_device">Include in phone-to-phone transfer</string>

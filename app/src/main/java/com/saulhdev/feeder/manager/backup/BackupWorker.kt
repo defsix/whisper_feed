@@ -56,13 +56,27 @@ class BackupWorker(
         return when (val outcome = store.backUp(destination.toUri())) {
             is BackupStore.Result.Written -> {
                 prefs.backupLastRun.setValue(outcome.at.toString())
+                // Any earlier stoppage is over, and a warning that outlives
+                // the problem teaches people to ignore warnings.
+                if (prefs.backupStoppedAt.getValue() != 0L) {
+                    prefs.backupStoppedAt.setValue(0L)
+                }
                 Result.success()
             }
 
             // The folder is gone, or permission was revoked. Retrying on a
             // schedule would not fix it and the reader has to choose again, so
             // this stops rather than failing daily in the background for ever.
-            BackupStore.Result.NoDestination -> Result.success()
+            //
+            // Recorded on the way out. Stopping quietly was the whole problem:
+            // nothing said backups had ended, and the only way to find out was
+            // to open the backup screen and read a line about the folder.
+            BackupStore.Result.NoDestination -> {
+                if (prefs.backupStoppedAt.getValue() == 0L) {
+                    prefs.backupStoppedAt.setValue(System.currentTimeMillis())
+                }
+                Result.success()
+            }
 
             else -> Result.retry()
         }

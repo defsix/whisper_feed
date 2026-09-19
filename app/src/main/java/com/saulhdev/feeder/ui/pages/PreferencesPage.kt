@@ -42,7 +42,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import com.saulhdev.feeder.R
+import java.util.Date
+import java.text.DateFormat
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Surface
+import com.saulhdev.feeder.ui.navigation.NavRoute
+import com.saulhdev.feeder.ui.navigation.LocalNavController
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.content.StringSelectionPref
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
@@ -74,6 +82,8 @@ fun PreferencesPage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val navController = LocalNavController.current
+    val backupStoppedAt by prefs.backupStoppedAt.get().collectAsState(initial = 0L)
     val syncClient: SyncRestClient = koinInject()
     val title = stringResource(id = R.string.title_settings)
     // The row acts on the feed, which lives in a view model this screen does
@@ -183,6 +193,37 @@ fun PreferencesPage(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Above everything, because it is the one thing on this screen
+            // that is wrong rather than merely adjustable — and because the
+            // backup screen already said it, to nobody, for however long it
+            // took somebody to wander in there.
+            if (backupStoppedAt > 0L) {
+                item(key = "backup-stopped") {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        shape = MaterialTheme.shapes.large,
+                        onClick = { navController.navigate(NavRoute.Backup) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(R.string.backup_stopped_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.backup_stopped_body,
+                                    DateFormat.getDateInstance().format(Date(backupStoppedAt)),
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+            }
+
             // Reload and Restart, which used to be in the feed's overflow
             // menu. They are actions rather than settings, so they are buttons
             // at the top rather than rows in a group pretending to be

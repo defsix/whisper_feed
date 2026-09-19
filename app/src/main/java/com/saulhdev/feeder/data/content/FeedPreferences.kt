@@ -834,6 +834,24 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      *
      * 0 means never reset, which leaves the plain 30-day window in force.
      */
+    /**
+     * When the scheduled backup last found its destination gone, or 0.
+     *
+     * Backups stop silently by design: a folder that has been deleted or had
+     * its permission revoked will not come back on its own, so the worker
+     * gives up rather than failing daily for ever. What was missing is anybody
+     * being told. Backups are the thing nobody looks at until something has
+     * already gone wrong, and "it stopped six months ago" is the worst moment
+     * to find out.
+     *
+     * Cleared by the next successful write, so it cannot linger after a fix.
+     */
+    var backupStoppedAt = LongPref(
+        key = BACKUP_STOPPED_AT,
+        dataStore = dataStore,
+        defaultValue = 0L,
+    )
+
     var learnedResetAt = LongPref(
         key = LEARNED_RESET_AT,
         dataStore = dataStore,
@@ -1003,6 +1021,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
         val HIDDEN_SOURCES = stringSetPreferencesKey("pref_hidden_sources")
 val LEARNED_RESET_AT = longPreferencesKey("pref_learned_reset_at")
+        val BACKUP_STOPPED_AT = longPreferencesKey("pref_backup_stopped_at")
         val SOURCE_AFFINITY = stringSetPreferencesKey("pref_source_affinity")
         val FILTER_TAGS = stringSetPreferencesKey("filter_tags")
         val FILTER_SORT = stringPreferencesKey("filter_sorting")

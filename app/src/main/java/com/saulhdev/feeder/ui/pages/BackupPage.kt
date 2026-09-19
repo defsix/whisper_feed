@@ -115,8 +115,9 @@ fun BackupPage(
             // run: somebody who has just chosen a folder wants to see a file
             // appear in it, and a day of nothing happening reads as a setting
             // that did not take.
-            report(store.backUp(uri), context) { say(it) }
-            prefs.backupLastRun.setValue(System.currentTimeMillis().toString())
+            val outcome = store.backUp(uri)
+            report(outcome, context) { say(it) }
+            stamp(outcome, prefs)
         }
     }
 
@@ -266,16 +267,7 @@ fun BackupPage(
                             scope.launch(Dispatchers.IO) {
                                 val outcome = store.backUp(folder.toUri())
                                 report(outcome, context) { say(it) }
-                                // Only on success, and from the time the file
-                                // was actually written. This used to stamp the
-                                // clock whatever happened, so a failed backup
-                                // still left "Last backed up a minute ago" on
-                                // the screen — the one line a reader checks to
-                                // find out whether their backup is current,
-                                // saying yes when the answer was no.
-                                if (outcome is BackupStore.Result.Written) {
-                                    prefs.backupLastRun.setValue(outcome.at.toString())
-                                }
+                                stamp(outcome, prefs)
                             }
                         },
                     )
@@ -384,4 +376,25 @@ private fun report(
             is BackupStore.Result.Failed -> context.getString(R.string.backup_failed)
         }
     )
+}
+
+/**
+ * Records a backup that actually happened.
+ *
+ * Both routes to a backup — choosing a folder, and the button — used to stamp
+ * the clock unconditionally, so a failure still left "Last backed up a minute
+ * ago" on screen: the one line a reader checks to find out whether their
+ * backup is current, answering yes when it was no. They were two copies of
+ * the same three lines, which is how they came to disagree with the scheduled
+ * worker and then with each other, so there is one copy now.
+ *
+ * The time comes from when the file was written rather than from the clock
+ * afterwards, and a successful write clears any recorded stoppage — the
+ * warning on the settings screen has to end when the problem does, or it
+ * teaches people to ignore warnings.
+ */
+private suspend fun stamp(outcome: BackupStore.Result, prefs: FeedPreferences) {
+    if (outcome !is BackupStore.Result.Written) return
+    prefs.backupLastRun.setValue(outcome.at.toString())
+    if (prefs.backupStoppedAt.getValue() != 0L) prefs.backupStoppedAt.setValue(0L)
 }
