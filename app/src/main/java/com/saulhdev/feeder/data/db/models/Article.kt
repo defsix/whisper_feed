@@ -134,6 +134,35 @@ data class Article constructor(
     val dwellMs: Long = 0L,
 
     /**
+     * How long was spent inside the article itself, in milliseconds.
+     *
+     * Not [dwellMs], which is the card in the feed. This is the article open
+     * and being read, which is the difference between opening something and
+     * reading it — and opening something is currently the strongest signal the
+     * ordering has, so it cannot tell a piece somebody read to the end from
+     * one they bounced straight out of.
+     *
+     * **Accumulated in ticks, never as a subtraction.** Nothing anywhere
+     * stores "opened at X" and works out `now - X` on the way back, because
+     * there is no guarantee of a way back: the reader can close the app, lock
+     * the phone, or have the process killed with the article still open, and
+     * the next launch would then find a start time from Tuesday and record a
+     * three-day read. Counting forward in bounded steps that only happen while
+     * somebody is looking makes that arithmetic impossible to express rather
+     * than merely unlikely.
+     *
+     * Capped as well, for the case the ticks are honest about: a phone left
+     * unlocked on a desk with an article open is awake, is resumed, and is not
+     * being read.
+     *
+     * Zero does not mean "not read". It means nothing was measured — which is
+     * also what an article opened in an external browser reads, because the
+     * app is not on screen to measure it.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val readMs: Long = 0L,
+
+    /**
      * What a Google Reader server calls this article, if one does.
      *
      * Null for every article on an account-less install, which is most of
@@ -297,6 +326,15 @@ data class SourceEngagement(
  * opened. `day` is `YYYY-MM-DD` in the reader's own timezone.
  */
 data class DayCount(val day: String, val seen: Int, val opened: Int)
+
+/**
+ * Time spent reading over a window.
+ *
+ * @param articles how many articles it is spread over — only those with time
+ *   recorded, so an average taken from these two is an average per article
+ *   read rather than per article scrolled past.
+ */
+data class ReadingTime(val totalMs: Long, val articles: Int)
 
 /** The same, bucketed by hour of day. `hour` is `00`–`23`, as text from SQLite. */
 data class HourCount(val hour: String, val seen: Int, val opened: Int)

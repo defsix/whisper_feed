@@ -46,6 +46,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -211,23 +212,54 @@ private fun ChartCard(
  */
 @Composable
 private fun Summary(state: StatisticsState) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Stat(
-            value = state.seen.toString(),
-            label = stringResource(R.string.stats_seen),
-            modifier = Modifier.weight(1f),
-        )
-        Stat(
-            value = state.opened.toString(),
-            label = stringResource(R.string.stats_opened),
-            modifier = Modifier.weight(1f),
-            emphasised = true,
-        )
-        Stat(
-            value = state.perActiveDay.toString(),
-            label = stringResource(R.string.stats_per_day),
-            modifier = Modifier.weight(1f),
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Stat(
+                value = state.seen.toString(),
+                label = stringResource(R.string.stats_seen),
+                modifier = Modifier.weight(1f),
+            )
+            Stat(
+                value = state.opened.toString(),
+                label = stringResource(R.string.stats_opened),
+                modifier = Modifier.weight(1f),
+                emphasised = true,
+            )
+            Stat(
+                value = state.perActiveDay.toString(),
+                label = stringResource(R.string.stats_per_day),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val spent = state.readingHoursMinutes
+            Stat(
+                // A dash rather than "0m": nothing measured is not the same
+                // statement as no time spent, and an external browser records
+                // nothing however long the reading took.
+                value = spent?.let { (h, m) ->
+                    if (h > 0) stringResource(R.string.stats_hours_minutes, h, m)
+                    else stringResource(R.string.stats_minutes, m)
+                } ?: stringResource(R.string.stats_unmeasured),
+                label = stringResource(R.string.stats_time_reading),
+                modifier = Modifier.weight(1f),
+                emphasised = spent != null,
+            )
+            Stat(
+                value = state.busiestHour
+                    ?.let { stringResource(R.string.stats_hour_of_day, it) }
+                    ?: stringResource(R.string.stats_unmeasured),
+                label = stringResource(R.string.stats_busiest),
+                modifier = Modifier.weight(1f),
+            )
+            Stat(
+                value = pluralStringResource(
+                    R.plurals.stats_streak_days, state.streak, state.streak
+                ),
+                label = stringResource(R.string.stats_streak),
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 

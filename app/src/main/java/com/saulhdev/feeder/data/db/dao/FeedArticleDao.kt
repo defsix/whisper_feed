@@ -31,6 +31,7 @@ import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
 import com.saulhdev.feeder.data.db.models.DayCount
 import com.saulhdev.feeder.data.db.models.HourCount
+import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.data.db.models.SourceReadCount
 import com.saulhdev.feeder.data.db.models.Feed
@@ -252,6 +253,46 @@ interface FeedArticleDao {
     )
     suspend fun addDwell(id: String, addMs: Long, capMs: Long)
 
+    /**
+     * Adds to the time spent inside an article, up to a ceiling.
+     *
+     * An increment rather than a total, and that is the whole design. A
+     * setter taking a duration would need somebody to have worked that
+     * duration out, and the only way to work it out is to subtract a stored
+     * start time from the present — which is exactly the arithmetic that
+     * produces a three-day read when the reader closes the app mid-article
+     * and comes back on Thursday. There is no start time here to subtract.
+     *
+     * Capped in SQL for the same reason [addDwell] is: the article page and
+     * anything else that ever times a read are writing to one row, and the
+     * ceiling has to hold across both rather than per-caller.
+     */
+    @Query(
+        """
+        UPDATE Article SET readMs = MIN(readMs + :addMs, :capMs)
+        WHERE uuid = :id
+        """
+    )
+    suspend fun addReading(id: String, addMs: Long, capMs: Long)
+
+    /**
+     * Time spent reading over a window, and how many articles it covers.
+     *
+     * Only articles with something recorded are counted, so the average is
+     * over articles that were actually read rather than over everything that
+     * went past — the second is a number about scrolling wearing the name of
+     * a number about reading.
+     */
+    @Query(
+        """
+        SELECT COALESCE(SUM(readMs), 0) AS totalMs,
+            COUNT(*) AS articles
+        FROM Article
+        WHERE readAt >= :since AND readMs > 0
+        """
+    )
+    fun readingTime(since: Long): Flow<ReadingTime>
+
     @Query("UPDATE Article SET readAt = 0 WHERE uuid IN (:ids)")
     suspend fun unmarkRead(ids: List<String>)
 
@@ -286,6 +327,8 @@ interface FeedArticleDao {
         """
         SELECT feedId AS feedId,
             SUM(CASE
+                WHEN readMs >= :finishedMs THEN :finished
+                WHEN readMs >= :readingMs THEN :read
                 WHEN openedAt > 0 THEN :opened
                 WHEN dwellMs >= :heldMs THEN :held
                 WHEN dwellMs >= :glancedMs THEN :glanced
@@ -302,10 +345,14 @@ interface FeedArticleDao {
         since: Long,
         glancedMs: Long,
         heldMs: Long,
+        readingMs: Long,
+        finishedMs: Long,
         passed: Int,
         glanced: Int,
         held: Int,
         opened: Int,
+        read: Int,
+        finished: Int,
     ): Flow<List<SourceEngagement>>
 
     /**

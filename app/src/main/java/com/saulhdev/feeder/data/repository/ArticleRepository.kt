@@ -29,6 +29,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import com.saulhdev.feeder.data.db.models.DayCount
 import com.saulhdev.feeder.data.db.models.HourCount
+import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.ui.overlay.ArticleWeight
 import kotlinx.coroutines.flow.Flow
@@ -168,6 +169,18 @@ class ArticleRepository(db: NeoFeedDb) {
     }
 
     /**
+     * Adds to the time spent inside an article, up to [READ_CAP_MS].
+     *
+     * Called repeatedly with small increments while the article is on screen,
+     * rather than once with a total at the end. See [addReading]'s caller for
+     * why, and `Article.readMs` for why there is no total to pass.
+     */
+    suspend fun addReading(articleId: String, millis: Long) = withContext(jcc) {
+        if (millis <= 0L) return@withContext
+        articlesDao.addReading(articleId, millis, READ_CAP_MS)
+    }
+
+    /**
      * Marks every unread article read, returning what it changed.
      *
      * The ids come back so the action can be undone: after the write every
@@ -203,10 +216,14 @@ class ArticleRepository(db: NeoFeedDb) {
             since = since,
             glancedMs = ArticleWeight.GLANCED_MS,
             heldMs = ArticleWeight.HELD_MS,
+            readingMs = ArticleWeight.READING_MS,
+            finishedMs = ArticleWeight.FINISHED_MS,
             passed = ArticleWeight.BAND_PASSED,
             glanced = ArticleWeight.BAND_GLANCED,
             held = ArticleWeight.BAND_HELD,
             opened = ArticleWeight.BAND_OPENED,
+            read = ArticleWeight.BAND_READ,
+            finished = ArticleWeight.BAND_FINISHED,
         ).map { rows -> rows.associateBy { it.feedId } }
 
     /**
@@ -238,6 +255,9 @@ class ArticleRepository(db: NeoFeedDb) {
      * commute home has two peaks and a trough, and the trough is only visible
      * if the empty hours are drawn.
      */
+    /** Time spent inside articles over a window, and how many it covers. */
+    fun readingTime(since: Long): Flow<ReadingTime> = articlesDao.readingTime(since)
+
     fun readingByHour(since: Long): Flow<List<HourCount>> =
         articlesDao.readingByHour(since).map(::fillHours)
 
@@ -372,6 +392,21 @@ const val FEED_WINDOW = 500
  * would dominate every comparison it took part in.
  */
 const val DWELL_CAP_MS = 30_000L
+
+/**
+ * The most reading time one article can accumulate.
+ *
+ * Ten minutes. Longer than almost any article takes to read, and short enough
+ * that a phone left unlocked on a desk with one open stops contributing well
+ * before it could outweigh a month of genuine reading.
+ *
+ * The ceiling is the second line of defence rather than the first. The clock
+ * only advances while the article is in front of somebody, so a backgrounded
+ * app or a locked phone contributes nothing at all and never reaches this.
+ * What it catches is the case the clock cannot argue with: awake, on screen,
+ * and nobody there.
+ */
+const val READ_CAP_MS = 600_000L
 
 /**
  * The window's days in order, with the ones the query had nothing for.

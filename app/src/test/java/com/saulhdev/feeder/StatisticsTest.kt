@@ -22,6 +22,7 @@ import com.saulhdev.feeder.data.db.models.HourCount
 import com.saulhdev.feeder.viewmodels.STATS_WINDOW_DAYS
 import com.saulhdev.feeder.viewmodels.StatisticsState
 import com.saulhdev.feeder.viewmodels.exampleDays
+import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.repository.fillDays
 import com.saulhdev.feeder.data.repository.fillHours
 import com.saulhdev.feeder.viewmodels.exampleHours
@@ -237,5 +238,52 @@ class StatisticsTest {
         assertEquals(3, filled[0].seen)
         assertEquals("00", filled[0].hour)
         assertEquals("23", filled[23].hour)
+    }
+
+    /* -------------------------------------------------------- reading time -- */
+
+    @Test
+    fun `reading time is shown as hours and minutes`() {
+        val state = StatisticsState(
+            readingTime = ReadingTime(totalMs = 3 * 3_600_000L + 25 * 60_000L, articles = 40),
+            loading = false,
+        )
+        assertEquals(3L to 25L, state.readingHoursMinutes)
+    }
+
+    @Test
+    fun `under an hour is still minutes rather than zero hours`() {
+        val state = StatisticsState(
+            readingTime = ReadingTime(totalMs = 8 * 60_000L, articles = 4),
+            loading = false,
+        )
+        assertEquals(0L to 8L, state.readingHoursMinutes)
+    }
+
+    /**
+     * Nothing measured is a different statement from no time spent.
+     *
+     * An article opened in an external browser records nothing however long
+     * it was read for, so a reader using that mode must not be told they read
+     * for zero minutes.
+     */
+    @Test
+    fun `nothing measured reads as nothing, not as zero`() {
+        val state = StatisticsState(readingTime = ReadingTime(0, 0), loading = false)
+        assertEquals(null, state.readingHoursMinutes)
+    }
+
+    @Test
+    fun `the per-article average is over articles that were actually read`() {
+        val state = StatisticsState(
+            readingTime = ReadingTime(totalMs = 20 * 60_000L, articles = 10),
+            loading = false,
+        )
+        assertEquals(2, state.minutesPerArticle)
+    }
+
+    @Test
+    fun `no articles read averages zero rather than dividing by it`() {
+        assertEquals(0, StatisticsState(readingTime = ReadingTime(0, 0), loading = false).minutesPerArticle)
     }
 }

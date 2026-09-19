@@ -527,6 +527,17 @@
     <string name="stats_opened">Opened</string>
     <string name="stats_passed">Passed over</string>
     <string name="stats_per_day">A day</string>
+    <string name="stats_time_reading">Time reading</string>
+    <string name="stats_busiest">Busiest</string>
+    <string name="stats_streak">Best streak</string>
+    <string name="stats_hours_minutes">%1$dh %2$dm</string>
+    <string name="stats_minutes">%1$dm</string>
+    <string name="stats_hour_of_day">%1$d:00</string>
+    <string name="stats_unmeasured">\u2014</string>
+    <plurals name="stats_streak_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
     <string name="stats_by_day">Reading over time</string>
     <string name="stats_by_day_caption">Articles that reached your screen, over the last %1$d days.</string>
     <string name="stats_by_hour">Time of day</string>

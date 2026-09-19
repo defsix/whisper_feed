@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_19_20,
     MIGRATION_18_19,
     MIGRATION_17_18,
     MIGRATION_16_17,
@@ -240,6 +241,17 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_19_20 : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Zero, and it means "never measured" rather than "read for no time".
+        // Nothing before this release could have recorded it, and an article
+        // opened in an external browser will keep reading zero afterwards,
+        // because the app is not on screen to time anything.
+        db.execSQL("ALTER TABLE Article ADD COLUMN readMs INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_18_19 : Migration(18, 19) {

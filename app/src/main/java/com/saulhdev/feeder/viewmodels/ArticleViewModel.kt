@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlinx.coroutines.plus
 
+/** @see com.saulhdev.feeder.ui.overlay.TrackArticleReading */
 class ArticleViewModel(
     private val articleRepo: ArticleRepository,
     private val sourcesRepo: SourcesRepository,
@@ -52,6 +53,17 @@ class ArticleViewModel(
 
     fun setArticleId(value: String) {
         articleId.update { value }
+    }
+
+    /**
+     * Adds a measured chunk of reading time to an article.
+     *
+     * An amount, not a total: see [TrackArticleReading], which is the only
+     * thing that calls this and explains why the distinction is the whole
+     * point rather than a detail of the signature.
+     */
+    fun addReading(id: String, millis: Long) {
+        ioScope.launch { articleRepo.addReading(id, millis) }
     }
 
     /**

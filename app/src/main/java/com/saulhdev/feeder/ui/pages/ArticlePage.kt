@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.saulhdev.feeder.ui.overlay.TrackArticleReading
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -83,6 +84,11 @@ fun ArticlePage(
     val activity = LocalActivity.current
 
     val state by viewModel.articleState.collectAsState(initial = null)
+
+    // Times the read. Counts forward only while this screen is resumed, so
+    // closing the app or locking the phone mid-article stops it rather than
+    // leaving a start time for a later resume to turn into a three-day read.
+    TrackArticleReading(articleId = articleId, onRead = viewModel::addReading)
 
     LaunchedEffect(articleId) {
         viewModel.setArticleId(articleId)

@@ -161,18 +161,55 @@ object ArticleWeight {
     const val BAND_HELD = 3
 
     /**
-     * Opened. The only unambiguous signal there is.
+     * Opened, and nothing more known.
      *
      * Eight, so that one article somebody chose to open outweighs a handful
-     * they merely lingered on. Nothing else here required a decision.
+     * they merely lingered on.
+     *
+     * This used to be the top of the scale, and it was carrying more than it
+     * could bear: opening an article and bouncing straight back out is a
+     * judgement that it was not worth reading, and it scored the same as
+     * reading the thing to the end. The two bands above separate them.
      */
     const val BAND_OPENED = 8
+
+    /**
+     * Opened and stayed a while: read, rather than merely opened.
+     *
+     * The first band that needs the reading clock, so it is also the first
+     * that reads zero for an article opened in an external browser. That is
+     * not a penalty — such an article still scores [BAND_OPENED] — it is the
+     * honest limit of what can be measured from outside the app.
+     */
+    const val BAND_READ = 14
+
+    /**
+     * Stayed long enough to have read most of it.
+     *
+     * Twenty rather than something larger because these are divided by the
+     * largest before use: what matters is that a source whose articles get
+     * read properly outweighs one whose articles get opened and abandoned by
+     * about two and a half to one, not the figure itself.
+     */
+    const val BAND_FINISHED = 20
 
     /** Time on screen that separates a glance from a look. */
     const val GLANCED_MS = 1_000L
 
     /** And a look from having read it where it sat. */
     const val HELD_MS = 5_000L
+
+    /**
+     * Time inside an article that separates opening it from reading it.
+     *
+     * Half a minute. Short enough that a genuine skim of a short piece
+     * counts, long enough that opening something, seeing what it is and
+     * coming straight back does not.
+     */
+    const val READING_MS = 30_000L
+
+    /** And reading it from having read the whole thing. */
+    const val FINISHED_MS = 120_000L
 
     /**
      * What a story several sources are covering is worth.

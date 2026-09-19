@@ -20,6 +20,7 @@ package com.saulhdev.feeder.viewmodels
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.DayCount
 import com.saulhdev.feeder.data.db.models.HourCount
+import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +58,7 @@ const val STATS_MIN_REAL = 20
 data class StatisticsState(
     val byDay: List<DayCount> = emptyList(),
     val byHour: List<HourCount> = emptyList(),
+    val readingTime: ReadingTime = ReadingTime(totalMs = 0, articles = 0),
     val isExample: Boolean = false,
     val loading: Boolean = true,
 ) {
@@ -75,6 +77,28 @@ data class StatisticsState(
         get() = byHour.filter { it.seen > 0 }.maxByOrNull { it.seen }?.hour?.toIntOrNull()
 
     val openingUncounted: Boolean get() = !isExample && seen > 0 && opened == 0
+
+    /**
+     * Time spent inside articles, as hours and minutes.
+     *
+     * Null when nothing was measured at all, which is a different statement
+     * from "no time" and has to be said differently on the screen — an
+     * article opened in an external browser records nothing, so a reader who
+     * uses that mode would otherwise be told they read for zero minutes.
+     */
+    val readingHoursMinutes: Pair<Long, Long>?
+        get() {
+            if (readingTime.totalMs <= 0L) return null
+            val minutes = readingTime.totalMs / 60_000L
+            return minutes / 60 to minutes % 60
+        }
+
+    /** Average time per article that had any recorded, rounded to the minute. */
+    val minutesPerArticle: Int
+        get() {
+            if (readingTime.articles <= 0) return 0
+            return (readingTime.totalMs / readingTime.articles / 60_000L).toInt()
+        }
 
     /** The longest run of consecutive days with any reading on them. */
     val streak: Int
@@ -118,17 +142,24 @@ class StatisticsViewModel(
         combine(
             articleRepo.readingByDay(from, STATS_WINDOW_DAYS),
             articleRepo.readingByHour(from),
-        ) { days, hours ->
+            articleRepo.readingTime(from),
+        ) { days, hours, time ->
             val total = days.sumOf { it.seen }
             if (total < STATS_MIN_REAL) {
                 StatisticsState(
                     byDay = exampleDays(STATS_WINDOW_DAYS, days.map { it.day }),
                     byHour = exampleHours(),
+                    readingTime = ReadingTime(totalMs = 4 * 3_600_000L + 12 * 60_000L, articles = 63),
                     isExample = true,
                     loading = false,
                 )
             } else {
-                StatisticsState(byDay = days, byHour = hours, loading = false)
+                StatisticsState(
+                    byDay = days,
+                    byHour = hours,
+                    readingTime = time,
+                    loading = false,
+                )
             }
         }
     }.stateIn(ioScope, SharingStarted.Eagerly, StatisticsState())

@@ -43,6 +43,21 @@ All of it:
   nobody would expect an RSS reader to know. It is measured only while the feed
   is actually in front of you — not while the app is in the background or the
   panel is shut — and never leaves the device
+- **How long you spend inside an article you open**, capped at ten minutes.
+  More personal again than the line above, and recorded for the same reason:
+  opening an article and coming straight back out is a judgement that it was
+  not worth reading, and without this the app cannot tell that from reading it
+  to the end.
+
+  It is counted forward in one-second steps taken only while the article is on
+  your screen, and never worked out by subtracting the time you opened it from
+  the time you came back. That is not a detail of the implementation. It means
+  closing the app, locking the phone or losing the process mid-article records
+  the reading you actually did and then stops, rather than leaving a start time
+  that a later resume turns into a three-day read.
+
+  Nothing is recorded at all for an article opened in an external browser,
+  because Whisper is not on screen to measure it.
 - Which sources you engage with most, which the app uses to decide what to show
   larger. Per source, and derived from the above: nothing about *which*
   articles, or what was in them
