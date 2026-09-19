@@ -115,6 +115,7 @@ fun PreferencesPage(
     val feedPrefs = listOf(
         prefs.breakingNews,
         prefs.stickyTop,
+        prefs.dimSkipped,
         prefs.removeDuplicates,
         prefs.blockedWords,
         prefs.glanceEnabled,

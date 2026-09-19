@@ -325,6 +325,24 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /**
+     * Fade sources whose articles the reader consistently passes over.
+     *
+     * Off by default, like every other rule that acts on something the app
+     * inferred rather than something the reader said. This one dims part of
+     * the feed on the strength of a guess, and a reader who never turned it on
+     * would be entitled to read that as a rendering bug. What it is doing, and
+     * to which sources, is on the Learned screen either way.
+     */
+    var dimSkipped = BooleanPref(
+        titleId = R.string.pref_dim_skipped,
+        summaryId = R.string.pref_dim_skipped_summary,
+        icon = Phosphor.EyeSlash,
+        key = DIM_SKIPPED,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
+    /**
      * Keep a pinned or breaking article at the top until it is scrolled past.
      *
      * Off by default, and paired with the setting above rather than hidden
@@ -1018,6 +1036,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val INSECURE_FEEDS = stringPreferencesKey("pref_insecure_feeds")
         val FEED_LIBRARY = stringPreferencesKey("pref_feed_library")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
+        val DIM_SKIPPED = booleanPreferencesKey("pref_dim_skipped")
         val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 
         /**

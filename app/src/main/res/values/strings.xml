@@ -242,6 +242,8 @@
     <string name="pref_breaking_news">Highlight breaking news</string>
     <string name="pref_breaking_news_summary">When several of your News sources cover the same story within a few hours, give it the largest card. Uses sources filed under a News category only.</string>
     <string name="why_breaking">Several sources are covering this story</string>
+    <string name="pref_dim_skipped">Fade sources you skip</string>
+    <string name="pref_dim_skipped_summary">Sources whose articles you scroll past without stopping are shown faded, so the ones you read stand out. Nothing is hidden, and you can see which sources this affects under What Whisper has learned.</string>
     <string name="pref_sticky_top">Hold it there while you scroll</string>
     <string name="pref_sticky_top_summary">A pinned article stays at the top of the feed until you unpin it \u2014 for following a story as it develops. A breaking story is held there too, but lets go once you have scrolled a few articles past it.</string>
     <string name="empty_bookmarks">Nothing saved yet</string>

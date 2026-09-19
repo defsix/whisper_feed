@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.data.db.models.SourcePace
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.utils.READ_DIM
@@ -169,6 +170,65 @@ object ArticleWeight {
 
     /** And past this it cannot claim anything at all. */
     const val RELATIVE_STALE_HOURS = 168f
+
+    /*
+     * The quiet-source rescue.
+     *
+     * A source can be one somebody reads almost everything from and still
+     * disappear from their feed, because the only thing the sizing asks about
+     * time is how long ago an article was published. Go quiet for a week and
+     * your newest piece is a week old, scores accordingly, and sits in a row
+     * at the bottom — the reader never sees that you are back.
+     *
+     * This is the one place the weighting acts on an *absence*. Everything
+     * else here scores what is in front of it.
+     */
+
+    /** Silence this long makes a source worth surfacing again. */
+    const val QUIET_AFTER_HOURS = 168f
+
+    /**
+     * How much of the reader's attention a source needs to earn a rescue.
+     *
+     * Half of what their most-read source gets. Deliberately high: this rule
+     * overrides the spacing that stops one publication owning the screen, so
+     * it has to be rare, and "a source you read about as much as your
+     * favourite" is rare by construction.
+     */
+    const val RESCUE_HABIT_MIN = 0.5f
+
+    /** At most this many rescues in one feed, however many sources went quiet. */
+    const val RESCUE_MAX = 2
+
+    /*
+     * Fading a source the reader keeps skipping.
+     *
+     * The mirror of the rescue, and the reason both are cautious: this is the
+     * weighting acting on a judgement the reader never stated, and the cost of
+     * being wrong is that somebody's feed greys out a source they did in fact
+     * want. It is therefore off unless asked for, needs a lot of evidence, and
+     * fades rather than hides.
+     */
+
+    /**
+     * How many of a source's articles must have gone past before it can be
+     * judged at all.
+     *
+     * Thirty. A handful proves nothing — a busy week, a run of pieces on a
+     * subject somebody was not in the mood for — and the difference between a
+     * source that is genuinely not wanted and one that had a bad fortnight is
+     * mostly a matter of how long you watched.
+     */
+    const val SKIPPED_MIN_SEEN = 30
+
+    /**
+     * The most engagement per article a skipped source may show.
+     *
+     * Half of [BAND_GLANCED], so this means "on average, not even a glance".
+     * A source clearing this is one whose headlines the reader has stopped on
+     * often enough to be worth keeping bright, whatever the totals say.
+     */
+    const val SKIPPED_SCORE_MAX = 0.5f
 
     /**
      * How many articles a source needs before its pace is worth estimating.
@@ -458,7 +518,11 @@ fun articleWeight(
     // which is why this is capped so much lower than affinity.
     weight += (habit[item.feed.id] ?: 0f) * ArticleWeight.HABIT_MAX
 
-    // Already read: it has had its turn.
+    // Already read: it has had its turn — unless it is pinned, which is the
+    // reader saying it has not. A pin is held at the top of the feed until it
+    // is unpinned, so it is read within moments of being opened once; taking
+    // two points off it then would shrink the card of the story somebody is
+    // deliberately following, which is the pin failing at its only job.
     //
     // Two rather than the one and a half this started at, because the penalty
     // has to clear [ArticleWeight.MEDIUM_AT] and that floor came down. At 1.5
@@ -466,7 +530,7 @@ fun articleWeight(
     // kept its card — so the strongest negative signal there is, the reader
     // having actually seen the thing, stopped being able to shrink anything
     // fresh. This is the one term that should beat freshness outright.
-    if (item.article.readAt != 0L) weight -= ArticleWeight.READ_PENALTY
+    if (item.article.readAt != 0L && !item.pinned) weight -= ArticleWeight.READ_PENALTY
 
     // Saved, and pinned, are the reader saying this one matters.
     if (item.bookmarked) weight += 0.4f
@@ -518,6 +582,15 @@ fun feedEmphasisFor(
         }
     }
 
+    // The quiet-source rescue, before the anchor so a rescued article can be
+    // what the feed opens on.
+    //
+    // Applied after the ordinary pass rather than as a term in the weight,
+    // because it is a statement about a source's silence rather than about an
+    // article, and because it has to be able to override the spacing rule —
+    // which a number added to a weight cannot do.
+    rescueQuietSources(items, sizes, habit, nowMs)
+
     // The opening anchor, if the scores did not produce one.
     val head = minOf(ArticleWeight.ANCHOR_WITHIN, items.size)
     if (head > 0 && sizes.take(head).none { it == FeedEmphasis.Large }) {
@@ -528,6 +601,60 @@ fun feedEmphasisFor(
     }
 
     return sizes
+}
+
+/**
+ * Gives a guaranteed large slot to sources that went quiet and came back.
+ *
+ * Only the newest article from each rescued source, only sources the reader
+ * demonstrably reads, and only [ArticleWeight.RESCUE_MAX] of them — so the
+ * exception stays an exception. A source is rescued at most once per feed
+ * however many articles it has just published.
+ *
+ * Mutates `sizes` in place, which is ugly and is the honest shape: it is one
+ * more pass over the same array the loop above filled, and returning a copy
+ * would suggest the two could be applied independently.
+ */
+private fun rescueQuietSources(
+    items: List<FeedItem>,
+    sizes: MutableList<FeedEmphasis>,
+    habit: Map<Long, Float>,
+    nowMs: Long,
+) {
+    if (items.isEmpty() || habit.isEmpty()) return
+
+    // The newest article from each source, which is the only candidate: a
+    // source that went quiet and published three times is back, and three
+    // large cards is a takeover rather than a welcome.
+    val newestBySource = HashMap<Long, Int>()
+    items.forEachIndexed { index, item ->
+        val at = newestBySource[item.feed.id]
+        if (at == null || item.timeMillis > items[at].timeMillis) newestBySource[item.feed.id] = index
+    }
+
+    newestBySource.entries
+        .filter { (feedId, index) ->
+            val ageHours = ((nowMs - items[index].timeMillis).coerceAtLeast(0L)) / 3_600_000f
+            val wellRead = (habit[feedId] ?: 0f) >= ArticleWeight.RESCUE_HABIT_MIN
+            // No picture, no large tile — the shape needs one, and a rescue
+            // that produced an empty grey rectangle would help nobody.
+            wellRead &&
+                    ageHours >= ArticleWeight.QUIET_AFTER_HOURS &&
+                    !items[index].article.imageUrl.isNullOrBlank() &&
+                    sizes[index] != FeedEmphasis.Large
+        }
+        // Most-read source first, so a cap of two spends itself on the sources
+        // the reader would most want back rather than on list order.
+        .sortedByDescending { (feedId, _) -> habit[feedId] ?: 0f }
+        .take(ArticleWeight.RESCUE_MAX)
+        .forEach { (_, index) ->
+            // One adjacency guard. The rescue overrides the spacing rule by
+            // design, but two full-width cards touching reads as a layout
+            // fault rather than as emphasis.
+            val neighbourLarge = sizes.getOrNull(index - 1) == FeedEmphasis.Large ||
+                    sizes.getOrNull(index + 1) == FeedEmphasis.Large
+            if (!neighbourLarge) sizes[index] = FeedEmphasis.Large
+        }
 }
 
 /**
@@ -688,6 +815,49 @@ fun rememberSourcePace(): Map<Long, Float> {
     return rows
 }
 
+/**
+ * Whether one source's record says its articles are consistently passed over.
+ *
+ * A pure function rather than a line inside the composable, because it is the
+ * whole judgement: everything else around it is plumbing, and a rule that
+ * fades part of somebody's feed should be the part that is easiest to read
+ * and to argue with.
+ *
+ * Both conditions matter. Without the floor on how much has been seen, a
+ * source that arrived yesterday is condemned on three articles; without the
+ * score, a source the reader stops at constantly is condemned for having a
+ * lot of articles.
+ */
+fun isSkippedSource(row: SourceEngagement): Boolean =
+    row.seen >= ArticleWeight.SKIPPED_MIN_SEEN &&
+            row.score.toFloat() / row.seen < ArticleWeight.SKIPPED_SCORE_MAX
+
+/**
+ * Sources whose articles go past without ever being stopped at.
+ *
+ * Derived from the same engagement rows the sizing uses, so a source that is
+ * faded here is one the Learned screen will show near the bottom — the reader
+ * can check the verdict against the numbers it came from, and reset both with
+ * the same button.
+ *
+ * Empty unless the reader has turned fading on. The work is skipped entirely
+ * in that case rather than computed and ignored.
+ */
+@Composable
+fun rememberSkippedSources(): Set<Long> {
+    val repo: ArticleRepository = koinInject()
+    val prefs: FeedPreferences = koinInject()
+    val enabled by prefs.dimSkipped.asState()
+    val resetAt by prefs.learnedResetAt.get().collectAsState(initial = 0L)
+    val since = remember(resetAt) { habitWindowStart(resetAt) }
+    val scores by remember(since) { repo.engagementPerSource(since) }
+        .collectAsState(initial = emptyMap())
+    return remember(scores, enabled) {
+        if (!enabled) emptySet()
+        else scores.values.filter(::isSkippedSource).mapTo(HashSet()) { it.feedId }
+    }
+}
+
 @Composable
 fun rememberReadingHabits(): Map<Long, Float> {
     val repo: ArticleRepository = koinInject()
@@ -805,7 +975,9 @@ fun weightReasons(
         WeightReason(R.string.why_has_summary, 0.3f)
     else WeightReason(R.string.why_no_summary, -0.3f)
 
-    if (item.article.readAt != 0L) reasons += WeightReason(R.string.why_read, -ArticleWeight.READ_PENALTY)
+    if (item.article.readAt != 0L && !item.pinned) {
+        reasons += WeightReason(R.string.why_read, -ArticleWeight.READ_PENALTY)
+    }
     if (item.bookmarked) reasons += WeightReason(R.string.why_saved, 0.4f)
     if (item.pinned) reasons += WeightReason(R.string.why_pinned, 1.5f)
 

@@ -88,14 +88,34 @@ fun FeedArticleItem(
     layout: String = LAYOUT_CARDS,
     emphasis: FeedEmphasis = FeedEmphasis.Medium,
     dimRead: Boolean = false,
+    /**
+     * Whether this article's source is one the reader consistently skips.
+     *
+     * Passed rather than looked up here so the set is read once per feed
+     * instead of once per card, and so a card in a preview or a test is never
+     * silently faded by state it did not ask for.
+     */
+    dimSource: Boolean = false,
     cluster: StoryCluster? = null,
     onPin: (Boolean) -> Unit = {},
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     // One place rather than five: every shape below takes this modifier, so a
     // read article fades whichever way the feed happens to be drawing it.
-    val shapeModifier =
-        if (dimRead && item.article.readAt != 0L) modifier.alpha(READ_ALPHA) else modifier
+    //
+    // A pin never fades. It is held at the top of the feed until it is
+    // unpinned, which makes it permanently visible and therefore permanently
+    // "read" the moment it is opened once — and a story somebody is following
+    // through the day greying out after the first read is the pin failing at
+    // the one job it has. The hide setting already exempts pins for the same
+    // reason; this is the half that was missed.
+    //
+    // A skipped source fades the same way and for a related reason: both mean
+    // "you are unlikely to want this". Same alpha rather than a second, milder
+    // one, because two shades of faded on one screen is a distinction nobody
+    // can read and everybody has to wonder about.
+    val faded = (dimRead && item.article.readAt != 0L) || dimSource
+    val shapeModifier = if (faded && !item.pinned) modifier.alpha(READ_ALPHA) else modifier
     // Worked out only when the menu is opened, not for every card in the feed:
     // this is an answer to a question almost nobody asks of almost any article.
     val reasons = rememberWeightReasons(item, clusterOf(item, cluster))
