@@ -3,8 +3,6 @@ package com.saulhdev.feeder
 import android.app.Activity
 import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Bundle
-import android.widget.Toast
-import androidx.lifecycle.SavedStateHandle
 import androidx.multidex.MultiDexApplication
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -18,134 +16,31 @@ import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
-import com.saulhdev.feeder.data.db.NeoFeedDb
-import com.saulhdev.feeder.data.repository.ArticleRepository
-import com.saulhdev.feeder.manager.glance.GlanceStateHolder
-import com.saulhdev.feeder.manager.glance.WeatherRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.manager.bookmarks.FeedDiscovery
-import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
-import com.saulhdev.feeder.manager.mastodon.MastodonApi
-import com.saulhdev.feeder.manager.mastodon.MastodonAuth
-import com.saulhdev.feeder.manager.mastodon.MastodonStorage
 import com.saulhdev.feeder.manager.service.OverlayBridge
-import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.MainThreadWatch
-import com.saulhdev.feeder.utils.extensions.ToastMaker
 import com.saulhdev.feeder.utils.extensions.restartApp
-import com.saulhdev.feeder.viewmodels.ArticleListViewModel
-import com.saulhdev.feeder.viewmodels.ArticleViewModel
-import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
-import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
-import com.saulhdev.feeder.viewmodels.SortFilterViewModel
-import com.saulhdev.feeder.data.content.SyncAccount
-import com.saulhdev.feeder.manager.backup.BackupStore
-import com.saulhdev.feeder.manager.sync.service.GoogleReaderService
-import com.saulhdev.feeder.manager.sync.service.LocalRssService
-import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
-import com.saulhdev.feeder.viewmodels.AccountViewModel
-import com.saulhdev.feeder.viewmodels.LearnedViewModel
-import com.saulhdev.feeder.viewmodels.SourceEditViewModel
-import com.saulhdev.feeder.viewmodels.SourceListViewModel
-import com.saulhdev.feeder.viewmodels.BookmarkImportViewModel
-import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
-import com.saulhdev.feeder.viewmodels.SuggestionsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.androix.startup.KoinStartup
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.context.GlobalContext
-import org.koin.core.module.dsl.singleOf
-import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.koinConfiguration
-import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.inject
 
 @OptIn(KoinExperimentalAPI::class)
 class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
     val activityHandler = ActivityHandler()
-    private val applicationCoroutineScope = ApplicationCoroutineScope()
+    // Built by coreModule now, not here; see AppModules.kt.
+    private val applicationCoroutineScope: ApplicationCoroutineScope by inject(
+        ApplicationCoroutineScope::class.java
+    )
     private val wm: WorkManager by inject(WorkManager::class.java)
-
-    private fun savedStateHandle() = SavedStateHandle()
-
-    private val modelModule = module {
-        single {
-            savedStateHandle()
-        }
-        viewModelOf(::SourceEditViewModel)
-        viewModelOf(::LearnedViewModel)
-        viewModelOf(::AccountViewModel)
-        viewModelOf(::SearchFeedViewModel)
-        viewModelOf(::ArticleListViewModel)
-        viewModelOf(::SourceListViewModel)
-        viewModelOf(::ArticleViewModel)
-        viewModelOf(::SortFilterViewModel)
-        viewModelOf(::SuggestionsViewModel)
-        viewModelOf(::BookmarkImportViewModel)
-        viewModelOf(::BrokenFeedsViewModel)
-        viewModelOf(::MastodonAuthViewModel)
-    }
-
-    // TODO Move to its class
-    private val dataModule = module {
-        single<NeoFeedDb> { NeoFeedDb.getInstance(this@NeoApp) }
-        single { get<NeoFeedDb>().feedArticleDao() }
-        single { get<NeoFeedDb>().feedSourceDao() }
-        singleOf(::ArticleRepository)
-        singleOf(::SourcesRepository)
-        singleOf(::SyncRestClient)
-        singleOf(::MastodonStorage)
-        singleOf(::MastodonAuth)
-        singleOf(::MastodonApi)
-        // Two things resolve this from Koin — FeedDiscovery and
-        // DiscoveryWorker — and nothing ever registered it, so "Feeds that
-        // stopped working" crashed the app the moment it was opened and the
-        // suggestion worker threw on every run. A singleton rather than a
-        // factory because each instance builds its own OkHttpClient, with its
-        // own connection and thread pools, for a class that holds no other
-        // state.
-        singleOf(::FeedParser)
-        singleOf(::FeedDiscovery)
-        single { SyncAccount(this@NeoApp) }
-        single { BackupStore(this@NeoApp, get(), get()) }
-        single { LocalRssService(this@NeoApp, get()) }
-        single {
-            RssServiceDispatcher(
-                account = get(),
-                local = get(),
-                googleReaderFactory = {
-                    GoogleReaderService(this@NeoApp, get(), get(), get())
-                },
-            )
-        }
-        singleOf(::WeatherRepository)
-        singleOf(::GlanceStateHolder)
-    }
-
-    private val coreModule = module {
-        single { contentResolver }
-        single { WorkManager.getInstance(this@NeoApp) }
-        single<ToastMaker> {
-            object : ToastMaker {
-                override suspend fun makeToast(text: String) = withContext(Dispatchers.Main) {
-                    Toast.makeText(get(), text, Toast.LENGTH_SHORT).show()
-                }
-
-                override suspend fun makeToast(resId: Int) = withContext(Dispatchers.Main) {
-                    Toast.makeText(get(), resId, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-        single { applicationCoroutineScope }
-        single<NeoApp> { this@NeoApp }
-    }
 
     fun onAppStarted() {
         registerActivityLifecycleCallbacks(activityHandler)

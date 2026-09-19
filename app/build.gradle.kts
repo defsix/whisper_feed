@@ -261,6 +261,7 @@ dependencies {
     implementation(libs.koin.startup)
     implementation(libs.koin.annotations)
     ksp(libs.koin.compiler)
+    testImplementation(libs.koin.test)
 
     //Libs
     implementation(libs.threetenabp)

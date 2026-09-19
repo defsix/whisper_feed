@@ -96,6 +96,7 @@ koin-startup = { group = "io.insert-koin", name = "koin-androidx-startup" }
 koin-workmanager = { group = "io.insert-koin", name = "koin-androidx-workmanager" }
 koin-annotations = { group = "io.insert-koin", name = "koin-annotations", version.ref = "koin-ksp" }
 koin-compiler = { group = "io.insert-koin", name = "koin-ksp-compiler", version.ref = "koin-ksp" }
+koin-test = { group = "io.insert-koin", name = "koin-test" }
 
 moshi = { group = "com.squareup.moshi", name = "moshi", version.ref = "moshi" }
 moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
