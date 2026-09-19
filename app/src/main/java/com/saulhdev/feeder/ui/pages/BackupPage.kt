@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
@@ -85,7 +87,15 @@ fun BackupPage(
 
     val folder by prefs.backupFolder.get().collectAsState(initial = "")
     val lastRun by prefs.backupLastRun.get().collectAsState(initial = "")
-    var message by remember { mutableStateOf<String?>(null) }
+    // A snackbar, not a row in the list. The result used to render at a fixed
+    // position below the restore buttons, so backing up — a button near the
+    // top of the screen — put its confirmation somewhere the reader was not
+    // looking and often could not see without scrolling. An action's outcome
+    // belongs where the action was.
+    val snackbarHostState = remember { SnackbarHostState() }
+    fun say(text: String) {
+        scope.launch { snackbarHostState.showSnackbar(text, withDismissAction = true) }
+    }
 
     val writable = remember(folder) {
         folder.isNotEmpty() && store.canWrite(folder.toUri())
@@ -105,7 +115,7 @@ fun BackupPage(
             // run: somebody who has just chosen a folder wants to see a file
             // appear in it, and a day of nothing happening reads as a setting
             // that did not take.
-            report(store.backUp(uri), context) { message = it }
+            report(store.backUp(uri), context) { say(it) }
             prefs.backupLastRun.setValue(System.currentTimeMillis().toString())
         }
     }
@@ -114,20 +124,21 @@ fun BackupPage(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch { report(store.restoreSettings(uri), context) { message = it } }
+        scope.launch { report(store.restoreSettings(uri), context) { say(it) } }
     }
 
     val chooseBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch { report(store.restore(uri), context) { message = it } }
+        scope.launch { report(store.restore(uri), context) { say(it) } }
     }
 
     ViewWithActionBar(
         title = stringResource(R.string.pref_backup),
         largeTitle = true,
         showBackButton = true,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -253,10 +264,18 @@ fun BackupPage(
                         positive = true,
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                report(store.backUp(folder.toUri()), context) { message = it }
-                                prefs.backupLastRun.setValue(
-                                    System.currentTimeMillis().toString()
-                                )
+                                val outcome = store.backUp(folder.toUri())
+                                report(outcome, context) { say(it) }
+                                // Only on success, and from the time the file
+                                // was actually written. This used to stamp the
+                                // clock whatever happened, so a failed backup
+                                // still left "Last backed up a minute ago" on
+                                // the screen — the one line a reader checks to
+                                // find out whether their backup is current,
+                                // saying yes when the answer was no.
+                                if (outcome is BackupStore.Result.Written) {
+                                    prefs.backupLastRun.setValue(outcome.at.toString())
+                                }
                             }
                         },
                     )
@@ -304,16 +323,6 @@ fun BackupPage(
                     // is the same file.
                     onClick = { chooseBackup.launch(arrayOf("*/*")) },
                 )
-            }
-
-            message?.let {
-                item {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
 
             // Android's own backup, asked separately from the folder above

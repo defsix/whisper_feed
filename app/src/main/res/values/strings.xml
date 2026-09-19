@@ -279,7 +279,7 @@
     <string name="backup_none">No folder chosen yet</string>
     <string name="backup_never">Not backed up yet</string>
     <string name="backup_last">Last backed up %1$s</string>
-    <string name="backup_written">Saved as %1$s</string>
+    <string name="backup_written">Backed up. Saved as %1$s</string>
     <string name="backup_restored">Added %1$d sources</string>
     <string name="backup_restored_none">Everything in that backup is already here</string>
     <string name="backup_lost">Whisper can no longer write to that folder. Choose it again.</string>
