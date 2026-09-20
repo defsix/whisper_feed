@@ -112,6 +112,18 @@ object FeedLibrary {
         }
 
     /**
+     * Every bundled feed, with the pack it came from.
+     *
+     * Used by the weekly discovery pass, which needs to know which packs the
+     * reader's own sources sit in. Reads all eighty-odd files, which is fine
+     * once a week in a worker and would not be on a screen.
+     */
+    suspend fun allFeeds(context: Context): List<Pair<LibraryPack, LibraryFeed>> =
+        withContext(Dispatchers.IO) {
+            packs(context).flatMap { pack -> feeds(context, pack).map { pack to it } }
+        }
+
+    /**
      * Subscribes to the chosen feeds, skipping any already followed.
      *
      * Deliberately the same shape as StarterSources.subscribe: description and

@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_20_21,
     MIGRATION_19_20,
     MIGRATION_18_19,
     MIGRATION_17_18,
@@ -241,6 +242,16 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_20_21 : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Everything already recorded came from link harvesting, which is the
+        // default, so the existing rows are correct without being touched.
+        db.execSQL("ALTER TABLE Suggestion ADD COLUMN kind TEXT NOT NULL DEFAULT 'links'")
+        db.execSQL("ALTER TABLE Suggestion ADD COLUMN context TEXT NOT NULL DEFAULT ''")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_19_20 : Migration(19, 20) {

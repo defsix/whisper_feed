@@ -40,6 +40,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.data.db.models.FROM_LIBRARY
 import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
@@ -130,9 +131,19 @@ private fun SuggestionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
-            // The evidence, in the row rather than behind it.
+            // The evidence, in the row rather than behind it — and each
+            // mechanism says its own. "Six articles you read linked to this"
+            // is a fact about the reader; "also in United Kingdom, where two
+            // of your sources are" is a fact about a file that ships with the
+            // app. One wording for both would let the weaker claim borrow the
+            // stronger one's authority.
             Text(
-                text = pluralStringResource(
+                text = if (suggestion.kind == FROM_LIBRARY) pluralStringResource(
+                    R.plurals.suggestion_reason_library,
+                    suggestion.mentions,
+                    suggestion.context,
+                    suggestion.mentions,
+                ) else pluralStringResource(
                     R.plurals.suggestion_reason,
                     suggestion.mentions,
                     suggestion.mentions,

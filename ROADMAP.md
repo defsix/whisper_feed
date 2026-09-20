@@ -1665,6 +1665,33 @@ a bonus for the people running a launcher that supports it.
 
 ---
 
+## Suggestions, after the device report
+
+Link harvesting answers "what do the things you read point at". That is a good
+question about blogs and a useless one about news, because a BBC article links
+to the BBC — so a reader of large news sites saw an empty screen and reasonably
+concluded the feature made no sense. Two things came out of that.
+
+**A bug**: the pass was reading the feed's own summary rather than the article
+body, so even for link-rich sources it was counting a teaser paragraph whose
+only outbound link is back to the publisher.
+
+**And a second mechanism**, suggested from the device: if somebody reads a lot
+of the BBC, offer ITV or Sky News. The bundled library is already a set of
+curated peer groups, so "in the United Kingdom pack beside the BBC" is the
+statement "similar publication", made by whoever assembled the pack rather than
+inferred from behaviour.
+
+The difficulty is that a large publication has a feed for everything: the BBC
+is in eight packs and the Guardian in fourteen, so counting shared sources
+makes a news reader look exactly as much like a cricket reader. Each source's
+vote is therefore divided by the number of packs it appears in — one that sits
+in a single pack says something definite, one that sits in fourteen says almost
+nothing about any of them.
+
+Still local, still no account, and still never one reader's list compared
+against another's.
+
 ## Debt worth clearing
 
 Small, and cheaper now than later.

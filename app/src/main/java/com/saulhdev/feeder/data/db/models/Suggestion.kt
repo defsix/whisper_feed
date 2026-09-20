@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.data.db.models
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -56,6 +57,27 @@ data class Suggestion(
      */
     val mentions: Int = 0,
 
+    /**
+     * Which mechanism found this, because they are different claims.
+     *
+     * [FROM_LINKS] means articles the reader read pointed here. [FROM_LIBRARY]
+     * means this sits in a bundled collection alongside sources they already
+     * follow. Showing both under one wording would make the weaker claim
+     * borrow the stronger one's evidence — "six articles you read linked to
+     * this" is a fact about the reader, and "also in United Kingdom" is a fact
+     * about a file that ships with the app.
+     */
+    @ColumnInfo(defaultValue = FROM_LINKS)
+    val kind: String = FROM_LINKS,
+
+    /**
+     * What the reason refers to — the pack's name, for a library suggestion.
+     *
+     * Empty for a link suggestion, whose reason is [mentions] alone.
+     */
+    @ColumnInfo(defaultValue = "")
+    val context: String = "",
+
     val foundAt: Long = System.currentTimeMillis(),
 
     /**
@@ -66,3 +88,9 @@ data class Suggestion(
      */
     val dismissedAt: Long = 0L,
 )
+
+/** Found because articles the reader read linked to it. */
+const val FROM_LINKS = "links"
+
+/** Found because it sits beside sources the reader already follows. */
+const val FROM_LIBRARY = "library"

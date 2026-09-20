@@ -29,6 +29,9 @@ import androidx.work.WorkerParameters
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.manager.models.FeedParser
+import com.saulhdev.feeder.data.FeedLibrary
+import com.saulhdev.feeder.data.db.models.FROM_LIBRARY
+import com.saulhdev.feeder.utils.registrableDomain
 import com.saulhdev.feeder.utils.blobFile
 import com.saulhdev.feeder.utils.blobFullFile
 import com.saulhdev.feeder.utils.blobFullInputStream
@@ -148,6 +151,74 @@ class DiscoveryWorker(
             )
             Log.i(TAG, "Suggesting $host on the evidence of $mentions read articles")
         }
+
+        suggestFromLibrary(suggestions, subscribed, known + candidates.map { it.first }.toSet())
+    }
+
+    /**
+     * Offers what sits beside the reader's own sources in the bundled packs.
+     *
+     * The other half of discovery, and the half that works for somebody who
+     * reads the news. Link harvesting asks what the things you read point at,
+     * which a BBC article answers with the BBC — so a reader of large news
+     * sites got an empty screen while the obvious suggestion, that ITV and
+     * Sky News exist and are not being followed, sat in a file shipped with
+     * the app.
+     *
+     * Nothing is fetched. The pack already carries the feed's address and its
+     * title, both verified before they shipped, so unlike a link suggestion
+     * there is no autodiscovery pass and no request to anybody.
+     */
+    private suspend fun suggestFromLibrary(
+        suggestions: com.saulhdev.feeder.data.db.dao.SuggestionDao,
+        subscribed: Set<String>,
+        excluded: Set<String>,
+    ) {
+        val library = runCatching { FeedLibrary.allFeeds(context) }.getOrNull().orEmpty()
+        if (library.isEmpty()) return
+
+        val domainToPacks = mutableMapOf<String, MutableSet<String>>()
+        library.forEach { (pack, feed) ->
+            val host = runCatching { URL(feed.url).host }.getOrNull() ?: return@forEach
+            domainToPacks.getOrPut(registrableDomain(host)) { mutableSetOf() }.add(pack.slug)
+        }
+
+        // Compared on the registrable domain rather than the address: the
+        // reader's BBC feed is almost never the one the pack happens to list,
+        // and matching on the address would call them unfollowed.
+        val mine = subscribed.mapTo(mutableSetOf()) { registrableDomain(it) }
+        val packs = LibraryNeighbours.topPacks(mine, domainToPacks)
+        if (packs.isEmpty()) return
+
+        val skip = mine + excluded.map(::registrableDomain)
+        var offered = 0
+        packs.forEach { (slug, shared) ->
+            val pack = library.firstOrNull { it.first.slug == slug }?.first ?: return@forEach
+            library.asSequence()
+                .filter { it.first.slug == slug }
+                .map { it.second }
+                .filter { feed ->
+                    val host = runCatching { URL(feed.url).host }.getOrNull()
+                    host != null && registrableDomain(host) !in skip
+                }
+                .take(MAX_PER_PACK)
+                .forEach { feed ->
+                    if (offered >= MAX_SUGGESTIONS) return
+                    val host = runCatching { URL(feed.url).host }.getOrNull() ?: return@forEach
+                    suggestions.insert(
+                        Suggestion(
+                            host = registrableDomain(host),
+                            feedUrl = feed.url,
+                            title = feed.title,
+                            mentions = shared,
+                            kind = FROM_LIBRARY,
+                            context = pack.name,
+                        )
+                    )
+                    offered++
+                    Log.i(TAG, "Suggesting ${feed.title} from ${pack.name} ($shared of yours)")
+                }
+        }
     }
 
     companion object {
@@ -163,6 +234,15 @@ class DiscoveryWorker(
 
         /** A ceiling on the pass, so a heavy reader does not pay for it. */
         private const val MAX_ARTICLES = 500
+
+        /**
+         * How many to take from any one pack.
+         *
+         * Two, so three packs cannot become one pack's catalogue. Somebody
+         * who follows three Irish papers wants to hear about a fourth, not
+         * about the other eleven.
+         */
+        private const val MAX_PER_PACK = 2
 
         /**
          * How many to offer at once.

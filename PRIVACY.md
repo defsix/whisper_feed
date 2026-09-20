@@ -68,6 +68,12 @@ All of it:
   Whisper never learns which page you were on, what you did while you were
   away, or whether you were reading at all — only how long it was until you
   returned to it.
+- Which bundled collections your own sources fall into, so the app can suggest
+  a publication that sits beside them. Worked out on the device against a file
+  that ships inside the app: no query goes anywhere, and your subscription list
+  is never compared against anybody else's. That last one is the mechanism
+  every recommendation feed is built on, and it is the one thing this app will
+  not do.
 - Which sources you engage with most, which the app uses to decide what to show
   larger. Per source, and derived from the above: nothing about *which*
   articles, or what was in them
