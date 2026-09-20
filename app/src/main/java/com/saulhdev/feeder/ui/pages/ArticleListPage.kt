@@ -126,6 +126,7 @@ import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.heldFeed
 import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
+import com.saulhdev.feeder.ui.overlay.ActiveFilterBar
 import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.BrowserReadTimer
@@ -451,6 +452,10 @@ fun ArticleListPage(
                                             prefs.categoryFilter.set(picked)
                                         },
                                     )
+                                    // Named, and undoable, where the shortened
+                                    // feed is rather than inside the sheet
+                                    // that set it.
+                                    ActiveFilterBar()
                                 }
                             }
 

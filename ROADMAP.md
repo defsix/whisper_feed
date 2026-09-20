@@ -351,13 +351,13 @@ a hundred sources, one at a time is the wrong unit.
   needs a preference rather than a column and a migration, and the cap is the
   feature: a list where everything is at the top is a list in its original
   order.
-- **Tags should be picked, not typed.** The source editor's Tags field is free
-  text, so a category is created by spelling it right and lost by spelling it
-  wrong — and the field reads as one value even though the column has always
-  held a comma-separated list. Every tag in use should offer itself as a chip
-  to select, with typing reserved for making a new one, and several selectable
-  on one feed. Note this is a UI change and a tag registry, not a schema change:
-  `Feeds.tag` already stores a list and `Feed.tags` already reads it.
+- ~~**Tags should be picked, not typed.**~~ Done, and done in all three places
+  a category can be set: adding a source, editing one, and the bulk dialog on
+  the sources list. Every tag in use offers itself as a chip, several can be
+  selected on one feed, and typing is reserved for making a new one — with a
+  guard that still saves a typed tag if Save is pressed instead of Done, which
+  is the kind of loss nobody reports and everybody notices. This entry was
+  simply left open after the work.
 
 That set is Milestone 4's "complete source management", read literally.
 
@@ -795,11 +795,18 @@ any of this, and it should be built before the rest of it.
   not covered: it lives in a file per article, so searching it would mean
   reading every one off disk on each keystroke, or building an index. Worth
   revisiting if the shorter fields prove too thin.
-- **The filter is confusing as it stands.** Half of this is done: the overlay
-  showed a View-based XML sheet while the app showed a Compose one, and the
-  two now share the app's. What is left is the sheet's own design — what it is
-  filtering *by* should be visible without opening it, and it should read as
-  narrowing the feed rather than configuring it.
+- ~~**The filter is confusing as it stands.**~~ The overlay showed a
+  View-based XML sheet while the app showed a Compose one, and the two now
+  share the app's. What it is filtering *by* is now visible without opening
+  anything: each active narrowing is a named chip under the header, on both
+  surfaces, with its own cross — so a muted category is undone where the
+  shortened feed is rather than inside the sheet that set it. A solid funnel
+  answers *whether* a filter is on and never *what*, which is exactly the
+  state in which somebody decides the app has lost their articles.
+
+  The chosen sort is shown but not removable: there is no "no sort", so a
+  cross on it would have to mean "back to newest first" — a different action
+  wearing the same symbol as the ones beside it.
 
 ### 10. Glance and header, once the rest is in
 

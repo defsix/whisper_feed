@@ -315,6 +315,10 @@ fun FeedScaffold(
                             selected = selectedCategories,
                             onSelectedChange = onCategoriesChange,
                         )
+                        // What the filter is doing, where the shortened feed
+                        // is. The funnel in the header says only that one is
+                        // on; this says which, and lets it be undone here.
+                        ActiveFilterBar()
                     }
                 }
             }

@@ -524,7 +524,12 @@
     <string name="pref_suggestions">Feeds from your reading</string>
     <string name="pref_suggestions_summary">Publications your articles keep linking to, if they publish a feed</string>
     <string name="suggestions_explanation">Feeds you could subscribe to \u2014 never articles to read. Worked out on this phone, from links in articles you actually read. Nothing about your reading is sent anywhere, and nothing here reaches your feed unless you add it.</string>
-    <string name="suggestions_none">Nothing yet. Once a week Whisper looks at the articles you have read, notices which publications they keep linking to, and checks whether those publish a feed. Give it a few weeks of reading.</string>
+    <string name="filter_chip_category">Category: %1$s</string>
+    <string name="filter_chip_source">Muted: %1$s</string>
+    <string name="filter_chip_sort_title">Sorted by title</string>
+    <string name="filter_chip_sort_source">Sorted by source</string>
+    <string name="filter_chip_clear">Clear</string>
+    <string name="suggestions_none">Nothing yet. Once a week Whisper reads back through the articles you opened, counts the other sites they link to, and checks whether any of those publish a feed. Three separate articles have to point at the same site before it is offered.\n\nThis works best if you read blogs, newsletters or anything that cites its sources. Big news sites mostly link to themselves, so if that is all you follow, this screen may stay empty \u2014 and that is the mechanism being honest rather than broken.</string>
     <string name="suggestion_dismiss">Not interested</string>
     <!-- Statistics -->
     <string name="pref_statistics">Your reading</string>

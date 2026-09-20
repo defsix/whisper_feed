@@ -30,6 +30,8 @@ import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.utils.blobFile
+import com.saulhdev.feeder.utils.blobFullFile
+import com.saulhdev.feeder.utils.blobFullInputStream
 import com.saulhdev.feeder.utils.blobInputStream
 import com.saulhdev.feeder.utils.isFeedHost
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURLNoThrows
@@ -76,11 +78,27 @@ class DiscoveryWorker(
         // memory together.
         val counts = mutableMapOf<String, Int>()
         read.forEach { article ->
-            val file = blobFile(article.uuid, context.filesDir)
-            if (!file.isFile) return@forEach
-            val html = runCatching {
-                blobInputStream(article.uuid, context.filesDir).use { it.reader().readText() }
-            }.getOrNull() ?: return@forEach
+            // The full page first, the feed's own summary only as a fallback.
+            //
+            // This read the summary alone, which is why the screen stayed
+            // empty. An RSS description is a teaser — a paragraph and a link
+            // back to the article — so its only outbound link is to the
+            // publisher, which is excluded as the article's own host. The
+            // links that say anything about what a reader might follow next
+            // are in the body of the piece, and the body is in a different
+            // file that full-text fetching already writes.
+            val full = blobFullFile(article.uuid, context.filesDir)
+            val html = if (full.isFile) {
+                runCatching {
+                    blobFullInputStream(article.uuid, context.filesDir).use { it.reader().readText() }
+                }.getOrNull()
+            } else {
+                val file = blobFile(article.uuid, context.filesDir)
+                if (!file.isFile) null
+                else runCatching {
+                    blobInputStream(article.uuid, context.filesDir).use { it.reader().readText() }
+                }.getOrNull()
+            } ?: return@forEach
             val ownHost = runCatching { URL(article.link ?: "").host }.getOrNull()
             LinkHarvest.tally(counts, LinkHarvest.domainsIn(html, ownHost))
         }
