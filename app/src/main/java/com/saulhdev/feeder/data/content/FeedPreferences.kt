@@ -55,7 +55,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.BookOpenUser
 import com.saulhdev.feeder.ui.icons.phosphor.Graph
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.ui.icons.phosphor.Sort
@@ -837,23 +836,23 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      */
     /**
      * Sources the reader wants at the top of their list, at most
-     * [com.saulhdev.feeder.viewmodels.MAX_FAVOURITE_SOURCES] of them.
+     * [com.saulhdev.feeder.viewmodels.MAX_PINNED_SOURCES] of them.
      *
      * Chosen over a drag-to-reorder handle, and the reason is worth keeping.
      * A hand-made order has no meaning while the list is sorted by name —
      * name ordering is already total — so a handle either does nothing in
      * three of the four sorts or silently overrides the sort that was picked.
-     * Both are controls that lie about what they do. A short favourites list
+     * Both are controls that lie about what they do. A short pinned list
      * composes with every sort instead: these few sit on top, everything else
      * keeps whatever order was asked for.
      *
      * Feed ids as strings, because DataStore has no set of longs and every
      * other multi-value preference here is already a string set.
      */
-    var favouriteSources = StringSetPref(
+    var pinnedSources = StringSetPref(
         titleId = R.string.title_sources,
-        icon = Phosphor.HeartStraight,
-        key = FAVOURITE_SOURCES,
+        icon = Phosphor.Asterisk,
+        key = PINNED_SOURCES,
         dataStore = dataStore,
         defaultValue = emptySet(),
     )
@@ -1075,7 +1074,10 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
 
         // Filter & Sort
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
-        val FAVOURITE_SOURCES = stringSetPreferencesKey("pref_favourite_sources")
+        // The stored name stays as it was written. Renaming a DataStore key
+        // is not a rename, it is a deletion plus an empty new setting, and
+        // nobody's pinned sources are worth tidier spelling.
+        val PINNED_SOURCES = stringSetPreferencesKey("pref_favourite_sources")
         val HIDDEN_SOURCES = stringSetPreferencesKey("pref_hidden_sources")
 val LEARNED_RESET_AT = longPreferencesKey("pref_learned_reset_at")
         val BACKUP_STOPPED_AT = longPreferencesKey("pref_backup_stopped_at")

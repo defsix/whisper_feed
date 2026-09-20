@@ -47,8 +47,10 @@ import androidx.compose.ui.graphics.Color
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.icons.Phosphor
 import androidx.compose.material3.IconButton
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
-import com.saulhdev.feeder.ui.icons.phosphor.HeartStraightFill
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.data.db.models.Feed
 
@@ -75,9 +77,9 @@ fun SourceItem(
     onExtendSelection: ((Feed) -> Unit)? = null,
     staleSince: Long = 0L,
     /** Whether this source is one of the few kept at the top of the list. */
-    favourite: Boolean = false,
+    pinned: Boolean = false,
     /** Null hides the control entirely, for the screens that have no list to top. */
-    onFavourite: ((Feed) -> Unit)? = null,
+    onPin: ((Feed) -> Unit)? = null,
 ) {
     val extend = onExtendSelection ?: onLongClick
     val (isEnabled, enable) = remember(source.isEnabled) {
@@ -153,18 +155,41 @@ fun SourceItem(
                 Checkbox(checked = selected, onCheckedChange = { onLongClick(source) })
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (onFavourite != null) {
-                        IconButton(onClick = { onFavourite(source) }) {
-                            Icon(
-                                imageVector = if (favourite) Phosphor.HeartStraightFill
-                                else Phosphor.HeartStraight,
-                                contentDescription = stringResource(
-                                    if (favourite) R.string.source_unfavourite
-                                    else R.string.source_favourite
-                                ),
-                                tint = if (favourite) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    if (onPin != null) {
+                        // The same asterisk a pinned article carries, because
+                        // it means the same thing — kept at the top until the
+                        // reader says otherwise. One mark for one idea is
+                        // worth more than two prettier ones.
+                        //
+                        // There is no filled asterisk to pair with the outline
+                        // the way a heart has, so the pinned state is a filled
+                        // container behind it rather than a heavier glyph. A
+                        // tint change alone would be the only difference
+                        // between the two states, which is colour carrying
+                        // meaning on its own.
+                        IconButton(onClick = { onPin(source) }) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (pinned) MaterialTheme.colorScheme.primaryContainer
+                                        else Color.Transparent
+                                    ),
+                            ) {
+                                Icon(
+                                    imageVector = Phosphor.Asterisk,
+                                    contentDescription = stringResource(
+                                        if (pinned) R.string.source_unpin
+                                        else R.string.source_pin
+                                    ),
+                                    tint = if (pinned)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
                     Switch(

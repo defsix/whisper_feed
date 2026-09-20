@@ -60,7 +60,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 1 | Material shell | **Done** — identity, M3, dynamic colour, edge-to-edge, light/dark/black, scaffold, header, chips. Plus a shape scale, bundled Inter and a two-stage splash, none of which the milestone asked for |
 | 2 | Cards layout | **Done** — cards, images, metadata, pull-to-refresh, save, read state, per-card overflow, source favicons, hide source, More/Less |
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
-| 4 | Source management | **Done** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out, and favourite sources at the top of the list — which is what reorder became; see §2 |
+| 4 | Source management | **Done** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out, and pinned sources at the top of the list — which is what reorder became; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
 | 6 | Sync | **Done bar removals, and unverified** — backup (§14) and the Google Reader protocol (§7): client, account, sign-in, subscription reconcile, the id mapping, read state both ways, background sync. Removals are deliberately not applied. **None of §7 has met a live server** |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
@@ -345,8 +345,8 @@ a hundred sources, one at a time is the wrong unit.
   leaves a handle that silently does nothing in the other three. Both options
   are a control that lies about what it does.
 
-  Up to five favourite sources sit at the top instead, and everything below
-  keeps whatever sort was asked for — including the favourites among
+  Up to five pinned sources sit at the top instead, and everything below
+  keeps whatever sort was asked for — including the pinned ones among
   themselves. It composes with every sort rather than competing with them,
   needs a preference rather than a column and a migration, and the cap is the
   feature: a list where everything is at the top is a list in its original

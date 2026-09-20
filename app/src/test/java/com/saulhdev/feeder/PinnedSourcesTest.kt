@@ -18,7 +18,7 @@
 package com.saulhdev.feeder
 
 import com.saulhdev.feeder.data.db.models.Feed
-import com.saulhdev.feeder.viewmodels.MAX_FAVOURITE_SOURCES
+import com.saulhdev.feeder.viewmodels.MAX_PINNED_SOURCES
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,19 +28,19 @@ private fun feed(id: Long, title: String) =
     Feed(id = id, title = title, url = URL("https://${title.lowercase()}.example/feed"))
 
 /** What the list does once a few sources are kept at the top. */
-private fun arrange(sources: List<Feed>, favourites: Set<Long>) =
-    sources.sortedBy { it.title.lowercase() }.sortedByDescending { it.id in favourites }
+private fun arrange(sources: List<Feed>, pinned: Set<Long>) =
+    sources.sortedBy { it.title.lowercase() }.sortedByDescending { it.id in pinned }
 
 /**
- * Favourites, which is what reorder turned into.
+ * Pinned sources, which is what reorder turned into.
  *
  * A drag handle and a sort selector contradict each other: a hand-made order
  * has no meaning while the list is sorted by name, so the handle either does
  * nothing in three of four sorts or silently overrides the one that was
- * picked. Both are controls that lie. A few favourites compose with every
+ * picked. Both are controls that lie. A few pinned compose with every
  * sort instead, and these pin that property rather than any particular order.
  */
-class FavouriteSourcesTest {
+class PinnedSourcesTest {
 
     private val all = listOf(
         feed(1, "Ars"), feed(2, "BBC"), feed(3, "Cnn"),
@@ -48,7 +48,7 @@ class FavouriteSourcesTest {
     )
 
     @Test
-    fun `favourites come first`() {
+    fun `pinned come first`() {
         val out = arrange(all, setOf(4L, 6L))
         assertEquals(setOf(4L, 6L), out.take(2).map { it.id }.toSet())
     }
@@ -56,7 +56,7 @@ class FavouriteSourcesTest {
     /**
      * The property that made this worth building instead of reorder: the
      * chosen sort still decides everything, including the order of the
-     * favourites among themselves.
+     * pinned among themselves.
      */
     @Test
     fun `the chosen sort still orders both groups`() {
@@ -66,7 +66,7 @@ class FavouriteSourcesTest {
     }
 
     @Test
-    fun `no favourites leaves the list exactly as the sort produced it`() {
+    fun `no pinned leaves the list exactly as the sort produced it`() {
         assertEquals(
             all.sortedBy { it.title.lowercase() }.map { it.id },
             arrange(all, emptySet()).map { it.id },
@@ -82,7 +82,7 @@ class FavouriteSourcesTest {
 
     /** An id left behind by a deleted source must not reserve a slot. */
     @Test
-    fun `a favourite that no longer exists changes nothing`() {
+    fun `a pinned that no longer exists changes nothing`() {
         assertEquals(arrange(all, emptySet()).map { it.id }, arrange(all, setOf(99L)).map { it.id })
     }
 
@@ -92,11 +92,11 @@ class FavouriteSourcesTest {
      */
     @Test
     fun `the cap is small enough to be a choice`() {
-        assertTrue(MAX_FAVOURITE_SOURCES in 3..8)
+        assertTrue(MAX_PINNED_SOURCES in 3..8)
     }
 
     @Test
-    fun `every source favourited still leaves the sort intact`() {
+    fun `every source pinned still leaves the sort intact`() {
         val out = arrange(all, all.map { it.id }.toSet())
         assertEquals(all.sortedBy { it.title.lowercase() }.map { it.id }, out.map { it.id })
     }

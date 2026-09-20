@@ -78,7 +78,7 @@ import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.FILE_DATETIME_FORMAT
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
-import com.saulhdev.feeder.viewmodels.MAX_FAVOURITE_SOURCES
+import com.saulhdev.feeder.viewmodels.MAX_PINNED_SOURCES
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -142,13 +142,13 @@ fun SourceListPage(
     // back on. The repository holds the removed row until this is answered.
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Removing a subscription leaves its id in the favourites set, which does
-    // nothing visible until the reader has five of those and cannot favourite
+    // Removing a subscription leaves its id in the pinned set, which does
+    // nothing visible until the reader has five of those and cannot pinned
     // anything at all. Cleared whenever the list is known, because that is the
     // only place the answer is.
     LaunchedEffect(state.allSources) {
         if (state.allSources.isNotEmpty()) {
-            viewModel.forgetMissingFavourites(state.allSources.mapTo(HashSet()) { it.id })
+            viewModel.forgetMissingPins(state.allSources.mapTo(HashSet()) { it.id })
         }
     }
     val recentlyDeleted by viewModel.recentlyDeleted.collectAsState()
@@ -654,14 +654,14 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
-                                favourite = item.id in state.favourites,
-                                onFavourite = {
+                                pinned = item.id in state.pinned,
+                                onPin = {
                                     scope.launch {
-                                        if (!viewModel.toggleFavourite(it.id)) {
+                                        if (!viewModel.togglePinned(it.id)) {
                                             snackbarHostState.showSnackbar(
                                                 context.getString(
-                                                    R.string.source_favourite_full,
-                                                    MAX_FAVOURITE_SOURCES,
+                                                    R.string.source_pin_full,
+                                                    MAX_PINNED_SOURCES,
                                                 ),
                                                 withDismissAction = true,
                                             )
