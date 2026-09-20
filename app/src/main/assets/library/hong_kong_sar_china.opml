@@ -10,7 +10,6 @@
       <outline type="rss" text="hongkongnews.net latest rss headlines" title="hongkongnews.net latest rss headlines" xmlUrl="https://feeds.hongkongnews.net/rss/b82693edf38ebff8"/>
     </outline>
     <outline text="News" title="News">
-      <outline type="rss" text="Hong Kong Free Press" title="Hong Kong Free Press" xmlUrl="https://hongkongfp.com/feed/"/>
       <outline type="rss" text="RTHK" title="RTHK" xmlUrl="https://rthk9.rthk.hk/rthk/news/rss/e_expressnews_elocal.xml"/>
       <outline type="rss" text="SCMP Hong Kong" title="SCMP Hong Kong" xmlUrl="https://www.scmp.com/rss/2/feed"/>
     </outline>

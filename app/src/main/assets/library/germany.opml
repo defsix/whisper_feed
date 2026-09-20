@@ -12,7 +12,6 @@
     </outline>
     <outline text="News" title="News">
       <outline type="rss" text="Der Spiegel" title="Der Spiegel" xmlUrl="https://www.spiegel.de/schlagzeilen/index.rss"/>
-      <outline type="rss" text="Tagesschau" title="Tagesschau" xmlUrl="https://www.tagesschau.de/index~rss2.xml"/>
     </outline>
   </body>
 </opml>

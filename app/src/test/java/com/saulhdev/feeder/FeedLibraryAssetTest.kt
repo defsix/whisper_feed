@@ -141,6 +141,28 @@ class FeedLibraryAssetTest {
         }
     }
 
+    /**
+     * Nor the same address with a trailing slash added.
+     *
+     * How Republika got in twice: `/rss` and `/rss/`, which are one feed to
+     * every server that has ever existed and two distinct strings to the check
+     * above. Cheap to catch, and it costs a pack one of its five when missed.
+     *
+     * Deliberately not a test for "the same publication twice". That needs a
+     * judgement — two language editions are two feeds, and PNA and PIA are two
+     * agencies sharing most of a name — and a matcher confident enough to
+     * decide it silently deleted three feeds it should not have. The scan for
+     * that lives in docs/FEED_LIBRARY.md, where a person reads its output.
+     */
+    @Test
+    fun `no pack lists one address under two spellings`() {
+        index().forEach { (slug, _, _) ->
+            val normalised = feedsIn(File(LIBRARY, "$slug.opml"))
+                .map { it.second.trimEnd('/').lowercase() }
+            assertEquals("same address twice in $slug", normalised.size, normalised.toSet().size)
+        }
+    }
+
     @Test
     fun `the library still covers both kinds`() {
         val kinds = index().map { it.second }.toSet()

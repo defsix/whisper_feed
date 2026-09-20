@@ -8,10 +8,9 @@
   </head>
   <body>
     <outline text="Startups" title="Startups">
+      <outline type="rss" text="Feld Thoughts" title="Feld Thoughts" xmlUrl="https://feld.com/feed"/>
       <outline text="AVC" title="AVC" description="Musings of a VC in NYC" xmlUrl="https://avc.com/feed/" type="rss" />
-      <outline text="Blog on Feld Thoughts" title="Blog on Feld Thoughts" description="Recent content in Blog on Feld Thoughts" xmlUrl="https://feld.com/archives/tag/blog/feed" type="rss" />
       <outline text="Entrepreneur – Latest" title="Entrepreneur – Latest" description="The latest small business tips and advice from Entrepreneur" xmlUrl="https://feeds.feedburner.com/entrepreneur/latest" type="rss" />
-      <outline text="Feld Thoughts" title="Feld Thoughts" description="Recent content on Feld Thoughts" xmlUrl="https://feld.com/feed" type="rss" />
       <outline text="GaryVee" title="GaryVee" description="" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=GaryVaynerchuk" type="rss" />
       <outline text="Hacker News: Front Page" title="Hacker News: Front Page" description="Hacker News RSS" xmlUrl="https://hnrss.org/frontpage" type="rss" />
       <outline text="Inc.com" title="Inc.com" description="Inc.com, the daily resource for entrepreneurs." xmlUrl="https://www.inc.com/rss/" type="rss" />

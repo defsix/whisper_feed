@@ -14,7 +14,6 @@
       <outline type="rss" text="朝日新聞デジタル" title="朝日新聞デジタル" xmlUrl="https://rss.asahi.com/rss/asahi/newsheadlines.rdf"/>
     </outline>
     <outline text="News" title="News">
-      <outline type="rss" text="The Japan Times" title="The Japan Times" xmlUrl="https://www.japantimes.co.jp/feed/"/>
     </outline>
   </body>
 </opml>

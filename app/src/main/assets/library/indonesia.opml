@@ -11,7 +11,6 @@
     <outline text="News" title="News">
       <outline type="rss" text="Antara News" title="Antara News" xmlUrl="https://en.antaranews.com/rss/news.xml"/>
       <outline type="rss" text="CNN Indonesia" title="CNN Indonesia" xmlUrl="https://www.cnnindonesia.com/nasional/rss"/>
-      <outline type="rss" text="Republika" title="Republika" xmlUrl="https://www.republika.co.id/rss"/>
       <outline type="rss" text="Tempo" title="Tempo" xmlUrl="https://rss.tempo.co/nasional"/>
     </outline>
   </body>

@@ -159,7 +159,7 @@
     "slug": "startups",
     "name": "Startups",
     "kind": "topic",
-    "count": 17
+    "count": 16
   },
   {
     "slug": "tech",
@@ -201,7 +201,7 @@
     "slug": "ios_development",
     "name": "iOS Development",
     "kind": "topic",
-    "count": 14
+    "count": 13
   },
   {
     "slug": "argentina",
@@ -285,7 +285,7 @@
     "slug": "germany",
     "name": "Germany",
     "kind": "country",
-    "count": 6
+    "count": 5
   },
   {
     "slug": "greece",
@@ -303,7 +303,7 @@
     "slug": "hong_kong_sar_china",
     "name": "Hong Kong SAR China",
     "kind": "country",
-    "count": 6
+    "count": 5
   },
   {
     "slug": "hungary",
@@ -321,7 +321,7 @@
     "slug": "indonesia",
     "name": "Indonesia",
     "kind": "country",
-    "count": 6
+    "count": 5
   },
   {
     "slug": "ireland",
@@ -345,7 +345,7 @@
     "slug": "japan",
     "name": "Japan",
     "kind": "country",
-    "count": 8
+    "count": 7
   },
   {
     "slug": "kenya",

@@ -152,6 +152,32 @@ China was the hardest. Most Chinese outlets' English feeds have been retired,
 and eight candidate addresses returned HTML or 404 before CGTN, ECNS, Nikkei
 Asia and The Diplomat filled the pack out.
 
+## The same publication twice
+
+Filling the packs out to five put some publications in twice under two
+addresses — Tagesschau, Hong Kong Free Press, Republika at `/rss` and `/rss/`,
+the Japan Times. A pack of five with two rows for one masthead is really a
+pack of four, so this undercuts the floor rather than merely looking untidy.
+
+Eight were removed. A heuristic found them — same registrable domain, one
+title containing the other — and **three of its eight were wrong**, which is
+the useful part of the story:
+
+- **Al-Ahram** alongside **Ahram Online** is the Arabic edition beside the
+  English one. Two editions are two feeds. The language guard missed it
+  because "Al-Ahram" names no language.
+- **Philippine News Agency** and **Philippine Information Agency** are two
+  different agencies that share a government domain and most of a name.
+- For **Feld Thoughts** it kept the wrong one of the pair, a tag archive over
+  the blog itself.
+
+So the automated check that ships is the narrow one: the same address twice,
+including the `/rss` versus `/rss/` case that let Republika through. Deciding
+that two *publications* are the same needs a person, and the scan is a tool to
+put candidates in front of one — `FeedLibraryAssetTest` does not attempt it,
+because a matcher confident enough to decide it silently deleted three feeds
+that belonged.
+
 ## Refreshing it
 
 Re-run the fetch and verification against the upstream repository, then
