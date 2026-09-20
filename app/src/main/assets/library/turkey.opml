@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+  <head>
+    <title>Turkey</title>
+  </head>
+  <body>
+    <outline text="News" title="News">
+      <outline type="rss" text="Daily Sabah" title="Daily Sabah" xmlUrl="https://www.dailysabah.com/rssFeed/home"/>
+      <outline type="rss" text="Hürriyet Daily News" title="Hürriyet Daily News" xmlUrl="https://www.hurriyetdailynews.com/rss"/>
+    </outline>
+  </body>
+</opml>

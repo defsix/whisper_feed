@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+  <head>
+    <title>China</title>
+  </head>
+  <body>
+    <outline text="News" title="News">
+      <outline type="rss" text="Caixin Global" title="Caixin Global" xmlUrl="https://www.caixinglobal.com/rss/"/>
+      <outline type="rss" text="South China Morning Post" title="South China Morning Post" xmlUrl="https://www.scmp.com/rss/91/feed"/>
+      <outline type="rss" text="Sixth Tone" title="Sixth Tone" xmlUrl="https://www.sixthtone.com/rss"/>
+    </outline>
+  </body>
+</opml>

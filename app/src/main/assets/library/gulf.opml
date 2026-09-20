@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+  <head>
+    <title>Gulf States</title>
+  </head>
+  <body>
+    <outline text="News" title="News">
+      <outline type="rss" text="Arab News" title="Arab News" xmlUrl="https://www.arabnews.com/rss.xml"/>
+      <outline type="rss" text="The National" title="The National" xmlUrl="https://www.thenationalnews.com/arc/outboundfeeds/rss/category/uae/?outputType=xml"/>
+    </outline>
+  </body>
+</opml>

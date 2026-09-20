@@ -5,7 +5,14 @@ somewhere to start. Every other route in — paste an address, import OPML, scan
 bookmarks, wait a week for it to notice what your reading links to — assumes
 you already know the answer.
 
-## Where it comes from
+## Two tranches
+
+The library was built twice. The first came wholesale from an upstream
+directory; the second was assembled by hand to fill in the countries that
+directory had never covered. They were verified the same way, and the second
+is described under **The country tranche** below.
+
+## Where the first tranche comes from
 
 [plenaryapp/awesome-rss-feeds](https://github.com/plenaryapp/awesome-rss-feeds),
 under **CC0 1.0** — public domain, no attribution required, no friction with
@@ -43,7 +50,8 @@ retry. They ship.
 
 Two packs did not survive at all. **Iran**: nothing in it verified. **Russia**:
 the source file has unescaped double quotes inside quoted attributes, which is
-ambiguous rather than merely wrong — see below.
+ambiguous rather than merely wrong — see below. Russia has since been added
+back from hand-picked addresses rather than repaired; Iran has not.
 
 ## The ampersands
 
@@ -60,6 +68,66 @@ the importer now escapes ampersands that do not begin an entity before parsing.
 Only ampersands. Unclosed tags and stray quotes are ambiguous, and guessing at
 somebody's subscription list is worse than declining it — which is why Russia
 is absent rather than repaired.
+
+## The country tranche
+
+The upstream directory covers 22 countries, with nothing for Scandinavia, the
+Low Countries, central Europe, Russia, or most of east and south-east Asia. A
+reader in any of them opened the library, found their own country missing, and
+learned the wrong thing about what the app is for.
+
+So a second set was assembled by hand: national broadcasters and major papers,
+164 addresses across 28 countries, probed exactly as the first tranche was.
+
+| | |
+|---|---|
+| Verified: returned a parseable feed | 96 |
+| Kept, unverifiable from the build machine | 15 |
+| Dropped | 53 |
+
+Two rounds of probing rather than one. The first lost 39, and roughly a
+quarter of those were a publication that still has a feed at a different
+address — an `arc/outboundfeeds` path, a `?outputType=xml`, a section id that
+has moved on. Trying a second address for each recovered eight, which is worth
+one extra round of anybody's time.
+
+**Dropped** is the same three cases as before: 404 or 410; a 200 serving HTML,
+which is a site that has retired its feed; or DNS, TLS or connection failure.
+**Unverifiable** is a refusal to serve rather than an absence — fourteen 403s
+from bot walls and one 451 — kept for the same reason the first tranche keeps
+them, that a datacentre IP is not a phone.
+
+Ireland, Japan and Poland already had packs and were merged into rather than
+replaced. Ireland is the clearest case for why this tranche exists: it had six
+feeds and none of RTÉ, the Irish Times or the Irish Independent, which is most
+of what an Irish reader would look for first.
+
+### One editorial decision, stated plainly
+
+The Russia pack is Meduza, The Moscow Times, Kommersant and Interfax. RT and
+Sputnik are not in it. Both are widely carried, so their absence is a choice
+rather than an oversight: a pack labelled "Russia" in a reader's library reads
+as a recommendation, and state outlets under EU sanction are not something to
+recommend silently. Anybody who wants them can paste the address — the app
+takes any feed, and this is a starting list rather than a permitted one.
+
+## The cleartext sweep
+
+Checking the new packs turned up 119 `http://` addresses in the *first*
+tranche, carried over from upstream and never looked at. They matter more than
+they look: Whisper tells Android to refuse cleartext outright, so an `http://`
+feed does not merely travel in the clear — it cannot be fetched at all, and a
+new reader picking one gets a subscription that fails on its first sync and
+lands in Broken feeds.
+
+Each was asked for over https: 97 answered with a feed and were rewritten, and
+23 had no working https and were dropped, on the same reasoning that dropped
+the dead ones. A feed the app is structurally incapable of reading is not a
+feed to offer somebody on their first day.
+
+No pack ships with fewer than two feeds. A one-feed country is a country the
+verification could not cover, and offering it as a collection would overstate
+what is there.
 
 ## Refreshing it
 

@@ -1,17 +1,30 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <opml version="1.0">
   <head>
-    <title>Export from Plenary</title>
-    <url>https://play.google.com/store/apps/details?id=com.spians.plenary</url>
+    <title>Ireland</title>
   </head>
   <body>
     <outline text="Ireland" title="Ireland">
-      <outline text="TheJournal.ie" title="TheJournal.ie" description="Ireland's Internet Newspaper" xmlUrl="https://www.thejournal.ie/feed/" type="rss" />
-      <outline text="All: BreakingNews.ie" title="All: BreakingNews.ie" description="Ireland's premier breaking news website providing up to the minute news and sports reports. With e-mail news releases following breaking stories throughout the day." xmlUrl="https://feeds.breakingnews.ie/bntopstories" type="rss" />
-      <outline text="The42" title="The42" description="Ireland's Internet Newspaper" xmlUrl="https://www.the42.ie/feed/" type="rss" />
-      <outline text="IrishExaminer.com" title="IrishExaminer.com" description="Ireland's premier breaking news website providing up to the minute news and sports reports. With e-mail news releases following breaking stories throughout the day." xmlUrl="https://feeds.feedburner.com/ietopstories" type="rss" />
-      <outline text="IrishCentral.com - Top Stories" title="IrishCentral.com - Top Stories" description="Whether you are looking for Irish news, Irish entertainment, Irish sport, Irish culture or Irish celebrities - IrishCentral.com is the best daily source for everything Irish." xmlUrl="https://feeds.feedburner.com/IrishCentral" type="rss" />
-      <outline text="Irish Mirror - Home" title="Irish Mirror - Home" description="Rss feed from Irish Mirror" xmlUrl="https://www.irishmirror.ie/?service=rss" type="rss" />
+      <outline type="rss" text="TheJournal.ie" title="TheJournal.ie" xmlUrl="https://www.thejournal.ie/feed/"/>
+      <outline type="rss" text="All: BreakingNews.ie" title="All: BreakingNews.ie" xmlUrl="https://feeds.breakingnews.ie/bntopstories"/>
+      <outline type="rss" text="The42" title="The42" xmlUrl="https://www.the42.ie/feed/"/>
+      <outline type="rss" text="IrishExaminer.com" title="IrishExaminer.com" xmlUrl="https://feeds.feedburner.com/ietopstories"/>
+      <outline type="rss" text="IrishCentral.com - Top Stories" title="IrishCentral.com - Top Stories" xmlUrl="https://feeds.feedburner.com/IrishCentral"/>
+      <outline type="rss" text="Irish Mirror - Home" title="Irish Mirror - Home" xmlUrl="https://www.irishmirror.ie/?service=rss"/>
+    </outline>
+    <outline text="News" title="News">
+      <outline type="rss" text="Dublin Live" title="Dublin Live" xmlUrl="https://www.dublinlive.ie/?service=rss"/>
+      <outline type="rss" text="Irish Independent" title="Irish Independent" xmlUrl="https://www.independent.ie/rss/"/>
+      <outline type="rss" text="The Irish Times" title="The Irish Times" xmlUrl="https://www.irishtimes.com/arc/outboundfeeds/feed-irish-news/"/>
+      <outline type="rss" text="Newstalk" title="Newstalk" xmlUrl="https://www.newstalk.com/feed"/>
+      <outline type="rss" text="RTÉ News" title="RTÉ News" xmlUrl="https://www.rte.ie/feeds/rss/?index=/news/"/>
+      <outline type="rss" text="The Irish Sun" title="The Irish Sun" xmlUrl="https://www.thesun.ie/feed/"/>
+    </outline>
+    <outline text="Business" title="Business">
+      <outline type="rss" text="RTÉ Business" title="RTÉ Business" xmlUrl="https://www.rte.ie/feeds/rss/?index=/news/business/"/>
+    </outline>
+    <outline text="Sport" title="Sport">
+      <outline type="rss" text="RTÉ Sport" title="RTÉ Sport" xmlUrl="https://www.rte.ie/feeds/rss/?index=/sport/"/>
     </outline>
   </body>
 </opml>

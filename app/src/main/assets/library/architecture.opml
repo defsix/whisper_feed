@@ -8,8 +8,8 @@
   </head>
   <body>
     <outline text="Architecture" title="Architecture">
-      <outline text="A Weekly Dose of Architecture Books" title="A Weekly Dose of Architecture Books" description="This blog wrapped in early 2024, though it continues as a Substack newsletter with the same name: &lt;a href=&quot;https://archidose.substack.com/&quot;&gt;archidose.substack.com&lt;/a&gt;" xmlUrl="http://feeds.feedburner.com/archidose" type="rss" />
-      <outline text="ArchDaily Global" title="ArchDaily Global" description="ArchDaily | Broadcasting Architecture Worldwide" xmlUrl="http://feeds.feedburner.com/Archdaily" type="rss" />
+      <outline text="A Weekly Dose of Architecture Books" title="A Weekly Dose of Architecture Books" description="This blog wrapped in early 2024, though it continues as a Substack newsletter with the same name: &lt;a href=&quot;https://archidose.substack.com/&quot;&gt;archidose.substack.com&lt;/a&gt;" xmlUrl="https://feeds.feedburner.com/archidose" type="rss" />
+      <outline text="ArchDaily Global" title="ArchDaily Global" description="ArchDaily | Broadcasting Architecture Worldwide" xmlUrl="https://feeds.feedburner.com/Archdaily" type="rss" />
       <outline text="Architectural Digest" title="Architectural Digest" description="The latest from www.architecturaldigest.com" xmlUrl="https://www.architecturaldigest.com/feed/rss" type="rss" />
       <outline text="Architectural Digest" title="Architectural Digest" description="" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=ArchitecturalDigest" type="rss" />
       <outline text="Architecture" title="Architecture" description="A community for students, professionals, and lovers of architecture." xmlUrl="https://www.reddit.com/r/architecture/.rss" type="rss" />
