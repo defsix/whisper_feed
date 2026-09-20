@@ -350,6 +350,7 @@ fun SourceEditView(
             Spacer(modifier = Modifier.height(4.dp))
             ComposeSwitchView(
                 titleId = R.string.source_enabled,
+                summaryId = R.string.source_enabled_summary,
                 isChecked = editState.value.isEnabled,
                 onCheckedChange = {
                     editState.value = editState.value.copy(isEnabled = it)

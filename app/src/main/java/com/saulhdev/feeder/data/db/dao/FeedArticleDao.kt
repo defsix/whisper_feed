@@ -449,10 +449,23 @@ interface FeedArticleDao {
         """
     SELECT Article.* FROM Article
     JOIN Feeds ON Article.feedId = Feeds.id
-    WHERE Article.bookmarked = 1 AND Feeds.isEnabled = 1
+    WHERE Article.bookmarked = 1
     ORDER BY Article.pinned DESC, Article.pubDateV2 DESC
     """
     )
+    /**
+     * Saved articles, from every source, whether or not it is still on.
+     *
+     * This used to require `Feeds.isEnabled = 1`, so turning a source off
+     * took every article the reader had saved from it out of Bookmarks. A
+     * bookmark is the strongest thing anybody says about an article — the
+     * feed's own hide-read rule already exempts saved and pinned articles for
+     * exactly this reason — and a switch about whether to keep *fetching* a
+     * source has no business revoking it.
+     *
+     * The rows were never deleted, so they come back for anybody who had
+     * saved something from a source they later switched off.
+     */
     fun getAllBookmarkedFeedItems(): Flow<List<FeedItem>>
 
     @Transaction
