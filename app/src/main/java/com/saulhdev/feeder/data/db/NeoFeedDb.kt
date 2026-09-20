@@ -300,6 +300,19 @@ object MIGRATION_22_23 : Migration(22, 23) {
 
         // SQLite before 3.35 has no DROP COLUMN, and the minSdk reaches back
         // further than that, so the four columns go the long way round.
+        //
+        // The view goes first, and this is not tidiness. A view is stored as
+        // text and resolved lazily, so dropping the table underneath one is
+        // allowed and silent — but from SQLite 3.25 an ALTER TABLE ... RENAME
+        // re-parses every view in the schema to fix up references, and a view
+        // pointing at a table that no longer exists stops the rename dead:
+        //
+        //     error in view ArticleIdWithLink: no such table: main.feeds
+        //
+        // which fails the migration, rolls it back, and leaves the app
+        // crashing on launch for everybody who had the previous version.
+        db.execSQL("DROP VIEW IF EXISTS `ArticleIdWithLink`")
+
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS `Feeds_new` (
@@ -340,6 +353,20 @@ object MIGRATION_22_23 : Migration(22, 23) {
         db.execSQL(
             "CREATE UNIQUE INDEX IF NOT EXISTS `index_Feeds_id_url_title` " +
                     "ON `Feeds` (`id`, `url`, `title`)"
+        )
+
+        // Put back character for character. Room compares a view's stored SQL
+        // against the text it expects and rejects the database on any
+        // difference, so this is not a place to tidy the whitespace or the
+        // capitalisation of `feeds`. It is the string from the exported
+        // schema, and `scripts/check_migrations.py` compares what this
+        // produces against that file rather than trusting the comparison to a
+        // careful reading.
+        db.execSQL(
+            "CREATE VIEW `ArticleIdWithLink` AS SELECT Article.uuid, Article.link\n" +
+                    "    FROM Article\n" +
+                    "    JOIN feeds f ON Article.feedId = f.id\n" +
+                    "    WHERE f.fulltextByDefault = 1 OR Article.bookmarked = 1"
         )
     }
 }

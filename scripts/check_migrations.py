@@ -35,6 +35,25 @@ SRC = ROOT / "app/src/main/java/com/saulhdev/feeder/data/db/NeoFeedDb.kt"
 SCHEMAS = ROOT / "app/schemas/com.saulhdev.feeder.data.db.NeoFeedDb"
 
 
+KOTLIN_ESCAPES = {
+    "n": "\n", "t": "\t", "r": "\r", "b": "\b",
+    "\\": "\\", '"': '"', "'": "'", "$": "$", "0": "\0",
+}
+
+
+def unescape(literal):
+    """Kotlin's escape sequences, as the compiler would resolve them."""
+    out, i = [], 0
+    while i < len(literal):
+        if literal[i] == "\\" and i + 1 < len(literal):
+            out.append(KOTLIN_ESCAPES.get(literal[i + 1], literal[i + 1]))
+            i += 2
+        else:
+            out.append(literal[i])
+            i += 1
+    return "".join(out)
+
+
 def migration_sql(source, name):
     """The execSQL statements in one migration object, in source order.
 
@@ -58,8 +77,14 @@ def migration_sql(source, name):
                 depth -= 1
             j += 1
         arg = body[i + len("db.execSQL("): j - 1]
-        parts = re.findall(r'"""(.*?)"""|"((?:[^"\\\n]|\\.)*)"', arg, re.S)
-        out.append("".join((a or b) for a, b in parts).strip())
+        # A raw (triple-quoted) literal keeps its backslashes; an ordinary one
+        # has them processed by the compiler. Getting this backwards sends a
+        # literal backslash-n to SQLite, which rejects it — and, worse, would
+        # let a migration pass here that fails on a device, or the reverse.
+        pieces = []
+        for raw, plain in re.findall(r'"""(.*?)"""|"((?:[^"\\\n]|\\.)*)"', arg, re.S):
+            pieces.append(raw if raw else unescape(plain))
+        out.append("".join(pieces).strip())
         i = j
 
 
@@ -78,6 +103,13 @@ def build(version):
         con.execute(e["createSql"].replace("${TABLE_NAME}", e["tableName"]))
         for i in e.get("indices", []):
             con.execute(i["createSql"].replace("${TABLE_NAME}", e["tableName"]))
+    # Views matter and were missed the first time this script was written. A
+    # view is stored as text and resolved lazily, so a migration can drop the
+    # table underneath one and not find out until something reads it — or,
+    # worse, until the next ALTER TABLE ... RENAME, which re-parses every view
+    # in the schema and fails on the broken one.
+    for v in d.get("views", []):
+        con.execute(v["createSql"].replace("${VIEW_NAME}", v["viewName"]))
     return con
 
 
@@ -174,6 +206,25 @@ def compare(con, target):
         if missing:
             ok = False
             print(f"  FAIL {table}: missing indices {sorted(missing)}")
+
+    # Room compares a view's stored SQL text against what it expects and
+    # rejects the database on any difference, so this compares the text too.
+    # The first version of this script created no views at all, which is how a
+    # migration that dropped the table out from under one reached a phone.
+    for v in d.get("views", []):
+        want = v["createSql"].replace("${VIEW_NAME}", v["viewName"])
+        row = con.execute(
+            "SELECT sql FROM sqlite_master WHERE type='view' AND name=?",
+            (v["viewName"],),
+        ).fetchone()
+        if row is None:
+            ok = False
+            print(f"  FAIL view {v['viewName']}: does not exist after migrating")
+        elif row[0] != want:
+            ok = False
+            print(f"  FAIL view {v['viewName']}: SQL differs from the schema")
+            print(f"    in database: {row[0]!r}")
+            print(f"    in schema:   {want!r}")
 
     violations = list(con.execute("PRAGMA foreign_key_check"))
     if violations:
