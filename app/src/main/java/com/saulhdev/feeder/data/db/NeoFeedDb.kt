@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_21_22,
     MIGRATION_20_21,
     MIGRATION_19_20,
     MIGRATION_18_19,
@@ -242,6 +243,15 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_21_22 : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Nothing has ever been removed-but-kept, so every existing source is
+        // simply a source the reader still has.
+        db.execSQL("ALTER TABLE Feeds ADD COLUMN removedAt INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_20_21 : Migration(20, 21) {

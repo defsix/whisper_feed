@@ -50,6 +50,24 @@ data class Feed(
     val tag: String = "",
     val currentlySyncing: Boolean = false,
     val isEnabled: Boolean = true,
+
+    /**
+     * When the reader removed this source, or 0 while they still have it.
+     *
+     * A removed source is normally deleted outright. It is kept, marked, and
+     * hidden from every listing only when it still holds articles the reader
+     * bookmarked or pinned — because the articles carry a foreign key onto
+     * this row with `onDelete = CASCADE`, so deleting it is what destroyed
+     * them. A bookmark is meant to last until it is taken back, and
+     * unsubscribing from a site is not taking it back.
+     *
+     * The row is reaped as soon as the last saved article from it is
+     * un-bookmarked, so this is not a graveyard that fills up. Re-adding the
+     * same address resurrects it instead of creating a second one, which also
+     * means the reader gets their saved articles back.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val removedAt: Long = 0L,
     @ColumnInfo(defaultValue = "rss")
     val sourceType: String = "rss",
     @ColumnInfo(defaultValue = "0")

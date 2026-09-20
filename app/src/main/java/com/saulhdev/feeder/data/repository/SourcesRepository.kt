@@ -58,7 +58,22 @@ class SourcesRepository(db: NeoFeedDb) {
     private val articlesDao = db.feedArticleDao()
     private val workManager: WorkManager by inject(WorkManager::class.java)
 
+    /**
+     * Adds a source, resurrecting a removed one at the same address.
+     *
+     * Without this, re-adding a site somebody had removed would insert a
+     * second row while the first sat invisible holding their bookmarks — two
+     * entries for one feed, and the saved articles attached to the one they
+     * cannot see. Reusing the row gives them back instead, which is the
+     * friendlier answer and the only consistent one.
+     */
     suspend fun insertSource(feed: Feed) = withContext(jcc) {
+        val removed = feedsDao.findRemovedByUrl(feed.url)
+        if (removed != null) {
+            feedsDao.restoreRemoved(removed.id)
+            requestFeedSync(removed.id)
+            return@withContext removed.id
+        }
         feedsDao.insert(feed)
     }
 
@@ -217,30 +232,68 @@ class SourcesRepository(db: NeoFeedDb) {
     private val _recentlyDeleted = MutableStateFlow<Feed?>(null)
     val recentlyDeleted: StateFlow<Feed?> = _recentlyDeleted.asStateFlow()
 
+    /**
+     * Removes a source, keeping anything the reader saved from it.
+     *
+     * `Article.feedId` carries `onDelete = CASCADE`, so deleting the row is
+     * what deleted the articles — bookmarked ones included. A bookmark is
+     * meant to last until it is taken back, and unsubscribing from a site is
+     * not taking it back: the articles were saved because somebody wanted to
+     * keep them, not because they wanted to keep the subscription.
+     *
+     * So a source holding saved articles is marked removed instead of
+     * deleted. It vanishes from every listing, stops syncing, and its
+     * unsaved articles go — but the row stays, because the bookmarks need
+     * something to point at. One holding nothing saved is deleted outright,
+     * as before, so this leaves no debris in the ordinary case.
+     */
     fun deleteFeed(feedId: Long) {
         scope.launch {
             _recentlyDeleted.value = feedsDao.loadFeedById(feedId)
-            feedsDao.deleteFeedById(feedId)
+            if (articlesDao.countSavedInFeed(feedId) > 0) {
+                feedsDao.markRemoved(feedId, System.currentTimeMillis())
+                articlesDao.clearArticlesForFeeds(listOf(feedId))
+            } else {
+                feedsDao.deleteFeedById(feedId)
+            }
         }
+    }
+
+    /**
+     * Drops a removed source once nothing saved is left in it.
+     *
+     * What makes "kept until you un-bookmark it" literally true rather than a
+     * promise to keep a row for ever. Called after un-bookmarking; does
+     * nothing to a source the reader still has.
+     */
+    suspend fun reapIfEmpty(feedId: Long) = withContext(jcc) {
+        val feed = feedsDao.loadFeedById(feedId) ?: return@withContext
+        if (feed.removedAt == 0L) return@withContext
+        if (articlesDao.countSavedInFeed(feedId) == 0) feedsDao.deleteFeedById(feedId)
     }
 
     /**
      * Puts a removed source back, and resyncs it.
      *
-     * Its articles are not restored: deleting a feed cascades to them, and
-     * keeping a tombstone of every article of every removed feed to make this
-     * exact is not worth the storage. The feed refetches instead, so what comes
-     * back is the current contents rather than the old ones — read state and
-     * bookmarks within it are genuinely lost.
+     * Two cases, because removal has two. A source that was marked rather
+     * than deleted still has its row, and its saved articles with it, so it
+     * is unmarked in place and everything bookmarked from it is there again.
+     * One that was deleted outright is reinserted under a fresh id — the old
+     * one may have been handed out again — and refetched, so what comes back
+     * is the feed's current contents. Nothing was saved from it, which is
+     * why it could be deleted at all.
      */
     fun undoDeleteSource() {
         scope.launch {
             val feed = _recentlyDeleted.value ?: return@launch
             _recentlyDeleted.value = null
-            // Insert under a fresh id: the old one may have been handed out
-            // again, and nothing outside the row refers to it any more.
-            val id = feedsDao.insert(feed.copy(id = ID_UNSET))
-            requestFeedSync(id)
+            if (feedsDao.existsById(feed.id)) {
+                feedsDao.restoreRemoved(feed.id)
+                requestFeedSync(feed.id)
+            } else {
+                val id = feedsDao.insert(feed.copy(id = ID_UNSET))
+                requestFeedSync(id)
+            }
         }
     }
 

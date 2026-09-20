@@ -94,4 +94,74 @@ class SourceVisibilityTest {
         assertFalse(query("getAllBookmarkedFeedItems").contains("isEnabled"))
         assertTrue(query("getAllEnabledFeedItems").contains("isEnabled"))
     }
+
+    private val sourceDao =
+        File("src/main/java/com/saulhdev/feeder/data/db/dao/FeedSourceDao.kt").readText()
+
+    private fun sourceQuery(afterFunctionNamed: String): String {
+        val at = sourceDao.indexOf("fun $afterFunctionNamed")
+        assertTrue("no function named $afterFunctionNamed", at > 0)
+        val start = sourceDao.lastIndexOf("@Query", at)
+        val quoted = sourceDao.substring(start, at)
+        // These are one-line @Query("…") rather than triple-quoted blocks.
+        val open = quoted.indexOf('"')
+        val close = quoted.lastIndexOf('"')
+        return quoted.substring(open + 1, close)
+    }
+
+    /* --------------------------------------------------- removed sources -- */
+
+    /**
+     * The rule this was built for: a bookmark lasts until it is taken back.
+     *
+     * Articles carry a foreign key onto their feed with onDelete = CASCADE,
+     * so removing a source was what destroyed the articles saved from it.
+     * Unsubscribing from a site is not the same as deciding you no longer
+     * want what you kept from it.
+     */
+    @Test
+    fun `routine cleanup never touches a saved article`() {
+        val cleanup = query("getItemsToBeCleanedFromFeed")
+        assertTrue(cleanup.contains("bookmarked = 0"))
+        assertTrue(cleanup.contains("pinned = 0"))
+    }
+
+    @Test
+    fun `clearing a source keeps what was saved from it`() {
+        val clear = query("clearArticlesForFeeds")
+        assertTrue(clear.contains("bookmarked = 0"))
+        assertTrue(clear.contains("pinned = 0"))
+    }
+
+    /** A removed source is gone from every listing, not merely switched off. */
+    @Test
+    fun `a removed source is absent from the listings`() {
+        listOf(
+            "loadFeeds", "getAllFeeds", "loadAllFeeds", "loadFeedIds",
+            "getEnabledFeeds", "getAllTags", "getAllTagsFlow",
+            "loadFeedsByTag", "getFailingFeeds", "getFeedByURL",
+        ).forEach { name ->
+            assertTrue(
+                "$name would still show a removed source",
+                sourceQuery(name).contains("removedAt = 0"),
+            )
+        }
+    }
+
+    /** And it is not synced, or a source nobody has would still cost data. */
+    @Test
+    fun `a removed source is not synced`() {
+        assertTrue(sourceQuery("loadFeedIfStale").contains("removedAt = 0"))
+    }
+
+    /**
+     * The row is kept for the bookmarks' sake, so the query that finds them
+     * must not be the one thing that filters it out.
+     */
+    @Test
+    fun `bookmarks are not filtered by anything about the source`() {
+        val bookmarks = query("getAllBookmarkedFeedItems")
+        assertFalse(bookmarks.contains("removedAt"))
+        assertFalse(bookmarks.contains("isEnabled"))
+    }
 }

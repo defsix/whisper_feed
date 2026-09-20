@@ -98,6 +98,10 @@ interface FeedArticleDao {
     )
     suspend fun clearArticlesForFeeds(feedIds: List<Long>): Int
 
+    /** How many articles of a source the reader has asked to keep. */
+    @Query("SELECT COUNT(*) FROM Article WHERE feedId = :feedId AND (bookmarked = 1 OR pinned = 1)")
+    suspend fun countSavedInFeed(feedId: Long): Int
+
     @Query("SELECT * FROM Article WHERE guid IS :guid AND feedId IS :feedId")
     suspend fun loadArticle(guid: String, feedId: Long?): Article?
 

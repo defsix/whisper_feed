@@ -16,6 +16,7 @@ import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.service.OverlayBridge
@@ -95,6 +96,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         )
         wm.pruneWork()
         carryOverHiddenSources()
+        reapRemovedSourcesOnUnsave()
         onAppStarted()
     }
 
@@ -111,6 +113,22 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
      * subsequent starts and nothing else. Off the main thread, because it is
      * a DataStore read and a database write and neither belongs in onCreate.
      */
+    /**
+     * Drops a removed source when the last thing saved from it is unsaved.
+     *
+     * Wired here because articles cannot hold a reference to sources without
+     * making a cycle of a dependency that already runs the other way.
+     */
+    private fun reapRemovedSourcesOnUnsave() {
+        val articles: ArticleRepository by inject(ArticleRepository::class.java)
+        val sources: SourcesRepository by inject(SourcesRepository::class.java)
+        articles.onSavedRemoved = { feedId ->
+            applicationCoroutineScope.launch(Dispatchers.IO) {
+                runCatching { sources.reapIfEmpty(feedId) }
+            }
+        }
+    }
+
     private fun carryOverHiddenSources() {
         val prefs: FeedPreferences by inject(FeedPreferences::class.java)
         val sources: SourcesRepository by inject(SourcesRepository::class.java)

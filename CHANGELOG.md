@@ -22,7 +22,7 @@ is maintained:
 Two things are knowingly unproven and repeated here so a release note cannot
 be read as a clean bill of health: **Google Reader sync has never spoken to a
 live server**, and **there are no instrumentation or screenshot tests** — the
-345 unit tests cover logic, and every on-device check so far has been manual.
+350 unit tests cover logic, and every on-device check so far has been manual.
 
 ---
 

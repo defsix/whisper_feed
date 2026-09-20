@@ -46,6 +46,15 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleRepository(db: NeoFeedDb) {
+
+    /**
+     * Told when an article stops being saved, with its source's id.
+     *
+     * A callback rather than a repository reference, because sources already
+     * depend on articles and the reverse would be a cycle Koin would have to
+     * be talked out of. Set once at startup.
+     */
+    var onSavedRemoved: ((Long) -> Unit)? = null
     private val cc = Dispatchers.IO
     private val jcc = Dispatchers.IO + SupervisorJob()
     private val articlesDao = db.feedArticleDao()
@@ -298,6 +307,11 @@ class ArticleRepository(db: NeoFeedDb) {
     ) = withContext(jcc) {
         articlesDao.getArticleById(articleId)?.let {
             articlesDao.updateFeedArticle(it.copy(bookmarked = bookmark))
+            // A source removed while it still held saved articles is kept
+            // only for their sake. Taking the last one back is what ends
+            // that, and is what makes "kept until you un-bookmark it" a fact
+            // rather than a promise to hold a row for ever.
+            if (!bookmark) onSavedRemoved?.invoke(it.feedId)
         }
     }
 
