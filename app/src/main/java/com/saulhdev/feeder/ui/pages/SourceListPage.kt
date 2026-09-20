@@ -537,7 +537,7 @@ fun SourceListPage(
                                 },
                                 onClick = {
                                     hideMenu()
-                                    opmlExporter.launch("NF-${localTime}.opml")
+                                    opmlExporter.launch("whisper-${localTime}.opml")
                                 },
                                 text = { Text(text = stringResource(id = R.string.sources_export_opml)) }
                             )

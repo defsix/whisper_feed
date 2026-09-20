@@ -136,7 +136,7 @@
     <string name="date_at_time_FORMAT">%1$s, saat %2$s</string>
     <string name="draw_permission_required">Bu uygulama diğer uygulamaların üzerinde görüntülenme izni gerektirir; bu izin verilmezse akış ögeleri tıklandığında açılmayacaktır</string>
     <string name="go_to_settings">Ayarlara git</string>
-    <string name="file_share_text">Neo Feed\'den Dosya</string>
+    <string name="file_share_text">Whisper\'den Dosya</string>
     <string name="sources_import_bookmarks">Yer işaretlerini içe aktar</string>
     <string name="sources_export_bookmarks">Yer işaretlerini dışa aktar</string>
     <string name="enabled">Etkin</string>

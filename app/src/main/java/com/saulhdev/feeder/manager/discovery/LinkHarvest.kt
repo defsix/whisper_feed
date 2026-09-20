@@ -18,6 +18,7 @@
 package com.saulhdev.feeder.manager.discovery
 
 import org.jsoup.Jsoup
+import com.saulhdev.feeder.utils.registrableDomain
 import java.net.URL
 
 /**
@@ -54,8 +55,9 @@ object LinkHarvest {
      * Counting these would produce the same four suggestions for everybody,
      * which is the opposite of the point.
      *
-     * Matched on the registrable-looking tail rather than the exact host, so
-     * `www.facebook.com` and `m.facebook.com` are both caught.
+     * Matched on the registrable domain rather than the exact host, so
+     * `www.facebook.com`, `m.facebook.com` and `web.facebook.com` are all
+     * caught by the one entry.
      */
     private val NEVER = setOf(
         "facebook.com", "twitter.com", "x.com", "instagram.com", "threads.net",
@@ -76,12 +78,12 @@ object LinkHarvest {
      * nine times would let a single page manufacture a suggestion.
      */
     fun domainsIn(html: String, ownHost: String? = null): Set<String> {
-        val own = ownHost?.let(::registrable)
+        val own = ownHost?.let(::registrableDomain)
         return runCatching {
             Jsoup.parse(html).select("a[href]")
                 .asSequence()
                 .mapNotNull { hostOf(it.attr("href")) }
-                .map(::registrable)
+                .map(::registrableDomain)
                 .filter { it.isNotBlank() && it != own && it !in NEVER }
                 .toSet()
         }.getOrDefault(emptySet())
@@ -105,22 +107,10 @@ object LinkHarvest {
         minimum: Int = MENTIONS_NEEDED,
     ): List<Pair<String, Int>> =
         counts.asSequence()
-            .filter { (host, n) -> n >= minimum && registrable(host) !in alreadySubscribed }
+            .filter { (host, n) -> n >= minimum && registrableDomain(host) !in alreadySubscribed }
             .sortedByDescending { it.value }
             .map { it.key to it.value }
             .toList()
-
-    /**
-     * The part of a host worth comparing.
-     *
-     * `www.` and `m.` are the same site by any reading, and treating them as
-     * different would let one publication produce three suggestions. Anything
-     * deeper is left alone: `blog.example.com` genuinely can be a different
-     * publication from `example.com`, and guessing at public suffixes without
-     * a public-suffix list is how `co.uk` becomes a domain.
-     */
-    fun registrable(host: String): String =
-        host.lowercase().removePrefix("www.").removePrefix("m.")
 
     private fun hostOf(href: String): String? =
         runCatching { URL(href).host }.getOrNull()?.takeIf { it.isNotBlank() }

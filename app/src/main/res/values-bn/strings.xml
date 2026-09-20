@@ -115,5 +115,5 @@
     <string name="go_to_settings">পছন্দসমূহে যাও</string>
     <string name="action_open_smry">এসএমআরওয়াই এ খুলো</string>
     <string name="pref_syscolors">সিস্টেম ওয়ালপেপার রঙ ব্যবহার করো</string>
-    <string name="file_share_text">নিও ফিড থেকে ফাইল</string>
+    <string name="file_share_text">Whisper থেকে ফাইল</string>
 </resources>

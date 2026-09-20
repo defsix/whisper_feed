@@ -1,6 +1,7 @@
 package com.saulhdev.feeder
 
 import com.saulhdev.feeder.manager.discovery.LinkHarvest
+import com.saulhdev.feeder.utils.registrableDomain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -63,16 +64,28 @@ class LinkHarvestTest {
     }
 
     @Test
-    fun `www and m are the same site`() {
-        assertEquals(LinkHarvest.registrable("www.bbc.co.uk"), LinkHarvest.registrable("bbc.co.uk"))
-        assertEquals(LinkHarvest.registrable("m.bbc.co.uk"), LinkHarvest.registrable("bbc.co.uk"))
+    fun `a subscriber to a site is not offered that site`() {
+        // Harvesting used to key hosts by stripping `www.` and `m.` while the
+        // library half of discovery reduced them to the registrable domain, so
+        // the two halves disagreed about what counts as the same publication.
+        // A reader subscribed to `rss.nytimes.com` had "nytimes.com" harvested
+        // as an unfollowed site and offered back to them.
+        val counts = mapOf("nytimes.com" to 9)
+        val subscribed = setOf(registrableDomain("rss.nytimes.com"))
+        assertEquals(emptyList<Pair<String, Int>>(), LinkHarvest.candidates(counts, subscribed))
     }
 
     @Test
-    fun `a subdomain is left alone, because it can be a different publication`() {
-        // Guessing at public suffixes without a public-suffix list is how
-        // "co.uk" ends up being treated as somebody's domain.
-        assertFalse(LinkHarvest.registrable("blog.example.com") == "example.com")
+    fun `the two halves of discovery agree on what a publication is`() {
+        // The concrete symptom: the library half stored a suggestion keyed
+        // "nytimes.com", and on the next run the harvesting half did not
+        // recognise its own subdomain candidate as the same thing and offered
+        // the publication a second time.
+        val alreadyOffered = setOf(registrableDomain("www.nytimes.com"))
+        assertEquals(
+            emptyList<Pair<String, Int>>(),
+            LinkHarvest.candidates(mapOf("nytimes.com" to 9), alreadyOffered),
+        )
     }
 
     @Test

@@ -110,14 +110,16 @@ fun ArticlePage(
 
     val showFullArticle = fullText == ArticleViewModel.FullText.Ready
 
-    val title by remember { derivedStateOf { state?.article?.title ?: "Neo Feed" } }
-    val currentUrl by remember { derivedStateOf { state?.article?.link ?: "Neo Feed" } }
     val appName = stringResource(R.string.app_name)
+    // Both of these fell back to the literal "Neo Feed", which is the wrong
+    // app and, in the second case, not an address either — it was handed
+    // straight to the open-in-browser and share actions. An untitled article
+    // now falls back to this app's own name, and a linkless one to nothing at
+    // all, which is what it has.
+    val title by remember(appName) { derivedStateOf { state?.article?.title ?: appName } }
+    val currentUrl by remember { derivedStateOf { state?.article?.link.orEmpty() } }
     val subTitle by remember {
         derivedStateOf {
-            // "Neo Feed" was the literal fallback here, and the sentinel this
-            // compared against — so an article whose source had no title was
-            // attributed on screen to a different app.
             Uri.parse(currentUrl).host
                 ?: state?.source?.title
                 ?: appName
@@ -182,11 +184,17 @@ fun ArticlePage(
         showBackButton = true,
         onBackAction = onDismiss,
         actions = {
-            RoundButton(
-                icon = Phosphor.ArrowSquareOut,
-                description = stringResource(id = R.string.article_open_original),
-            ) {
-                context.launchView(currentUrl)
+            // Hidden rather than disabled when there is nothing to open: an
+            // article without a link is rare enough that a permanently dead
+            // button would read as a bug in the app rather than a gap in the
+            // feed. The same goes for sharing it.
+            if (currentUrl.isNotBlank()) {
+                RoundButton(
+                    icon = Phosphor.ArrowSquareOut,
+                    description = stringResource(id = R.string.article_open_original),
+                ) {
+                    context.launchView(currentUrl)
+                }
             }
             // The reader kept upstream's heart while the feed moved to the
             // Whisper save mark, so the same action had two different icons
@@ -200,11 +208,13 @@ fun ArticlePage(
             // menu held two things and the second was a third-party summary
             // service nobody here uses, so it existed to hide one action
             // behind two taps.
-            HeaderAction(
-                icon = Phosphor.ShareNetwork,
-                description = stringResource(id = R.string.share),
-                onClick = { context.shareIntent(currentUrl, title) },
-            )
+            if (currentUrl.isNotBlank()) {
+                HeaderAction(
+                    icon = Phosphor.ShareNetwork,
+                    description = stringResource(id = R.string.share),
+                    onClick = { context.shareIntent(currentUrl, title) },
+                )
+            }
         }
     ) { paddingValues ->
         SelectionContainer {

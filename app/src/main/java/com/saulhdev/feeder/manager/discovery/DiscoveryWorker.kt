@@ -124,9 +124,9 @@ class DiscoveryWorker(
                 val link = articles.latestArticleLink(feed.id)
                 listOfNotNull(own, runCatching { URL(link ?: "").host }.getOrNull())
             }
-            .map(LinkHarvest::registrable)
+            .map(::registrableDomain)
             .toSet()
-        val known = suggestions.knownHosts().map(LinkHarvest::registrable).toSet()
+        val known = suggestions.knownHosts().map(::registrableDomain).toSet()
 
         val candidates = LinkHarvest.candidates(counts, subscribed + known)
             .take(MAX_SUGGESTIONS)
@@ -147,7 +147,7 @@ class DiscoveryWorker(
 
             suggestions.insert(
                 Suggestion(
-                    host = LinkHarvest.registrable(host),
+                    host = registrableDomain(host),
                     feedUrl = feedUrl,
                     title = title,
                     mentions = mentions,

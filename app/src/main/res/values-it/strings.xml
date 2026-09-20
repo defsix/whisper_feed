@@ -130,7 +130,7 @@
     <string name="collapse_handle_description">Trascina per comprimere il pannello inferiore</string>
     <string name="draw_permission_required">Questa applicazione richiede l\'autorizzazione per essere mostrata sopra le altre app, senza la quale gli elementi del feed non vengono aperti al click</string>
     <string name="go_to_settings">Vai alle impostazioni</string>
-    <string name="file_share_text">File da Neo Feed</string>
+    <string name="file_share_text">File da Whisper</string>
     <string name="sources_import_bookmarks">Importa segnalibri</string>
     <string name="sources_export_bookmarks">Esporta segnalibri</string>
     <string name="enabled">Abilitato</string>

@@ -131,7 +131,7 @@
     <string name="date_at_time_FORMAT">%1$s bei %2$s</string>
     <string name="draw_permission_required">Diese Anwendung benötigt die Berechtigung, über anderen Apps angezeigt zu werden. Ohne diese Berechtigung würden Feed-Elemente beim Anklicken nicht geöffnet</string>
     <string name="go_to_settings">Gehen Sie zu den Einstellungen</string>
-    <string name="file_share_text">Datei von Neo Feed</string>
+    <string name="file_share_text">Datei von Whisper</string>
     <string name="sources_import_bookmarks">Lesezeichen importieren</string>
     <string name="sources_export_bookmarks">Lesezeichen exportieren</string>
     <string name="enabled">Aktiviert</string>
