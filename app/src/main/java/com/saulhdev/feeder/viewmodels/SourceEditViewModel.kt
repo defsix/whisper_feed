@@ -85,20 +85,6 @@ class SourceEditViewModel : NeoViewModel() {
     private val _saveFailed = MutableSharedFlow<String>()
     val saveFailed: SharedFlow<String> = _saveFailed.asSharedFlow()
 
-    /**
-     * The hidden set as it stands, read rather than collected.
-     *
-     * The view state is built from the feed row, and hiding lives in
-     * preferences instead — so this is one read at the moment the screen is
-     * composed. Good enough: nothing else changes the set while the editor
-     * is open.
-     */
-    /** Whether this source is currently kept out of the feed. */
-    suspend fun isHidden(feedId: Long): Boolean =
-        feedId.toString() in prefs.hiddenSources.getValue()
-
-    private fun hiddenNow(): Set<String> =
-        runCatching { runBlocking { prefs.hiddenSources.getValue() } }.getOrDefault(emptySet())
 
     fun updateFeed(state: SourceEditViewState) {
         viewModelScope.launch { applyUpdate(state) }
@@ -140,14 +126,6 @@ class SourceEditViewModel : NeoViewModel() {
         // outlives the editor and has the snackbar.
         if (!saved) _saveFailed.emit(state.title.ifBlank { state.url })
 
-        // Hiding is a preference rather than a column, so it is written here
-        // rather than carried in the feed row — and written whether or not
-        // the row itself saved, because a refused address change is no reason
-        // to also discard an unrelated decision made on the same screen.
-        val key = currentFeed.id.toString()
-        val hidden = prefs.hiddenSources.getValue()
-        if (state.hidden && key !in hidden) prefs.hiddenSources.setValue(hidden + key)
-        if (!state.hidden && key in hidden) prefs.hiddenSources.setValue(hidden - key)
 
         if (filtersChanged) {
             articleRepository.deleteArticlesForFeed(currentFeed.id)
@@ -168,7 +146,6 @@ class SourceEditViewModel : NeoViewModel() {
             tag = feed.tag,
             fullTextByDefault = feed.fullTextByDefault,
             isEnabled = feed.isEnabled,
-            hidden = feed.id.toString() in hiddenNow(),
             sourceType = feed.sourceType,
             requireLink = feed.requireLink,
             requireImage = feed.requireImage,

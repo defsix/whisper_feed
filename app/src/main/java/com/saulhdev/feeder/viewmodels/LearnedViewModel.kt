@@ -86,13 +86,12 @@ class LearnedViewModel(
     val sources: StateFlow<List<LearnedSource>> = combine(
         sourcesRepo.getAllSourcesFlow(),
         prefs.sourceAffinity.get(),
-        prefs.hiddenSources.get(),
         // Re-reads on every reset, so the screen empties as soon as the button
         // is pressed rather than at the next time the page is opened.
         prefs.learnedResetAt.get().flatMapLatest { resetAt ->
             articleRepo.engagementPerSource(habitWindowStart(resetAt))
         },
-    ) { feeds, affinityRaw, hidden, engagement ->
+    ) { feeds, affinityRaw, engagement ->
         val affinity = parseAffinity(affinityRaw)
         val most = engagement.values.maxOfOrNull { it.score }?.takeIf { it > 0 }
         feeds.map { feed ->
@@ -112,7 +111,10 @@ class LearnedViewModel(
                 // of it: a screen that explains a different sum than the one
                 // being run is worse than no screen.
                 nudge = score.coerceIn(-3, 3) * 0.35f + habit * ArticleWeight.HABIT_MAX,
-                hidden = id.toString() in hidden,
+                // One state now: a hidden source is a source that is off,
+                // so this reads the feed's own column rather than a set that
+                // said the same thing in a second place.
+                hidden = !feed.isEnabled,
             )
         }.sortedWith(
             compareByDescending<LearnedSource> { it.nudge }.thenBy { it.title.lowercase() }
@@ -121,9 +123,7 @@ class LearnedViewModel(
 
     /** Puts one source back in the feed, without touching anything else. */
     fun unhide(id: Long) {
-        ioScope.launch {
-            prefs.hiddenSources.setValue(prefs.hiddenSources.getValue() - id.toString())
-        }
+        ioScope.launch { sourcesRepo.setEnabled(listOf(id), enabled = true) }
     }
 
     /** Forgets one source's scores, leaving every other source alone. */
@@ -149,7 +149,13 @@ class LearnedViewModel(
     fun resetAll() {
         ioScope.launch {
             prefs.sourceAffinity.setValue(emptySet())
-            prefs.hiddenSources.setValue(emptySet())
+            // Every source back on, which is what "shows any hidden sources
+            // again" has always promised — it just used to mean a separate
+            // set rather than the switch.
+            sourcesRepo.setEnabled(
+                sourcesRepo.getAllSources().map { it.id },
+                enabled = true,
+            )
             // Without this the button cleared the smaller half of what the
             // screen shows and left the larger one: every source kept its read
             // count and most of its weight, so "Forget everything" visibly did

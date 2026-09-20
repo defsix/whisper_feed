@@ -52,7 +52,7 @@ import kotlinx.coroutines.plus
 
 class ArticleListViewModel(
     private val articleRepo: ArticleRepository,
-    feedsRepo: SourcesRepository,
+    private val feedsRepo: SourcesRepository,
     val prefs: FeedPreferences,
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
@@ -152,7 +152,6 @@ class ArticleListViewModel(
         categoryArticles,
         sortFilterState,
         prefs.removeDuplicates.get(),
-        prefs.hiddenSources.get(),
         // Debounced so a fast typist does not re-filter and re-sort the whole
         // feed on every keystroke; the list is rebuilt once they pause.
         _searchQuery.debounce { if (it.isBlank()) 0L else SEARCH_DEBOUNCE_MS },
@@ -163,7 +162,6 @@ class ArticleListViewModel(
             articles = values[0] as List<FeedItem>,
             sfm = values[1] as SortFilterModel,
             removeDuplicate = values[2] as Boolean,
-            hiddenSources = values[3] as Set<String>,
             query = values[4] as String,
             hideRead = values[5] as String == READ_HIDE,
         )
@@ -335,9 +333,28 @@ class ArticleListViewModel(
     private val _recentlyHidden = MutableStateFlow<FeedItem?>(null)
     val recentlyHidden: StateFlow<FeedItem?> = _recentlyHidden.asStateFlow()
 
+    /**
+     * Hides a source, which now also stops it fetching.
+     *
+     * These were two states: a feed switched off, and a feed in a hidden set.
+     * Both kept the source's articles out of the feed, and the only thing
+     * separating them was whether it carried on syncing in the background —
+     * a distinction nobody asked for, expressed as two controls that looked
+     * identical and lived on different screens.
+     *
+     * Hiding something should stop it costing data and battery. So there is
+     * one state now, and it is the feed's own `isEnabled` column: hiding
+     * turns a source off, the switch on the sources list does the same thing,
+     * and either can be undone from either place.
+     *
+     * Safe to collapse only because saved articles no longer depend on it —
+     * until the previous commit, switching a source off took everything the
+     * reader had bookmarked from it out of Bookmarks, and merging the two
+     * would have made hiding do that too.
+     */
     fun hideSource(item: FeedItem) {
         ioScope.launch {
-            prefs.hiddenSources.setValue(prefs.hiddenSources.get().first() + item.sourceId)
+            feedsRepo.setEnabled(listOf(item.feed.id), enabled = false)
             _recentlyHidden.value = item
         }
     }
@@ -345,17 +362,15 @@ class ArticleListViewModel(
     fun undoHideSource() {
         val item = _recentlyHidden.value ?: return
         _recentlyHidden.value = null
-        unhideSource(item.sourceId)
+        ioScope.launch { feedsRepo.setEnabled(listOf(item.feed.id), enabled = true) }
     }
 
     fun forgetHiddenSource() {
         _recentlyHidden.value = null
     }
 
-    fun unhideSource(sourceId: String) {
-        ioScope.launch {
-            prefs.hiddenSources.setValue(prefs.hiddenSources.get().first() - sourceId)
-        }
+    fun unhideSource(feedId: Long) {
+        ioScope.launch { feedsRepo.setEnabled(listOf(feedId), enabled = true) }
     }
 
     // HELPERS
@@ -365,7 +380,6 @@ class ArticleListViewModel(
         articles: List<FeedItem>,
         sfm: SortFilterModel,
         removeDuplicate: Boolean,
-        hiddenSources: Set<String> = emptySet(),
         query: String = "",
         hideRead: Boolean = false,
     ): List<FeedItem> {
@@ -381,7 +395,6 @@ class ArticleListViewModel(
                     seenLinks != null && !seenLinks.add(item.link) -> false
                     // "Hide source" is permanent and survives a filter reset;
                     // sourcesFilter below is the filter sheet's scratchpad.
-                    item.sourceId in hiddenSources -> false
                     item.sourceId in sfm.sourcesFilter -> false
                     // Any of the source's categories being muted hides it. This
                     // compared the whole comma-separated tag string against the

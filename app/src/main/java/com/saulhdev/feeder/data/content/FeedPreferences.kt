@@ -857,9 +857,15 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = emptySet(),
     )
 
+    /**
+     * Sources hidden before hiding and switching off became one thing.
+     *
+     * Kept only so the ids can be carried over once, then cleared. Nothing
+     * reads it to decide anything; see NeoApp's migration.
+     */
     var hiddenSources = StringSetPref(
         titleId = R.string.title_sources,
-        icon = Phosphor.Info,
+        icon = Phosphor.EyeSlash,
         key = HIDDEN_SOURCES,
         dataStore = dataStore,
         defaultValue = emptySet(),

@@ -64,9 +64,6 @@
     <string name="category_in_use">%1$d sources</string>
     <string name="category_merge_hint">Renaming onto an existing category merges the two.</string>
     <string name="source_address_taken">%1$s was not saved \u2014 another source already uses that address.</string>
-    <string name="source_hidden_marker">Hidden from the feed</string>
-    <string name="source_hide">Hide from the feed</string>
-    <string name="source_hide_summary">Its articles stay out of your feed, but it keeps syncing \u2014 so there is something waiting when you bring it back. Turning the source off instead stops it fetching at all.</string>
     <string name="source_hidden">Hiding %1$s</string>
     <string name="all_categories">All</string>
     <string name="home">Home</string>
@@ -347,7 +344,7 @@
     <string name="by_author_on_date">%1$s, %2$s</string>
 
     <string name="source_enabled">Keep this source on</string>
-    <string name="source_enabled_summary">Off stops it fetching anything new. Articles already collected stay, and so does anything you saved from it.</string>
+    <string name="source_enabled_summary">Off hides it from your feed and stops it fetching anything new. Articles already collected stay, and so does anything you saved from it.</string>
     <string name="sources_import_opml">Import feeds from OPML</string>
     <string name="sources_export_opml">Export feeds to OPML</string>
     <string name="failed_to_import_OPML">"Failed to import OPML"</string>

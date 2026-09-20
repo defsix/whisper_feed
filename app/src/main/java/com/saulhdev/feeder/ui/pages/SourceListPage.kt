@@ -667,7 +667,6 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
-                                hidden = item.id in state.hidden,
                                 pinned = item.id in state.pinned,
                                 onPin = {
                                     scope.launch {
@@ -712,7 +711,6 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
-                                hidden = item.id in state.hidden,
                                 onClick = {
                                     scope.launch {
                                         paneNavigator.navigateTo(

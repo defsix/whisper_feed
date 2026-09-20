@@ -28,13 +28,6 @@ data class SourceEditViewState(
     val tag: String = "",
     val fullTextByDefault: Boolean = true,
     val isEnabled: Boolean = true,
-    /**
-     * Kept out of the feed while still syncing.
-     *
-     * Lives in preferences rather than on the feed row, so it travels with
-     * the rest of the editor's state and is written separately on save.
-     */
-    val hidden: Boolean = false,
     val sourceType: String = "rss",
     val requireLink: Boolean = false,
     val requireImage: Boolean = false,

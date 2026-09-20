@@ -23,12 +23,13 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The two ways to stop seeing a source, and what each one costs.
+ * Silencing a source, which is now one state reached two ways.
  *
- * They look alike and are not: switching a source off stops it fetching,
- * while hiding keeps it collecting so there is something there when it comes
- * back. Keeping both is only defensible while the difference is real, so the
- * difference is asserted rather than described.
+ * Hiding and switching off were separate: both kept a source's articles out
+ * of the feed, and the only thing between them was whether it carried on
+ * syncing. Hiding something should stop it costing data and battery, so there
+ * is one state — the feed's own column — and the article menu and the sources
+ * list both set it.
  *
  * Read from the DAO source, because the distinction lives in SQL and a test
  * that restated it in Kotlin would pass while the query said otherwise.
@@ -78,5 +79,19 @@ class SourceVisibilityTest {
     @Test
     fun `the feed excludes a source that is switched off`() {
         assertTrue(query("getAllEnabledFeedItems").contains("Feeds.isEnabled = 1"))
+    }
+
+    /**
+     * The collapse is only safe because of the test above.
+     *
+     * While switching a source off still emptied Bookmarks of everything
+     * saved from it, making "hide" mean "switch off" would have made hiding
+     * do that too. These two assertions are one argument, and separating them
+     * would let a later change to either quietly undo it.
+     */
+    @Test
+    fun `hiding a source cannot cost the reader their saved articles`() {
+        assertFalse(query("getAllBookmarkedFeedItems").contains("isEnabled"))
+        assertTrue(query("getAllEnabledFeedItems").contains("isEnabled"))
     }
 }

@@ -94,7 +94,34 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
                 .build()
         )
         wm.pruneWork()
+        carryOverHiddenSources()
         onAppStarted()
+    }
+
+    /**
+     * Turns off anything hidden under the old two-state arrangement.
+     *
+     * Hiding a source and switching it off used to be separate: both kept its
+     * articles out of the feed, and only one of them stopped it syncing.
+     * They are one thing now, so a source somebody hid before this release
+     * has to end up off rather than quietly coming back the moment the set
+     * stopped being read.
+     *
+     * Runs once and clears the set, so it costs a preference read on
+     * subsequent starts and nothing else. Off the main thread, because it is
+     * a DataStore read and a database write and neither belongs in onCreate.
+     */
+    private fun carryOverHiddenSources() {
+        val prefs: FeedPreferences by inject(FeedPreferences::class.java)
+        val sources: SourcesRepository by inject(SourcesRepository::class.java)
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            runCatching {
+                val hidden = prefs.hiddenSources.getValue()
+                if (hidden.isEmpty()) return@runCatching
+                sources.setEnabled(hidden.mapNotNull(String::toLongOrNull), enabled = false)
+                prefs.hiddenSources.setValue(emptySet())
+            }
+        }
     }
 
     /**
