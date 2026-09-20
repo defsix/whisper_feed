@@ -25,6 +25,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 
+/**
+ * How many sources may be kept at the top of the list.
+ *
+ * Five. The number is the feature: a list where everything is a favourite is
+ * a list in its original order, and a small cap makes choosing one an actual
+ * decision rather than a shrug. Small enough, too, that the favourites still
+ * read as a group at a glance rather than as the first screenful.
+ */
+const val MAX_FAVOURITE_SOURCES = 5
+
 class SourceListViewModel(
     private val feedsRepo: SourcesRepository,
     private val articleRepo: ArticleRepository,
@@ -109,10 +119,12 @@ class SourceListViewModel(
         combine(_query, _category, _duplicatesOnly, _duplicateIds, _sameSite) { q, c, d, ids, same ->
             Narrowing(q as String, c as String?, d as Boolean, ids as Set<Long>, same as Boolean)
         },
-        combine(sort, ascending) { sort, ascending -> sort to ascending },
+        combine(sort, ascending, prefs.favouriteSources.get()) { sort, ascending, favourites ->
+            Triple(sort, ascending, favourites.mapNotNull(String::toLongOrNull).toSet())
+        },
         articleRepo.latestArticlePerFeed(),
     ) { allSources, allTags, narrowing, order, latestPosts ->
-        val (sort, ascending) = order
+        val (sort, ascending, favourites) = order
         // By name while the loose filter is on, whatever the chosen sort:
         // members of a group are only recognisable as a group when they sit
         // next to each other, and they nearly always share a title.
@@ -125,6 +137,12 @@ class SourceListViewModel(
         val matching = allSources
             .filter { narrowing.keeps(it) }
             .sortedWith(comparator)
+            // Favourites first, then whatever the chosen sort produced.
+            // sortedBy is stable, so this lifts a handful to the top without
+            // disturbing the order of anything — including the favourites
+            // among themselves, which keep the sort the reader asked for
+            // rather than the order they happened to tick them in.
+            .sortedByDescending { it.id in favourites }
         val (enabledSources, disabledSources) = matching.partition { it.isEnabled }
         SourceListState(
             allSources = allSources,
@@ -132,6 +150,7 @@ class SourceListViewModel(
             disabledSources = disabledSources,
             tagsSourcesMap = groupByTag(allSources, allTags),
             allTags = allTags,
+            favourites = favourites,
         )
     }
         // A sync writes to every feed row twice — once to mark it syncing and
@@ -155,6 +174,42 @@ class SourceListViewModel(
      * across Article and Feeds re-ran on every article a sync inserted — to
      * keep a list ready for a button pressed once in a blue moon, if ever.
      */
+    /**
+     * Adds or removes a favourite, refusing to go past the cap.
+     *
+     * Returns false when the cap stopped it, so the screen can say so. The
+     * limit is the point of the feature rather than a safeguard on it: a
+     * list where everything is at the top is a list in its original order,
+     * and five is few enough that picking one is a decision.
+     */
+    suspend fun toggleFavourite(id: Long): Boolean {
+        val current = prefs.favouriteSources.getValue()
+        val key = id.toString()
+        if (key in current) {
+            prefs.favouriteSources.setValue(current - key)
+            return true
+        }
+        if (current.size >= MAX_FAVOURITE_SOURCES) return false
+        prefs.favouriteSources.setValue(current + key)
+        return true
+    }
+
+    /**
+     * Drops a favourite that no longer names a source.
+     *
+     * Removing a subscription leaves its id behind in the set, which is
+     * harmless until the reader has five of those and cannot favourite
+     * anything. Called when the list is known, because that is the only place
+     * the answer is known.
+     */
+    fun forgetMissingFavourites(existing: Set<Long>) {
+        ioScope.launch {
+            val current = prefs.favouriteSources.getValue()
+            val alive = current.filter { (it.toLongOrNull() ?: -1L) in existing }.toSet()
+            if (alive.size != current.size) prefs.favouriteSources.setValue(alive)
+        }
+    }
+
     suspend fun bookmarksForExport(): List<FeedItem> =
         articleRepo.getBookmarkedFeedItems().first()
 
@@ -424,6 +479,8 @@ data class SourceListState(
     val disabledSources: List<Feed> = emptyList(),
     val tagsSourcesMap: Map<String, List<Feed>> = emptyMap(),
     val allTags: List<String> = emptyList(),
+    /** Ids of the sources kept at the top, so a row can show it is one. */
+    val favourites: Set<Long> = emptySet(),
 ) {
     /**
      * The sources actually on screen, in the order they are drawn.

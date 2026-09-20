@@ -55,6 +55,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.FunnelSimple
 import com.saulhdev.feeder.ui.icons.phosphor.BookOpenUser
 import com.saulhdev.feeder.ui.icons.phosphor.Graph
+import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
 import com.saulhdev.feeder.ui.icons.phosphor.Hash
 import com.saulhdev.feeder.ui.icons.phosphor.Info
 import com.saulhdev.feeder.ui.icons.phosphor.Sort
@@ -549,15 +550,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.Suggestions
     )
 
-    /** The starter list, still reachable after onboarding. */
-    var starterSources = StringPref(
-        titleId = R.string.pref_starter_sources,
-        summaryId = R.string.pref_starter_sources_summary,
-        icon = Phosphor.Plus,
-        key = STARTER_SOURCES,
-        dataStore = dataStore,
-        route = NavRoute.StarterSources
-    )
 
     /** How to put Whisper on a launcher's left-most page. */
     var launcherSetup = StringPref(
@@ -843,6 +835,29 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * This is an answer to "hide this source", which should survive a filter
      * reset and be undone deliberately, from the sources screen.
      */
+    /**
+     * Sources the reader wants at the top of their list, at most
+     * [com.saulhdev.feeder.viewmodels.MAX_FAVOURITE_SOURCES] of them.
+     *
+     * Chosen over a drag-to-reorder handle, and the reason is worth keeping.
+     * A hand-made order has no meaning while the list is sorted by name —
+     * name ordering is already total — so a handle either does nothing in
+     * three of the four sorts or silently overrides the sort that was picked.
+     * Both are controls that lie about what they do. A short favourites list
+     * composes with every sort instead: these few sit on top, everything else
+     * keeps whatever order was asked for.
+     *
+     * Feed ids as strings, because DataStore has no set of longs and every
+     * other multi-value preference here is already a string set.
+     */
+    var favouriteSources = StringSetPref(
+        titleId = R.string.title_sources,
+        icon = Phosphor.HeartStraight,
+        key = FAVOURITE_SOURCES,
+        dataStore = dataStore,
+        defaultValue = emptySet(),
+    )
+
     var hiddenSources = StringSetPref(
         titleId = R.string.title_sources,
         icon = Phosphor.Info,
@@ -1026,7 +1041,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
-        val STARTER_SOURCES = stringPreferencesKey("pref_starter_sources")
         val SOURCES_ROUTE = stringPreferencesKey("pref_sources_route")
         val SOURCES_SORT = stringPreferencesKey("pref_sources_sort")
         val SOURCES_SORT_ASC = booleanPreferencesKey("pref_sources_sort_asc")
@@ -1061,6 +1075,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
 
         // Filter & Sort
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
+        val FAVOURITE_SOURCES = stringSetPreferencesKey("pref_favourite_sources")
         val HIDDEN_SOURCES = stringSetPreferencesKey("pref_hidden_sources")
 val LEARNED_RESET_AT = longPreferencesKey("pref_learned_reset_at")
         val BACKUP_STOPPED_AT = longPreferencesKey("pref_backup_stopped_at")

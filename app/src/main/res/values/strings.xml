@@ -22,6 +22,9 @@
     <string name="layout_magazine">Magazine</string>
     <string name="layout_list">List</string>
     <string name="layout_mosaic">Mosaic</string>
+    <string name="source_favourite">Keep at the top</string>
+    <string name="source_unfavourite">Stop keeping at the top</string>
+    <string name="source_favourite_full">You can keep %1$d sources at the top. Remove one first.</string>
     <string name="source_not_updating">Not updating</string>
     <string name="sources_clear_search">Clear the search</string>
     <string name="sources_search">Search sources</string>
@@ -579,8 +582,6 @@
         <item quantity="one">Added one source</item>
         <item quantity="other">Added %1$d sources</item>
     </plurals>
-    <string name="pref_starter_sources">Starter feeds</string>
-    <string name="pref_starter_sources_summary">A short list that ships with Whisper, to take or leave</string>
 
     <!-- Restoring during onboarding -->
     <string name="backup_folder_restored">%1$d sources and %2$d settings restored</string>

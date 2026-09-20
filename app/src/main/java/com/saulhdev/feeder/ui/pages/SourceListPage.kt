@@ -78,6 +78,7 @@ import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.FILE_DATETIME_FORMAT
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
+import com.saulhdev.feeder.viewmodels.MAX_FAVOURITE_SOURCES
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -140,6 +141,16 @@ fun SourceListPage(
     // so the offer to undo has to be made here, on the screen the user lands
     // back on. The repository holds the removed row until this is answered.
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Removing a subscription leaves its id in the favourites set, which does
+    // nothing visible until the reader has five of those and cannot favourite
+    // anything at all. Cleared whenever the list is known, because that is the
+    // only place the answer is.
+    LaunchedEffect(state.allSources) {
+        if (state.allSources.isNotEmpty()) {
+            viewModel.forgetMissingFavourites(state.allSources.mapTo(HashSet()) { it.id })
+        }
+    }
     val recentlyDeleted by viewModel.recentlyDeleted.collectAsState()
     val recentlyDeletedMany by viewModel.recentlyDeletedMany.collectAsState()
     val selection by viewModel.selection.collectAsState()
@@ -643,6 +654,20 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
+                                favourite = item.id in state.favourites,
+                                onFavourite = {
+                                    scope.launch {
+                                        if (!viewModel.toggleFavourite(it.id)) {
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(
+                                                    R.string.source_favourite_full,
+                                                    MAX_FAVOURITE_SOURCES,
+                                                ),
+                                                withDismissAction = true,
+                                            )
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     scope.launch {
                                         paneNavigator.navigateTo(

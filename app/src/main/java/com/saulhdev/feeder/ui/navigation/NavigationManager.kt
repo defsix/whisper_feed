@@ -55,7 +55,6 @@ import com.saulhdev.feeder.ui.pages.PreferencesPage
 import com.saulhdev.feeder.ui.pages.CategoryListPage
 import com.saulhdev.feeder.ui.pages.LauncherPage
 import com.saulhdev.feeder.ui.theme.reducedMotion
-import com.saulhdev.feeder.ui.pages.StarterSourcesPage
 import com.saulhdev.feeder.ui.pages.BookmarkImportPage
 import com.saulhdev.feeder.ui.pages.BrokenFeedsPage
 import com.saulhdev.feeder.ui.pages.FeedLibraryPage
@@ -129,7 +128,6 @@ fun NavigationManager(
             composable<NavRoute.Account> { AccountPage() }
             composable<NavRoute.Backup> { BackupPage() }
             composable<NavRoute.Launcher> { LauncherPage() }
-            composable<NavRoute.StarterSources> { StarterSourcesPage() }
             composable<NavRoute.Suggestions> { SuggestionsPage() }
             composable<NavRoute.BookmarkImport> { BookmarkImportPage() }
             composable<NavRoute.BrokenFeeds> { BrokenFeedsPage() }
@@ -216,9 +214,6 @@ open class NavRoute {
 
     @Serializable
     data object Launcher : NavRoute()
-
-    @Serializable
-    data object StarterSources : NavRoute()
 
     @Serializable
     data object Suggestions : NavRoute()

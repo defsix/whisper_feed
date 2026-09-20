@@ -46,6 +46,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.icons.Phosphor
+import androidx.compose.material3.IconButton
+import com.saulhdev.feeder.ui.icons.phosphor.HeartStraight
+import com.saulhdev.feeder.ui.icons.phosphor.HeartStraightFill
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.data.db.models.Feed
 
@@ -71,6 +74,10 @@ fun SourceItem(
      */
     onExtendSelection: ((Feed) -> Unit)? = null,
     staleSince: Long = 0L,
+    /** Whether this source is one of the few kept at the top of the list. */
+    favourite: Boolean = false,
+    /** Null hides the control entirely, for the screens that have no list to top. */
+    onFavourite: ((Feed) -> Unit)? = null,
 ) {
     val extend = onExtendSelection ?: onLongClick
     val (isEnabled, enable) = remember(source.isEnabled) {
@@ -145,14 +152,30 @@ fun SourceItem(
             if (selectionMode) {
                 Checkbox(checked = selected, onCheckedChange = { onLongClick(source) })
             } else {
-                Switch(
-                    checked = isEnabled,
-                    colors = SwitchDefaults.colors(uncheckedBorderColor = Color.Transparent),
-                    onCheckedChange = {
-                        enable(!isEnabled)
-                        onSwitch(source)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onFavourite != null) {
+                        IconButton(onClick = { onFavourite(source) }) {
+                            Icon(
+                                imageVector = if (favourite) Phosphor.HeartStraightFill
+                                else Phosphor.HeartStraight,
+                                contentDescription = stringResource(
+                                    if (favourite) R.string.source_unfavourite
+                                    else R.string.source_favourite
+                                ),
+                                tint = if (favourite) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                )
+                    Switch(
+                        checked = isEnabled,
+                        colors = SwitchDefaults.colors(uncheckedBorderColor = Color.Transparent),
+                        onCheckedChange = {
+                            enable(!isEnabled)
+                            onSwitch(source)
+                        }
+                    )
+                }
             }
         }
     )
