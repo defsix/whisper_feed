@@ -49,7 +49,7 @@ const val ID_ALL: Long = -1L
         Article::class,
         Suggestion::class,
     ],
-    version = 22,
+    version = 23,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -225,6 +225,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_22_23,
     MIGRATION_21_22,
     MIGRATION_20_21,
     MIGRATION_19_20,
@@ -243,6 +244,74 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_22_23 : Migration(22, 23) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Mastodon is gone from the app, so its rows and its columns go too.
+        //
+        // The sources go first, and their articles by hand rather than by
+        // cascade: Room runs migrations with foreign keys switched off, so the
+        // `onDelete = CASCADE` on Article.feedId does not fire here and the
+        // articles would be orphaned onto a feed id that no longer exists.
+        //
+        // Nothing is being rescued. A Mastodon source's articles are toots
+        // fetched through an API that this version cannot speak to; leaving
+        // them would leave a source in the list that can never sync again.
+        db.execSQL(
+            """
+            DELETE FROM Article WHERE feedId IN (
+                SELECT id FROM Feeds WHERE sourceType = 'mastodon'
+            )
+            """.trimIndent()
+        )
+        db.execSQL("DELETE FROM Feeds WHERE sourceType = 'mastodon'")
+
+        // SQLite before 3.35 has no DROP COLUMN, and the minSdk reaches back
+        // further than that, so the four columns go the long way round.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `Feeds_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `title` TEXT NOT NULL,
+                `description` TEXT NOT NULL,
+                `url` TEXT NOT NULL,
+                `feedImage` TEXT NOT NULL,
+                `lastSync` INTEGER NOT NULL,
+                `alternateId` INTEGER NOT NULL,
+                `fullTextByDefault` INTEGER NOT NULL,
+                `tag` TEXT NOT NULL,
+                `currentlySyncing` INTEGER NOT NULL,
+                `isEnabled` INTEGER NOT NULL,
+                `removedAt` INTEGER NOT NULL DEFAULT 0,
+                `consecutiveFailures` INTEGER NOT NULL DEFAULT 0,
+                `failingSince` INTEGER NOT NULL DEFAULT 0
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO `Feeds_new` (
+                `id`, `title`, `description`, `url`, `feedImage`, `lastSync`,
+                `alternateId`, `fullTextByDefault`, `tag`, `currentlySyncing`,
+                `isEnabled`, `removedAt`, `consecutiveFailures`, `failingSince`
+            )
+            SELECT
+                `id`, `title`, `description`, `url`, `feedImage`, `lastSync`,
+                `alternateId`, `fullTextByDefault`, `tag`, `currentlySyncing`,
+                `isEnabled`, `removedAt`, `consecutiveFailures`, `failingSince`
+            FROM `Feeds`
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE `Feeds`")
+        db.execSQL("ALTER TABLE `Feeds_new` RENAME TO `Feeds`")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_Feeds_url` ON `Feeds` (`url`)")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_Feeds_id_url_title` " +
+                    "ON `Feeds` (`id`, `url`, `title`)"
+        )
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_21_22 : Migration(21, 22) {

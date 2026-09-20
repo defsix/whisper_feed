@@ -48,8 +48,6 @@ import com.saulhdev.feeder.ui.pages.BackupPage
 import com.saulhdev.feeder.ui.pages.LearnedPage
 import com.saulhdev.feeder.ui.pages.LicensePage
 import com.saulhdev.feeder.ui.pages.MainPage
-import com.saulhdev.feeder.ui.pages.MastodonAddPage
-import com.saulhdev.feeder.ui.pages.MastodonCallbackPage
 import com.saulhdev.feeder.ui.pages.GlanceLocationPage
 import com.saulhdev.feeder.ui.pages.PreferencesPage
 import com.saulhdev.feeder.ui.pages.CategoryListPage
@@ -135,17 +133,6 @@ fun NavigationManager(
             composable<NavRoute.FeedLibrary> { FeedLibraryPage() }
             composable<NavRoute.Statistics> { StatisticsPage() }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
-            composable<NavRoute.MastodonAdd> { MastodonAddPage() }
-            composable<NavRoute.MastodonCallback>(
-                deepLinks = listOf(
-                    navDeepLink {
-                        uriPattern = "nf-mastodon://callback?code={code}&state={state}"
-                    }
-                )
-            ) {
-                val args = it.toRoute<NavRoute.MastodonCallback>()
-                MastodonCallbackPage(args.code, args.state)
-            }
             composable<NavRoute.WebView>(
                 deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.WEB_VIEW}/{url}" })
             ) {
@@ -235,12 +222,6 @@ open class NavRoute {
 
     @Serializable
     data object BlockedWords : NavRoute()
-
-    @Serializable
-    data object MastodonAdd : NavRoute()
-
-    @Serializable
-    data class MastodonCallback(val code: String = "", val state: String = "") : NavRoute()
 
     @Serializable
     data class ArticleView(val uuid: String = "") : NavRoute()

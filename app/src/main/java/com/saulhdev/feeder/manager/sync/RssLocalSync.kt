@@ -28,7 +28,7 @@ import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.entity.JsonFeed
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.manager.mastodon.MastodonFeedSync
+import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.models.getResponse
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
@@ -84,7 +84,7 @@ const val TAG = "RssLocalSync"
 private const val MAX_CONCURRENT_FEEDS = 4
 
 private val syncHttpClient: OkHttpClient by lazy {
-    OkHttpClient.Builder().asFeedReader().build()
+    OkHttpClient.Builder().asFeedReader().onlyPublicHttps().build()
 }
 
 suspend fun syncFeeds(
@@ -230,17 +230,6 @@ private suspend fun syncFeed(
     downloadTime: Instant
 ) {
     Log.d(TAG, "Fetching ${feedSql.title}")
-
-    if (feedSql.sourceType == "mastodon") {
-        MastodonFeedSync.sync(
-            context = context,
-            articleRepo = articleRepo,
-            feedSql = feedSql,
-            filesDir = filesDir,
-            downloadTime = downloadTime
-        )
-        return
-    }
 
     val response: Response =
         syncHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)

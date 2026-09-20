@@ -68,14 +68,6 @@ data class Feed(
      */
     @ColumnInfo(defaultValue = "0")
     val removedAt: Long = 0L,
-    @ColumnInfo(defaultValue = "rss")
-    val sourceType: String = "rss",
-    @ColumnInfo(defaultValue = "0")
-    val requireLink: Boolean = false,
-    @ColumnInfo(defaultValue = "0")
-    val requireImage: Boolean = false,
-    @ColumnInfo(defaultValue = "1")
-    val excludeReplies: Boolean = true,
 
     /**
      * How many syncs in a row have failed for this feed.

@@ -129,18 +129,14 @@ refused outright, so those credentials cannot cross the network unencrypted.
 The credentials are stored encrypted on the device, behind a key held in
 Android's hardware-backed keystore.
 
-### 6. A Mastodon instance, only if you connect one
-
-Standard OAuth against the instance you name. The token is stored the same way.
-
-### 7. Your own backup destination
+### 6. Your own backup destination
 
 If you turn on backups, the OPML and settings files are written to a folder
 **you** pick with Android's document picker — local storage, an SD card, or a
 cloud folder if that is what you choose. Whisper writes the file; where that
 folder actually lives is between you and whoever provides it.
 
-### 8. Android's own backup, only if you ask for it
+### 7. Android's own backup, only if you ask for it
 
 Off by default, and asked separately for cloud backup and for phone-to-phone
 transfer, because those are different questions. Your saved credentials are
@@ -163,12 +159,14 @@ excluded from both routes regardless of what you choose.
     genuinely has no HTTPS, the fetch fails and the source appears under Broken
     feeds.
   - **Anything carrying a credential is refused, not upgraded.** A sync server
-    or Mastodon instance given as `http://` simply fails. Guessing at HTTPS is
-    reasonable for a public article and not reasonable for your password.
+    given as `http://` simply fails. Guessing at HTTPS is reasonable for a
+    public article and not reasonable for your password.
 - **Private and local network addresses are refused.** A feed or an article link
   pointing at `192.168.x.x`, `10.x.x.x`, `localhost` or similar is not fetched,
   on every redirect hop rather than only the first. A hostile feed cannot use
-  your phone to reach inside your own network.
+  your phone to reach inside your own network. This holds for every client the
+  app builds, not only the ones checked by hand: a test reads the source and
+  fails the build if a client is added without the guard.
 - **The in-app browser opens `http` and `https` only.** Not `file:`, not
   `content:`, not `javascript:`.
 

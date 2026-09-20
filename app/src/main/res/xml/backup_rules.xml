@@ -4,7 +4,7 @@
     happens is PlatformBackupAgent's decision; this is what is in it when it
     does.
 
-    The two encrypted preference files never travel, on any route and whatever
+    The encrypted preference file never travels, on any route and whatever
     the reader chose. EncryptedSharedPreferences keeps its key in the
     hardware-backed Keystore, and the Keystore is not part of a backup — so a
     restored device would get the ciphertext without the key, and the first
@@ -14,5 +14,4 @@
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="whisper_account.xml" />
-    <exclude domain="sharedpref" path="mastodon_tokens.xml" />
 </full-backup-content>

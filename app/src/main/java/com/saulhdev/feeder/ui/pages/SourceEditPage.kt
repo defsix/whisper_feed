@@ -120,10 +120,6 @@ fun SourceEditPage(
                     tag = freshFeed.tag,
                     fullTextByDefault = freshFeed.fullTextByDefault,
                     isEnabled = freshFeed.isEnabled,
-                    sourceType = freshFeed.sourceType,
-                    requireLink = freshFeed.requireLink,
-                    requireImage = freshFeed.requireImage,
-                    excludeReplies = freshFeed.excludeReplies,
                 )
                 hasLoaded = true
             }
@@ -342,7 +338,7 @@ fun SourceEditView(
                     onEdited()
                 },
                 index = 0,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+                groupSize = 2
             )
             Spacer(modifier = Modifier.height(4.dp))
             ComposeSwitchView(
@@ -354,43 +350,8 @@ fun SourceEditView(
                     onEdited()
                 },
                 index = 1,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+                groupSize = 2
             )
-                        if (editState.value.sourceType == "mastodon") {
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_exclude_replies,
-                    isChecked = editState.value.excludeReplies,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(excludeReplies = it)
-                        onEdited()
-                    },
-                    index = 2,
-                    groupSize = 5
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_require_link,
-                    isChecked = editState.value.requireLink,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(requireLink = it)
-                        onEdited()
-                    },
-                    index = 3,
-                    groupSize = 5
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                ComposeSwitchView(
-                    titleId = R.string.mastodon_require_image,
-                    isChecked = editState.value.requireImage,
-                    onCheckedChange = {
-                        editState.value = editState.value.copy(requireImage = it)
-                        onEdited()
-                    },
-                    index = 4,
-                    groupSize = 5
-                )
-            }
         }
 
         item {

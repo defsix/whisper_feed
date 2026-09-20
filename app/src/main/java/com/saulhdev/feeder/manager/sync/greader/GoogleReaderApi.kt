@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.manager.sync.greader
 
+import com.saulhdev.feeder.manager.bookmarks.refusingPrivateNetworks
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -250,7 +251,14 @@ class GoogleReaderApi(
          * pretending to be anything else.
          */
         val defaultClient: OkHttpClient by lazy {
-            OkHttpClient.Builder().asFeedReader().build()
+            OkHttpClient.Builder()
+                .asFeedReader()
+                // The private-network guard, but deliberately not the https
+                // upgrade: this client carries the reader's sync credentials,
+                // and a server written down as `http://` should fail rather
+                // than be reached over a route its owner never confirmed.
+                .refusingPrivateNetworks()
+                .build()
         }
 
         private val moshi: Moshi =

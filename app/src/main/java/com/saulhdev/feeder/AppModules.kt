@@ -28,9 +28,6 @@ import com.saulhdev.feeder.manager.backup.BackupStore
 import com.saulhdev.feeder.manager.bookmarks.FeedDiscovery
 import com.saulhdev.feeder.manager.glance.GlanceStateHolder
 import com.saulhdev.feeder.manager.glance.WeatherRepository
-import com.saulhdev.feeder.manager.mastodon.MastodonApi
-import com.saulhdev.feeder.manager.mastodon.MastodonAuth
-import com.saulhdev.feeder.manager.mastodon.MastodonStorage
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.manager.sync.service.GoogleReaderService
@@ -46,7 +43,6 @@ import com.saulhdev.feeder.viewmodels.BrokenFeedsViewModel
 import com.saulhdev.feeder.viewmodels.InsecureFeedsViewModel
 import com.saulhdev.feeder.viewmodels.LearnedViewModel
 import com.saulhdev.feeder.viewmodels.StatisticsViewModel
-import com.saulhdev.feeder.viewmodels.MastodonAuthViewModel
 import com.saulhdev.feeder.viewmodels.SearchFeedViewModel
 import com.saulhdev.feeder.viewmodels.SortFilterViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
@@ -100,7 +96,6 @@ val modelModule = module {
     viewModelOf(::BookmarkImportViewModel)
     viewModelOf(::BrokenFeedsViewModel)
     viewModelOf(::InsecureFeedsViewModel)
-    viewModelOf(::MastodonAuthViewModel)
 }
 
 /** The database, the repositories, and everything that talks to a network. */
@@ -111,9 +106,6 @@ val dataModule = module {
     singleOf(::ArticleRepository)
     singleOf(::SourcesRepository)
     singleOf(::SyncRestClient)
-    singleOf(::MastodonStorage)
-    singleOf(::MastodonAuth)
-    singleOf(::MastodonApi)
     // Two things resolve this from Koin — FeedDiscovery and DiscoveryWorker —
     // and nothing ever registered it, so "Feeds that stopped working" crashed
     // the app the moment it was opened and the suggestion worker threw on

@@ -19,6 +19,7 @@ package com.saulhdev.feeder.manager.glance
 
 import android.util.Log
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -112,6 +113,7 @@ class WeatherRepository {
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .onlyPublicHttps()
             .callTimeout(20, TimeUnit.SECONDS)
             .build()
     }

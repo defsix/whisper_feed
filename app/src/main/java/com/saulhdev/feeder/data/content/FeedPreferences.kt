@@ -68,7 +68,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.getItemsPerFeed
-import com.saulhdev.feeder.utils.getMastodonItemsPerFeed
 import com.saulhdev.feeder.utils.getSortingOptions
 import com.saulhdev.feeder.utils.getSyncFrequency
 import com.saulhdev.feeder.utils.getSyncRange
@@ -690,15 +689,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getItemsPerFeed()
     )
 
-    var mastodonItemsPerFeed = StringSelectionPref(
-        titleId = R.string.pref_mastodon_items_per_feed,
-        icon = Phosphor.Hash,
-        key = MASTODON_ITEMS_PER_FEED,
-        dataStore = dataStore,
-        defaultValue = "20",
-        entries = getMastodonItemsPerFeed()
-    )
-
     var blockedWords = StringSetPref(
         titleId = R.string.pref_blocked_words,
         summaryId = R.string.pref_blocked_words_summary,
@@ -1072,7 +1062,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SYNC_FREQUENCY = stringPreferencesKey("pref_sync_frequency")
         val SYNC_RANGE = stringPreferencesKey("pref_sync_range")
         val ITEMS_PER_FEED = stringPreferencesKey("pref_items_per_feed")
-        val MASTODON_ITEMS_PER_FEED = stringPreferencesKey("pref_mastodon_items_per_feed")
         val BLOCKED_WORDS = stringSetPreferencesKey("pref_blocked_words")
         val PLUGINS = stringSetPreferencesKey("pref_enabled_plugins")
         val ABOUT = stringPreferencesKey("pref_about")

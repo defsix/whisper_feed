@@ -12,8 +12,7 @@ import androidx.work.WorkerParameters
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
 import com.saulhdev.feeder.data.repository.ArticleRepository
-import com.saulhdev.feeder.manager.bookmarks.BlockPrivateNetworks
-import com.saulhdev.feeder.manager.bookmarks.UpgradeToHttps
+import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import com.saulhdev.feeder.utils.HttpIdentity.asArticleReader
 import com.saulhdev.feeder.utils.blobFullFile
 import com.saulhdev.feeder.utils.blobFullOutputStream
@@ -112,8 +111,7 @@ val fullTextClient: OkHttpClient by lazy {
         // what came back. A network interceptor rather than a check on the
         // address, because OkHttp follows redirects itself and a public host
         // redirecting inward would walk straight past a check made up front.
-        .addInterceptor(UpgradeToHttps())
-        .addNetworkInterceptor(BlockPrivateNetworks())
+        .onlyPublicHttps()
         .connectTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

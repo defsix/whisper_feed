@@ -147,3 +147,38 @@ class BlockPrivateNetworks : okhttp3.Interceptor {
         return chain.proceed(chain.request())
     }
 }
+
+/**
+ * Refuses the reader's own network. The guard every client needs.
+ *
+ * Applied by hand at each client, three were missed — the weather client, the
+ * Google Reader client, and the one in
+ * [com.saulhdev.feeder.manager.sync.RssLocalSync] that fetches every
+ * subscribed feed on every scheduled sync, which is most of the fetching this
+ * app does. A guard that has to be remembered separately at each call site is
+ * one that will be forgotten at the next, so there is now one name to apply
+ * and a test that fails the build when a client is built without it.
+ */
+fun okhttp3.OkHttpClient.Builder.refusingPrivateNetworks(): okhttp3.OkHttpClient.Builder =
+    addNetworkInterceptor(BlockPrivateNetworks())
+
+/**
+ * That, plus asking https of an address still written down as http.
+ *
+ * The two are separate because they do not belong together everywhere.
+ * Refusing a private address is right for every client without exception.
+ * Quietly upgrading the scheme is right only where the thing being fetched is
+ * public — a feed, an article page, an image — and is deliberately *not*
+ * applied to anything carrying a credential, which is refused outright
+ * instead. Guessing at https is reasonable for a public article and not
+ * reasonable for somebody's password: a sync server written down as `http://`
+ * should fail loudly and be corrected, not be silently reached by a route its
+ * owner never confirmed.
+ *
+ * The order is not interchangeable. [UpgradeToHttps] is an application
+ * interceptor so the scheme is rewritten before a socket is opened;
+ * [BlockPrivateNetworks] is a network interceptor so it runs on every redirect
+ * hop rather than only on the address that was typed.
+ */
+fun okhttp3.OkHttpClient.Builder.onlyPublicHttps(): okhttp3.OkHttpClient.Builder =
+    addInterceptor(UpgradeToHttps()).refusingPrivateNetworks()

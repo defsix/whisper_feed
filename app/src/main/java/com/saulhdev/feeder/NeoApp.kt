@@ -8,8 +8,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
-import com.saulhdev.feeder.manager.bookmarks.BlockPrivateNetworks
-import com.saulhdev.feeder.manager.bookmarks.UpgradeToHttps
+import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import okhttp3.OkHttpClient
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
@@ -159,8 +158,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
         .okHttpClient {
             OkHttpClient.Builder()
-                .addInterceptor(UpgradeToHttps())
-                .addNetworkInterceptor(BlockPrivateNetworks())
+                .onlyPublicHttps()
                 .build()
         }
         .memoryCache {

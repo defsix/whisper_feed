@@ -21,11 +21,8 @@ package com.saulhdev.feeder.viewmodels
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.entity.SourceEditViewState
-import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.content.FeedPreferences
-import kotlinx.coroutines.runBlocking
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.manager.sync.requestFeedSync
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,7 +39,6 @@ import org.koin.java.KoinJavaComponent.inject
 @OptIn(ExperimentalCoroutinesApi::class)
 class SourceEditViewModel : NeoViewModel() {
     private val repository: SourcesRepository by inject(SourcesRepository::class.java)
-    private val articleRepository: ArticleRepository by inject(ArticleRepository::class.java)
     private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
 
     private val _feedId: MutableSharedFlow<Long> = MutableSharedFlow(replay = 1)
@@ -93,13 +89,8 @@ class SourceEditViewModel : NeoViewModel() {
     private suspend fun applyUpdate(state: SourceEditViewState) {
         val feedId = _feedId.replayCache.firstOrNull() ?: -1L
         val currentFeed = repository.loadFeedById(feedId) ?: return
-        val filtersChanged = currentFeed.sourceType == "mastodon" &&
-                (currentFeed.requireLink != state.requireLink
-                        || currentFeed.requireImage != state.requireImage
-                        || currentFeed.excludeReplies != state.excludeReplies)
         val needsResync = currentFeed.fullTextByDefault != state.fullTextByDefault
                 || currentFeed.isEnabled != state.isEnabled
-                || filtersChanged
 
         val saved = repository.updateSource(
             feed = currentFeed.copy(
@@ -108,9 +99,6 @@ class SourceEditViewModel : NeoViewModel() {
                 tag = state.tag,
                 fullTextByDefault = state.fullTextByDefault,
                 isEnabled = state.isEnabled,
-                requireLink = state.requireLink,
-                requireImage = state.requireImage,
-                excludeReplies = state.excludeReplies,
             ),
             resync = needsResync
         )
@@ -126,11 +114,6 @@ class SourceEditViewModel : NeoViewModel() {
         // outlives the editor and has the snackbar.
         if (!saved) _saveFailed.emit(state.title.ifBlank { state.url })
 
-
-        if (filtersChanged) {
-            articleRepository.deleteArticlesForFeed(currentFeed.id)
-            requestFeedSync(feedId = currentFeed.id, forceNetwork = true)
-        }
     }
 
     fun deleteFeed(feedId: Long) {
@@ -146,10 +129,6 @@ class SourceEditViewModel : NeoViewModel() {
             tag = feed.tag,
             fullTextByDefault = feed.fullTextByDefault,
             isEnabled = feed.isEnabled,
-            sourceType = feed.sourceType,
-            requireLink = feed.requireLink,
-            requireImage = feed.requireImage,
-            excludeReplies = feed.excludeReplies,
         )
     }.stateIn(
         viewModelScope,

@@ -32,8 +32,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
 import okhttp3.Credentials
-import com.saulhdev.feeder.manager.bookmarks.BlockPrivateNetworks
-import com.saulhdev.feeder.manager.bookmarks.UpgradeToHttps
+import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -57,8 +56,7 @@ class FeedParser {
         // reached from here has been vouched for by anybody.
         // Before the connection, so a feed still stored as http is asked
         // over https rather than refused.
-        .addInterceptor(UpgradeToHttps())
-        .addNetworkInterceptor(BlockPrivateNetworks())
+        .onlyPublicHttps()
         .connectTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
