@@ -71,6 +71,7 @@ import com.saulhdev.feeder.ui.components.ComposeSwitchView
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.dialog.ActionsDialogUI
+import com.saulhdev.feeder.ui.components.traceFocus
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.Check
 import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
@@ -278,6 +279,7 @@ fun SourceEditView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 64.dp)
+                    .traceFocus("url")
                     .interceptKey(Key.Enter) {
                         focusTitle.requestFocus()
                     }
@@ -313,6 +315,7 @@ fun SourceEditView(
                     .focusRequester(focusTitle)
                     .fillMaxWidth()
                     .heightIn(min = 64.dp)
+                    .traceFocus("title")
                     .interceptKey(Key.Enter) {
                         focusTag.requestFocus()
                     }
@@ -419,7 +422,9 @@ fun SourceEditView(
                             focusManager.clearFocus()
                         }
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .traceFocus("add category"),
                 )
             }
         }

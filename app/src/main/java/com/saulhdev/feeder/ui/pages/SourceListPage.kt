@@ -64,6 +64,7 @@ import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.PreferenceGroupHeading
 import com.saulhdev.feeder.ui.components.SourceItem
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
+import com.saulhdev.feeder.ui.components.traceFocus
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.BookBookmark
 import com.saulhdev.feeder.ui.icons.phosphor.Bookmarks
@@ -597,7 +598,9 @@ fun SourceListPage(
                                 value = query,
                                 onValueChange = viewModel::setQuery,
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .traceFocus("sources search"),
                                 shape = MaterialTheme.shapes.large,
                                 label = { Text(stringResource(R.string.sources_search)) },
                                 trailingIcon = {
@@ -948,7 +951,9 @@ private fun TagPickerDialog(
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     label = { Text(stringResource(R.string.source_tags)) },
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .traceFocus("bulk category dialog"),
                 )
             }
         },
