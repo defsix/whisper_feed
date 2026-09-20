@@ -182,3 +182,27 @@ fun okhttp3.OkHttpClient.Builder.refusingPrivateNetworks(): okhttp3.OkHttpClient
  */
 fun okhttp3.OkHttpClient.Builder.onlyPublicHttps(): okhttp3.OkHttpClient.Builder =
     addInterceptor(UpgradeToHttps()).refusingPrivateNetworks()
+
+/**
+ * Declares that a client is allowed to reach the reader's own network.
+ *
+ * A no-op that exists to be read, and to be found. Every other client refuses
+ * private addresses, and the test that enforces that finds clients by looking
+ * at the source — so an exemption has to be something it can see, or it is
+ * indistinguishable from the omission it was written to catch.
+ *
+ * There is exactly one, and the difference is provenance rather than trust.
+ * [BlockPrivateNetworks] exists because a feed address, an article link or a
+ * redirect is a string a publisher put in a file, and a hostile one could have
+ * the phone reach into its reader's network from inside the firewall. A sync
+ * server's address is not that: the reader typed it into a sign-in form and
+ * then typed their own password underneath it.
+ *
+ * Refusing it breaks the thing the feature is for. Self-hosted FreshRSS and
+ * Miniflux are the whole use case — the network security config says so in as
+ * many words — and they live at `192.168.1.50`, at `nas.local`, and behind
+ * Tailscale on `100.64/10`, all of which are refused. Guarding this client
+ * protects nobody from anything and unsupports self-hosting, which is a poor
+ * trade for a reader who went to the trouble of running their own server.
+ */
+fun okhttp3.OkHttpClient.Builder.allowingPrivateNetworks(): okhttp3.OkHttpClient.Builder = this

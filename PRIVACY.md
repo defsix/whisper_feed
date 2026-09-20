@@ -129,6 +129,17 @@ refused outright, so those credentials cannot cross the network unencrypted.
 The credentials are stored encrypted on the device, behind a key held in
 Android's hardware-backed keystore.
 
+If you type the address as `http://`, Whisper corrects it to `https://` in
+the field, before the password is sent, and tells you it did. Nothing is
+guessed behind your back — you can see the address that will be used, and
+it is the corrected one that gets saved.
+
+This is also the one part of Whisper allowed to reach an address on your own
+network, because a self-hosted server is usually *on* your own network: at
+`192.168.1.50`, at `nas.local`, or behind Tailscale. The rule that keeps
+everything else off your LAN exists because feed and article addresses come
+from publishers. This one came from you.
+
 ### 6. Your own backup destination
 
 If you turn on backups, the OPML and settings files are written to a folder
@@ -158,15 +169,19 @@ excluded from both routes regardless of what you choose.
     and the scheme is rewritten before any connection is opened. If the server
     genuinely has no HTTPS, the fetch fails and the source appears under Broken
     feeds.
-  - **Anything carrying a credential is refused, not upgraded.** A sync server
-    given as `http://` simply fails. Guessing at HTTPS is reasonable for a
-    public article and not reasonable for your password.
+  - **A sync server is corrected where you can see it, not on the way to the
+    socket.** Typing `http://` in the account screen rewrites the field to
+    `https://` and says so. Same host, checked against the system's own
+    certificate list — but a password is the wrong thing to reroute quietly,
+    so it happens in front of you instead.
 - **Private and local network addresses are refused.** A feed or an article link
   pointing at `192.168.x.x`, `10.x.x.x`, `localhost` or similar is not fetched,
   on every redirect hop rather than only the first. A hostile feed cannot use
   your phone to reach inside your own network. This holds for every client the
   app builds, not only the ones checked by hand: a test reads the source and
-  fails the build if a client is added without the guard.
+  fails the build if a client neither carries the guard nor declares, in a name
+  that test can find, that it is the exception. There is one exception — your
+  own sync server, above — and the same test fails if a second one appears.
 - **The in-app browser opens `http` and `https` only.** Not `file:`, not
   `content:`, not `javascript:`.
 

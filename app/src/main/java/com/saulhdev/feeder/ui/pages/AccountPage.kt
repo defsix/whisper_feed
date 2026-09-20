@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.manager.sync.greader.normalisedServerUrl
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
@@ -70,6 +72,11 @@ fun AccountPage(
     val state by viewModel.state.collectAsState()
 
     var server by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
+    // Set when the address was corrected, so the screen can say so. The
+    // correction itself is visible in the field; this is the sentence that
+    // explains why it moved, which is the whole point of doing it here rather
+    // than silently inside the HTTP client.
+    var corrected by remember { mutableStateOf(false) }
     var username by remember(state.username) { mutableStateOf(state.username) }
     var password by remember { mutableStateOf("") }
 
@@ -151,18 +158,37 @@ fun AccountPage(
                 item {
                     OutlinedTextField(
                         value = server,
-                        onValueChange = { server = it; viewModel.clearError() },
+                        onValueChange = {
+                            server = it
+                            corrected = false
+                            viewModel.clearError()
+                        },
                         label = { Text(stringResource(R.string.account_server)) },
                         placeholder = { Text("https://freshrss.example.com/api/greader.php") },
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
+                        supportingText = if (corrected) {
+                            { Text(stringResource(R.string.account_server_upgraded)) }
+                        } else null,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.None,
                             autoCorrectEnabled = false,
                             keyboardType = KeyboardType.Uri,
                             imeAction = ImeAction.Next,
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        // Corrected as the reader leaves the field rather than
+                        // as they type it, which would make `http` impossible
+                        // to type and look like the app fighting them.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focus ->
+                                if (focus.isFocused || server.isBlank()) return@onFocusChanged
+                                val fixed = normalisedServerUrl(server)
+                                if (fixed != server) {
+                                    corrected = true
+                                    server = fixed
+                                }
+                            },
                     )
                 }
                 item {
@@ -209,7 +235,16 @@ fun AccountPage(
                         icon = Phosphor.Check,
                         modifier = Modifier.fillMaxWidth(),
                         positive = true,
-                        onClick = { viewModel.signIn(server.trim(), username.trim(), password) },
+                        // Corrected again on the way out, for the reader who
+                        // types an address and presses Sign in without the
+                        // field ever losing focus. Assigning it back means
+                        // they still see what is being used.
+                        onClick = {
+                            val fixed = normalisedServerUrl(server)
+                            corrected = fixed != server.trim()
+                            server = fixed
+                            viewModel.signIn(fixed, username.trim(), password)
+                        },
                     )
                 }
             }

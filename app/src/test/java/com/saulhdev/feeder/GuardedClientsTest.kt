@@ -25,6 +25,13 @@ class GuardedClientsTest {
 
     private val mainSources = File("src/main/java")
 
+    /** What a client may say about the reader's own network. All three count. */
+    private val GUARDS = listOf(
+        "onlyPublicHttps()",
+        "refusingPrivateNetworks()",
+        "allowingPrivateNetworks()",
+    )
+
     private fun kotlinFiles(): List<File> =
         mainSources.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
 
@@ -54,52 +61,60 @@ class GuardedClientsTest {
     }
 
     @Test
-    fun `every client built in the app refuses private addresses`() {
-        // Either name will do. `onlyPublicHttps()` is the usual one and is
-        // built on `refusingPrivateNetworks()`; a client that carries a
-        // credential takes the narrower one on purpose, because guessing at
-        // https is right for a public article and wrong for a password.
-        val unguarded = kotlinFiles().flatMap { file ->
+    fun `every client built in the app declares what it does about private addresses`() {
+        // One of three names, and the third is a no-op that exists to be
+        // found: an exemption has to be visible to this test, or it cannot be
+        // told apart from the omission the test was written to catch.
+        val undeclared = kotlinFiles().flatMap { file ->
             builderChains(withoutComments(file.readText()))
-                .filter {
-                    !it.contains("onlyPublicHttps()") &&
-                            !it.contains("refusingPrivateNetworks()")
-                }
+                .filter { chain -> GUARDS.none(chain::contains) }
                 .map { file.path }
         }
         assertEquals(
-            "these clients are built with neither guard: $unguarded",
+            "these clients declare neither guard nor exemption: $undeclared",
             emptyList<String>(),
-            unguarded,
+            undeclared,
         )
     }
 
     @Test
+    fun `only the sync client is exempt`() {
+        // The exemption turns the guard off, so it must not spread quietly.
+        // It is justified by provenance and nothing else: this address was
+        // typed into a sign-in form by the reader, where every other address
+        // the app fetches came out of somebody else's XML.
+        val exempt = kotlinFiles()
+            .filter { withoutComments(it.readText()).contains("allowingPrivateNetworks()") }
+            .map { it.name }
+            .sorted()
+        assertEquals(listOf("GoogleReaderApi.kt", "SafeAddress.kt"), exempt)
+    }
+
+    @Test
+    fun `the client that syncs every feed is guarded`() {
+        // Named on its own because it is the one that was missed, and because
+        // a regression here is the expensive one: it fetches unattended, in
+        // the background, for every subscription at once.
+        val sync = withoutComments(
+            File(mainSources, "com/saulhdev/feeder/manager/sync/RssLocalSync.kt").readText()
+        )
+        assertTrue(sync.contains("onlyPublicHttps()"))
+    }
+
+    @Test
     fun `the sync server client is not quietly upgraded to https`() {
-        // PRIVACY.md promises that anything carrying a credential is refused
-        // rather than upgraded, and this is the client that carries one.
+        // The scheme is corrected at sign-in instead, in the field, where the
+        // reader can see it happen before their password is sent.
         val greader = withoutComments(
             File(
                 mainSources,
                 "com/saulhdev/feeder/manager/sync/greader/GoogleReaderApi.kt",
             ).readText()
         )
-        assertTrue(greader.contains("refusingPrivateNetworks()"))
         assertTrue(
             "the sync client must not take the https upgrade",
             !greader.contains("onlyPublicHttps()"),
         )
-    }
-
-    @Test
-    fun `the client that syncs every feed is among them`() {
-        // Named on its own because it is the one that was missed, and because a
-        // regression here is the expensive one: it fetches unattended, in the
-        // background, for every subscription at once.
-        val sync = withoutComments(
-            File(mainSources, "com/saulhdev/feeder/manager/sync/RssLocalSync.kt").readText()
-        )
-        assertTrue(sync.contains("onlyPublicHttps()"))
     }
 
     @Test

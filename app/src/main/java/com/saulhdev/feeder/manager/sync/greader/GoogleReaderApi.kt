@@ -17,7 +17,7 @@
  */
 package com.saulhdev.feeder.manager.sync.greader
 
-import com.saulhdev.feeder.manager.bookmarks.refusingPrivateNetworks
+import com.saulhdev.feeder.manager.bookmarks.allowingPrivateNetworks
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -253,11 +253,15 @@ class GoogleReaderApi(
         val defaultClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
                 .asFeedReader()
-                // The private-network guard, but deliberately not the https
-                // upgrade: this client carries the reader's sync credentials,
-                // and a server written down as `http://` should fail rather
-                // than be reached over a route its owner never confirmed.
-                .refusingPrivateNetworks()
+                // The one client allowed onto the reader's own network, and
+                // the one that takes no https upgrade. Both follow from the
+                // same fact: this address was typed into a sign-in form by the
+                // reader rather than supplied by a publisher. Self-hosted
+                // servers live on the LAN, so refusing private addresses here
+                // would unsupport the feature; and the scheme is corrected
+                // where they can see it happen, at sign-in, rather than
+                // silently on the way to the socket.
+                .allowingPrivateNetworks()
                 .build()
         }
 

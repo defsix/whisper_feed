@@ -297,6 +297,7 @@
     <string name="account_server">Server address</string>
     <string name="account_username">Username</string>
     <string name="account_password">Password</string>
+    <string name="account_server_upgraded">Changed to https, so your password is not sent in the clear. Plain http will not connect.</string>
     <string name="account_password_hint">Most services offer an application password for this. Use one if yours does — it can be revoked without changing your real password.</string>
     <string name="account_sign_in">Sign in</string>
     <string name="account_sign_out">Sign out</string>
