@@ -156,14 +156,23 @@ class ArticleListViewModel(
         // feed on every keystroke; the list is rebuilt once they pause.
         _searchQuery.debounce { if (it.isBlank()) 0L else SEARCH_DEBOUNCE_MS },
         prefs.readVisibility.get(),
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
+        // Named parameters rather than an indexed array, and that is the whole
+        // point of writing it this way. The array overload of `combine` takes
+        // any number of flows and hands back `Array<Any?>`, so the positions
+        // are checked by nobody: when the hidden-sources flow was taken out of
+        // the middle of this list, the two reads below it went on pointing at
+        // 4 and 5. Five flows, index 5 — every launch, on a background worker,
+        // as an ArrayIndexOutOfBoundsException with no line number in it.
+        //
+        // The five-flow overload is typed. One flow fewer and this stops
+        // compiling rather than crashing on somebody's phone.
+    ) { articles, sfm, removeDuplicate, query, readVisibility ->
         processArticles(
-            articles = values[0] as List<FeedItem>,
-            sfm = values[1] as SortFilterModel,
-            removeDuplicate = values[2] as Boolean,
-            query = values[4] as String,
-            hideRead = values[5] as String == READ_HIDE,
+            articles = articles,
+            sfm = sfm,
+            removeDuplicate = removeDuplicate,
+            query = query,
+            hideRead = readVisibility == READ_HIDE,
         )
     }.flowOn(Dispatchers.Default)
 
