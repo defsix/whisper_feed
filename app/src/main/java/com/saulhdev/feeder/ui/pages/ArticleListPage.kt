@@ -462,7 +462,7 @@ fun ArticleListPage(
                             when {
                                 showBookmarks -> LazyColumn(
                                     state = listState,
-                                    contentPadding = PaddingValues(vertical = 4.dp)
+                                    contentPadding = FEED_PADDING,
                                 ) {
                                     item(key = FEED_HEADER_KEY) { header() }
                                     if (bookmarked.bookmarkedArticles.isEmpty()) {
@@ -607,6 +607,7 @@ fun ArticleListPage(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             gridState = gridState,
+                                            contentPadding = FEED_PADDING,
                                             content = {
                                                 item(
                                                     key = FEED_HEADER_KEY,
@@ -654,6 +655,17 @@ fun ArticleListPage(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             listState = listState,
+                                            // Said rather than inherited. The
+                                            // default is 8dp on all four
+                                            // sides, which the launcher feed
+                                            // overrides and this one did not
+                                            // — so the same card was full
+                                            // bleed on one surface and inset
+                                            // by eight points on the other,
+                                            // and a photograph with a margin
+                                            // reads as a component on a page
+                                            // rather than as the article.
+                                            contentPadding = FEED_PADDING,
                                             content = {
                                                 item(key = FEED_HEADER_KEY) { header() }
                                                 heldFeed(state.articles, held, animate) { index, item ->
@@ -735,3 +747,14 @@ private const val UNDO_SETTLE_MS = 30_000L
  * failed to notice.
  */
 private const val UNDO_MIN_COUNT = 5
+
+
+/**
+ * The feed's own padding: vertical breathing room, and nothing at the sides.
+ *
+ * The same value the launcher feed uses, named once so the two surfaces
+ * cannot drift apart again. A card carries its own margins for text; the
+ * photograph does not want them, and a list that adds eight points of its own
+ * takes that decision away from the card.
+ */
+private val FEED_PADDING = PaddingValues(vertical = 4.dp)
