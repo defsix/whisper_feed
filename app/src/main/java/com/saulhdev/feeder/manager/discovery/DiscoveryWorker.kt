@@ -25,6 +25,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.Flow
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Suggestion
@@ -251,6 +255,46 @@ class DiscoveryWorker(
          * one arrives with a reason worth reading.
          */
         private const val MAX_SUGGESTIONS = 5
+
+        /** The name the on-demand pass runs under, so two cannot overlap. */
+        private const val NOW_WORK = "whisper_discovery_now"
+
+        /**
+         * Runs the pass at once, because somebody asked for it.
+         *
+         * The scheduled pass waits for an unmetered network and a healthy
+         * battery, which is right for work nobody requested and wrong the
+         * moment they press a button: a reader who has just added three
+         * sources and wants to know what sits beside them should not be told
+         * to wait for Sunday and a wifi network. It still needs *a* network,
+         * because half the pass looks for feeds on sites it has only a domain
+         * for — though the library half needs none and will produce its
+         * suggestions regardless.
+         *
+         * KEEP rather than REPLACE: pressing it twice should be one pass, not
+         * a cancelled one and a fresh start.
+         */
+        fun runNow(context: Context) {
+            val request = OneTimeWorkRequestBuilder<DiscoveryWorker>()
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .addTag(TAG)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                NOW_WORK,
+                ExistingWorkPolicy.KEEP,
+                request,
+            )
+        }
+
+        /** Whether an on-demand pass is waiting or running. */
+        fun runningNow(context: Context): Flow<Boolean> =
+            WorkManager.getInstance(context)
+                .getWorkInfosForUniqueWorkFlow(NOW_WORK)
+                .map { infos -> infos.any { !it.state.isFinished } }
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<DiscoveryWorker>(7, TimeUnit.DAYS)

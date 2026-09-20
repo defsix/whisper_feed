@@ -39,6 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
+import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FROM_LIBRARY
 import com.saulhdev.feeder.data.db.models.Suggestion
@@ -69,6 +72,13 @@ fun SuggestionsPage(
 ) {
     val suggestions by viewModel.suggestions.collectAsState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    // Straight from WorkManager rather than a flag set on the button. The pass
+    // outlives this screen, so a flag here would go back to "not running" on
+    // the way out and forwards on the way back in, which is a lie about work
+    // that is still happening.
+    val checking by DiscoveryWorker.runningNow(context)
+        .collectAsState(initial = false)
 
     ViewWithActionBar(
         title = stringResource(R.string.pref_suggestions),
@@ -94,6 +104,23 @@ fun SuggestionsPage(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+
+            // The pass runs weekly, which is right for work nobody asked for
+            // and useless the moment somebody is standing in front of the
+            // screen wondering why it is empty. A week is a long time to wait
+            // to find out whether a feature works.
+            item {
+                ActionButton(
+                    text = stringResource(
+                        if (checking) R.string.suggestions_checking
+                        else R.string.suggestions_check_now
+                    ),
+                    icon = Phosphor.ArrowCounterClockwise,
+                    enabled = !checking,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { DiscoveryWorker.runNow(context) },
                 )
             }
 
