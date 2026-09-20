@@ -29,6 +29,15 @@ import java.net.URL
 import kotlin.time.Clock
 import kotlin.time.Instant
 
+/**
+ * A feed that has never been fetched.
+ *
+ * Zero rather than a null column: `lastSync` is not null anywhere else and
+ * making it nullable would put a `?` on every read for the sake of one case
+ * that has a perfectly good value already.
+ */
+val NEVER_SYNCED: Instant = Instant.fromEpochMilliseconds(0)
+
 @Entity(
     tableName = "Feeds",
     indices = [
@@ -43,8 +52,25 @@ data class Feed(
     val description: String = "",
     val url: URL = sloppyLinkToStrictURL(""),
     val feedImage: URL = sloppyLinkToStrictURL(""),
+    /**
+     * When Whisper last fetched this feed successfully, or [NEVER_SYNCED].
+     *
+     * The default used to be `Clock.System.now()`, which is the moment the
+     * *row* was built rather than the moment a sync succeeded — so a feed that
+     * had never once been fetched was indistinguishable from one fetched the
+     * instant it was added. Importing an OPML wrote the same millisecond to
+     * every row in the file, and the feeds in it that could not be fetched at
+     * all then sat looking perfectly healthy: the "Not updating" badge only
+     * appears after three days without a sync, and their clock had been
+     * started for them.
+     *
+     * One import produced six such feeds out of twenty on a test device, and
+     * the only reason anybody noticed was six rows carrying an identical
+     * timestamp to the millisecond in a diagnostics report. Starting at zero
+     * makes the distinction the database was already supposed to be making.
+     */
     @ColumnInfo(typeAffinity = ColumnInfo.INTEGER)
-    val lastSync: Instant = Clock.System.now(),
+    val lastSync: Instant = NEVER_SYNCED,
     val alternateId: Boolean = false,
     val fullTextByDefault: Boolean = false,
     val tag: String = "",

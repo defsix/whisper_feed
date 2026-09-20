@@ -25,6 +25,7 @@
     <string name="source_pin">Pin to the top</string>
     <string name="source_unpin">Unpin from the top</string>
     <string name="source_pin_full">You can pin %1$d sources to the top. Unpin one first.</string>
+    <string name="source_never_updated">Never updated</string>
     <string name="source_not_updating">Not updating</string>
     <string name="sources_clear_search">Clear the search</string>
     <string name="sources_search">Search sources</string>

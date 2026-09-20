@@ -95,8 +95,12 @@ fun SourceItem(
     // simply quiet, so say which it is. The threshold is passed in rather than
     // computed here: "now" in a composable would be captured at composition and
     // then drift.
-    val isStale = staleSince > 0L && source.isEnabled &&
-            source.lastSync.toEpochMilliseconds() < staleSince
+    val health = sourceHealth(
+        lastSyncMs = source.lastSync.toEpochMilliseconds(),
+        isEnabled = source.isEnabled,
+        staleSince = staleSince,
+    )
+    val isStale = health != SourceHealth.Fine
 
     ListItem(
         modifier = modifier
@@ -135,7 +139,13 @@ fun SourceItem(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = stringResource(R.string.source_not_updating),
+                            text = stringResource(
+                                if (health == SourceHealth.NeverUpdated) {
+                                    R.string.source_never_updated
+                                } else {
+                                    R.string.source_not_updating
+                                }
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -207,3 +217,34 @@ fun SourceItem(
     )
 }
 
+
+
+/** What the list has to say about a source's fetching, if anything. */
+enum class SourceHealth { Fine, NeverUpdated, NotUpdating }
+
+/**
+ * Whether a source is fetching, and if not, which kind of not.
+ *
+ * The two cases read the same on screen and are not the same problem. "Not
+ * updating" means it used to work and has stopped, which is usually the
+ * publisher's end. "Never updated" means it has not worked once since it was
+ * added, which is usually the address — a typo, or an OPML entry that was
+ * already dead when it was exported.
+ *
+ * Telling them apart was impossible until `lastSync` stopped defaulting to the
+ * moment the row was created; see [com.saulhdev.feeder.data.db.models.NEVER_SYNCED].
+ *
+ * A disabled source says nothing: it is not fetching because it was told not
+ * to, and reporting that as a fault would put a red line against every source
+ * the reader deliberately switched off.
+ */
+fun sourceHealth(lastSyncMs: Long, isEnabled: Boolean, staleSince: Long): SourceHealth = when {
+    !isEnabled -> SourceHealth.Fine
+    lastSyncMs <= 0L -> SourceHealth.NeverUpdated
+    // Zero means the caller has not worked out a threshold yet, which happens
+    // for one frame on a cold screen. Saying nothing is better than saying
+    // everything is broken.
+    staleSince <= 0L -> SourceHealth.Fine
+    lastSyncMs < staleSince -> SourceHealth.NotUpdating
+    else -> SourceHealth.Fine
+}

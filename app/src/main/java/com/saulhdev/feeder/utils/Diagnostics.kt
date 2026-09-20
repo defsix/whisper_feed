@@ -112,10 +112,31 @@ object Diagnostics : KoinComponent {
             val sources = get<SourcesRepository>().getAllSources()
             appendLine("Sources:           ${sources.size}")
             appendLine("Enabled:           ${sources.count { it.isEnabled }}")
-            sources.take(MAX_SOURCES_LISTED).forEach {
+
+            // Counted over all of them, not just the ones printed below. A
+            // sample of twenty is how the last round of this was noticed at
+            // all, and only because six rows happened to share a timestamp;
+            // the totals say it outright.
+            val never = sources.count { it.isEnabled && it.lastSync.toEpochMilliseconds() <= 0L }
+            val failing = sources.count { it.isEnabled && it.consecutiveFailures > 0 }
+            appendLine("Never synced:      $never")
+            appendLine("Currently failing: $failing")
+
+            // Worst first: a report is read from the top, and the feeds that
+            // are not working are the reason anybody is reading it.
+            val ordered = sources.sortedWith(
+                compareByDescending<com.saulhdev.feeder.data.db.models.Feed> {
+                    it.isEnabled && it.lastSync.toEpochMilliseconds() <= 0L
+                }.thenByDescending { it.consecutiveFailures }
+            )
+            ordered.take(MAX_SOURCES_LISTED).forEach {
+                val last = if (it.lastSync.toEpochMilliseconds() <= 0L) "never" else "${it.lastSync}"
+                val fails = if (it.consecutiveFailures > 0) {
+                    " fails ${it.consecutiveFailures} since ${it.failingSince}"
+                } else ""
                 appendLine(
                     "  ${if (it.isEnabled) "on " else "off"} " +
-                            "${it.title.take(28).padEnd(28)} last sync ${it.lastSync}"
+                            "${it.title.take(28).padEnd(28)} last sync $last$fails"
                 )
             }
             if (sources.size > MAX_SOURCES_LISTED) {
