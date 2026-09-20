@@ -20,6 +20,7 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.service.OverlayBridge
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
+import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.MainThreadWatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,8 +82,14 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        // First, so it sees everything that follows — including this class's
-        // own startup work, which is where main-thread disk reads hide best.
+        // Before anything else that can throw. A crash on launch was the one
+        // failure this app could not report: the diagnostics screen needs a
+        // running app to press a button in, so the only evidence was a host
+        // machine with adb, which this project does not assume anybody has.
+        Diagnostics.installCrashLog(this)
+        // Then this, so it sees everything that follows — including this
+        // class's own startup work, which is where main-thread disk reads
+        // hide best.
         MainThreadWatch.install()
         instance = this
         // TODO remove on future release

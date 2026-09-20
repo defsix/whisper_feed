@@ -258,4 +258,69 @@ object Diagnostics : KoinComponent {
         file.writeText(report)
         return file.absolutePath
     }
+
+    /**
+     * Writes the stack trace to Downloads when the app dies unexpectedly.
+     *
+     * A crash on launch is the one failure this app had no way to report. The
+     * diagnostics above are collected from a running app by somebody pressing
+     * a button, and an app that dies before its first frame offers neither —
+     * so the only evidence was a host machine running adb, which is exactly
+     * what this project does not assume anybody has. Three release cycles were
+     * spent guessing at a crash for want of one stack trace.
+     *
+     * Deliberately small. It runs inside a process that is already dying, so
+     * it collects what is already in memory — the exception, the build, the
+     * device — and writes it. No database, no preferences, no logcat: each of
+     * those can block or throw, and a crash reporter that crashes reports
+     * nothing.
+     *
+     * The previous handler is always called afterwards. Swallowing it would
+     * leave the process hung instead of dying, and would take away the system
+     * dialog that is the only sign to the reader that anything happened.
+     */
+    fun installCrashLog(context: Context) {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            runCatching { writeCrash(context, thread, error) }
+            previous?.uncaughtException(thread, error)
+        }
+    }
+
+    private fun writeCrash(context: Context, thread: Thread, error: Throwable) {
+        val report = buildString {
+            appendLine("Whisper crash")
+            appendLine("When:        ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
+            appendLine("Version:     ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("Build type:  ${BuildConfig.BUILD_TYPE}")
+            appendLine("Device:      ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("Android:     ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            appendLine("Thread:      ${thread.name}")
+            appendLine()
+            appendLine("== Stack trace ==")
+            appendLine(error.stackTraceToString())
+
+            // Printed separately as well as inside the trace above, because a
+            // cause chain is where the answer usually is and `Caused by` is
+            // easy to lose in a hundred lines of framework frames.
+            var cause = error.cause
+            var depth = 0
+            while (cause != null && depth < 8) {
+                appendLine()
+                appendLine("== Cause ${depth + 1} ==")
+                appendLine(cause.stackTraceToString())
+                cause = cause.cause
+                depth++
+            }
+        }
+
+        val name = "whisper-crash-" +
+                SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".txt"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            writeViaMediaStore(context, name, report)
+        } else {
+            writeToLegacyDownloads(name, report)
+        }
+    }
 }
