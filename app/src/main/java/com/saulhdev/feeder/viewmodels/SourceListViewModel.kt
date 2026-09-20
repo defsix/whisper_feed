@@ -65,6 +65,27 @@ class SourceListViewModel(
     private val _category = MutableStateFlow<String?>(null)
     val category: StateFlow<String?> = _category.asStateFlow()
 
+    init {
+        // A chosen category can stop existing while the reader is looking at
+        // it, and moving the last source out of it is all it takes — which is
+        // exactly what the edit screen is for. Recategorising the only feed in
+        // "Android Development" left the filter holding a name nothing carries
+        // any more, so every source was filtered out; and because the chip row
+        // draws the categories that exist, the chip that would have cleared it
+        // was gone too. The result was an empty list with no visible cause and
+        // no way back except leaving the screen and returning, which threw the
+        // view model away and took the filter with it.
+        //
+        // So the filter follows the categories rather than outliving them.
+        // Renames and merges land here as well: all three are the same event
+        // seen from this side, a tag that is no longer in the set.
+        ioScope.launch {
+            feedsRepo.getAllTagsFlow().collect { tags ->
+                _category.value = survivingCategory(_category.value, tags)
+            }
+        }
+    }
+
     /** Whether the list is narrowed to sources that have a twin. */
     private val _duplicatesOnly = MutableStateFlow(false)
     val duplicatesOnly: StateFlow<Boolean> = _duplicatesOnly.asStateFlow()
@@ -666,3 +687,14 @@ internal fun Feed.matches(query: String): Boolean {
             url.toString().contains(q, ignoreCase = true) ||
             tags.any { it.contains(q, ignoreCase = true) }
 }
+
+/**
+ * The chosen category, if it still exists, and otherwise nothing.
+ *
+ * A function rather than two lines inside a collector, so the rule can be
+ * argued with in a test instead of only on a phone. The bug it fixes was
+ * invisible in every other way: the list was empty, the cause was a string
+ * held by a view model, and the only cure was leaving the screen.
+ */
+internal fun survivingCategory(chosen: String?, tags: List<String>): String? =
+    chosen?.takeIf { it in tags }

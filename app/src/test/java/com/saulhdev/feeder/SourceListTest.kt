@@ -7,6 +7,7 @@ import com.saulhdev.feeder.viewmodels.SourceSort
 import com.saulhdev.feeder.viewmodels.rangeBetween
 import com.saulhdev.feeder.viewmodels.groupByTag
 import com.saulhdev.feeder.viewmodels.matches
+import com.saulhdev.feeder.viewmodels.survivingCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -333,5 +334,51 @@ class ShownSourcesTest {
             disabledSources = listOf(feed(id = 2)),
         )
         assertEquals(listOf(1L, 2L), state.shownSources.map(Feed::id))
+    }
+}
+
+/**
+ * The category filter does not outlive the category.
+ *
+ * Recategorising the only source in a category is an ordinary thing to do and
+ * it used to empty the screen. The filter went on holding a name nothing
+ * carried any more, so every source was excluded; and since the chip row draws
+ * the categories that exist, the chip that would have cleared it was gone with
+ * the category. An empty list, no stated cause, and no way back except leaving
+ * the screen — which threw the view model away and took the filter with it,
+ * which is why it looked like a refresh problem.
+ */
+class CategoryFilterTest {
+
+    @Test
+    fun `a category that still exists is kept`() {
+        assertEquals("Tech", survivingCategory("Tech", listOf("Misc", "News", "Tech")))
+    }
+
+    @Test
+    fun `a category that has just been emptied is dropped`() {
+        // The exact case: the one feed filed under "Android Development" is
+        // moved to "Tech", so the tag stops existing mid-screen.
+        assertEquals(null, survivingCategory("Android Development", listOf("Misc", "News", "Tech")))
+    }
+
+    @Test
+    fun `a rename is the same event from this side`() {
+        assertEquals(null, survivingCategory("Tech", listOf("Technology")))
+    }
+
+    @Test
+    fun `clearing every category clears the filter`() {
+        assertEquals(null, survivingCategory("Tech", emptyList()))
+    }
+
+    @Test
+    fun `no chosen category stays no chosen category`() {
+        assertEquals(null, survivingCategory(null, listOf("Misc")))
+    }
+
+    @Test
+    fun `matching is exact, so a prefix does not keep a dead filter alive`() {
+        assertEquals(null, survivingCategory("Tech", listOf("Tech Review")))
     }
 }
