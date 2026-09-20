@@ -31,7 +31,9 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.saulhdev.feeder.data.db.dao.FeedArticleDao
+import com.saulhdev.feeder.data.db.dao.ReadingTallyDao
 import com.saulhdev.feeder.data.db.dao.SuggestionDao
+import com.saulhdev.feeder.data.db.models.ReadingTally
 import com.saulhdev.feeder.data.db.models.Suggestion
 import com.saulhdev.feeder.data.db.dao.FeedSourceDao
 import com.saulhdev.feeder.data.db.models.Article
@@ -48,8 +50,9 @@ const val ID_ALL: Long = -1L
         Feed::class,
         Article::class,
         Suggestion::class,
+        ReadingTally::class,
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -82,6 +85,8 @@ abstract class NeoFeedDb : RoomDatabase() {
     abstract fun feedSourceDao(): FeedSourceDao
     abstract fun feedArticleDao(): FeedArticleDao
     abstract fun suggestionDao(): SuggestionDao
+
+    abstract fun readingTallyDao(): ReadingTallyDao
 
     companion object {
         @Volatile
@@ -225,6 +230,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_23_24,
     MIGRATION_22_23,
     MIGRATION_21_22,
     MIGRATION_20_21,
@@ -244,6 +250,31 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_23_24 : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Nothing is backfilled, and there is nothing to backfill from: the
+        // whole reason this table exists is that the articles the old charts
+        // counted have been deleted. Reconstructing a history out of the
+        // survivors would produce exactly the decay curve this replaces, with
+        // the added insult of looking deliberate. The charts start from today
+        // and are honest from today.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `ReadingTally` (
+                `day` TEXT NOT NULL,
+                `hour` TEXT NOT NULL,
+                `seen` INTEGER NOT NULL DEFAULT 0,
+                `opened` INTEGER NOT NULL DEFAULT 0,
+                `readMs` INTEGER NOT NULL DEFAULT 0,
+                `timed` INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(`day`, `hour`)
+            )
+            """.trimIndent()
+        )
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_22_23 : Migration(22, 23) {

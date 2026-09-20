@@ -565,7 +565,7 @@
     <string name="stats_example_body">There is not enough reading yet to draw your own, so the charts below show made-up figures to give you an idea of the shape. They will be replaced by yours once you have read a little more.</string>
     <string name="stats_opening_new_title">Nothing opened yet</string>
     <string name="stats_opening_new_body">Whisper has only counted opened articles since a recent update, so days before that show none even if you read them. This will fill in from here.</string>
-    <string name="stats_footnote">Worked out on your phone from what Whisper already stores \u2014 when an article reached your screen, and when you opened one. Nothing here is collected for this screen and nothing leaves the device.</string>
+    <string name="stats_footnote">Worked out on your phone. Whisper keeps a running count of how many articles reached your screen and when \u2014 numbers only, no titles and no addresses \u2014 because the articles themselves are tidied away after a week and these charts would otherwise forget their own past. Nothing leaves the device, and the source breakdown reflects what you have been reading lately rather than the full 30 days.</string>
     <string name="pref_feed_library">Browse the feed library</string>
     <string name="pref_feed_library_summary">Hundreds of feeds by topic and country, bundled with the app</string>
     <string name="library_explanation">A directory that ships with Whisper, so nothing is fetched and no one is told what you are looking for. Open a collection to see what is in it \u2014 everything starts ticked, and nothing is added until you say so.</string>

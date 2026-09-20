@@ -28,6 +28,7 @@ import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.entity.JsonFeed
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
+import com.saulhdev.feeder.viewmodels.STATS_WINDOW_DAYS
 import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.models.getResponse
@@ -124,6 +125,16 @@ internal suspend fun syncFeeds(
     // Read once: the answer cannot change halfway through a sync, and reading
     // it per feed would hit the DataStore once for every source.
     val fullTextForAll = prefs.fullTextForAllFeeds.getValue()
+
+    // The reading tally, trimmed to what the statistics screen can still show.
+    // A generous margin past the window, because the charts are the only
+    // reader and a few extra rows cost nothing next to the alternative of
+    // discarding a day somebody could still be looking at.
+    articlesRepo.pruneTally(
+        java.time.LocalDate.now()
+            .minusDays(STATS_WINDOW_DAYS.toLong() + 7)
+            .toString()
+    )
     val time = measureTimeMillis {
         try {
             supervisorScope {

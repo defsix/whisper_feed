@@ -31,7 +31,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
 import kotlinx.coroutines.plus
+import com.saulhdev.feeder.data.db.models.ReadingTally
 import kotlin.math.roundToInt
 
 /** How many days the charts cover. A month is long enough to have a shape. */
@@ -136,16 +138,27 @@ data class StatisticsState(
 /**
  * Reading habits over time, from what is already on the device.
  *
- * Both charts come from columns the app has always written for its own
- * purposes — `readAt` since read state existed, `openedAt` since the release
- * that separated opening an article from scrolling past it. Nothing is
- * collected for this screen, nothing leaves the device, and switching the
- * screen off would not make the app collect less.
+ * The two time charts and the reading total come from [ReadingTally], a count
+ * written as the reading happens. They used to be derived from the Article
+ * table, which reads correctly and was wrong over time: the sync cleanup
+ * deletes articles published longer ago than the sync range — a week by
+ * default — so a day that showed fourteen articles read showed two a
+ * fortnight later. The chart was drawing the cleanup schedule and calling it
+ * a reading habit. See [ReadingTally] for the whole argument.
+ *
+ * The per-source breakdown still comes from the articles, and should. It is a
+ * snapshot of what the reader is currently engaged with rather than a history,
+ * it is the *same* query the weighting uses, and somebody comparing this
+ * screen against Learned should find the same reading behind both. Keeping it
+ * on the articles is what makes that true.
+ *
+ * Nothing is collected for this screen that the app was not already writing
+ * for itself, nothing leaves the device, and the tally holds no article ids,
+ * no titles and no addresses — only how many, and when.
  *
  * The window is deliberately the same thirty days the weighting uses. Two
  * numbers describing "recently" that disagree about what recently means is a
- * bug report waiting to happen, and somebody comparing this screen against
- * Learned should find the same reading behind both.
+ * bug report waiting to happen.
  */
 class StatisticsViewModel(
     private val articleRepo: ArticleRepository,
@@ -158,12 +171,17 @@ class StatisticsViewModel(
         get() = System.currentTimeMillis() -
                 STATS_WINDOW_DAYS.toLong() * 24 * 60 * 60 * 1000
 
+    /** The same window as a local date, which is how the tally is keyed. */
+    private val sinceDay: String
+        get() = LocalDate.now().minusDays(STATS_WINDOW_DAYS.toLong() - 1).toString()
+
     val state: StateFlow<StatisticsState> = run {
         val from = since
+        val fromDay = sinceDay
         combine(
-            articleRepo.readingByDay(from, STATS_WINDOW_DAYS),
-            articleRepo.readingByHour(from),
-            articleRepo.readingTime(from),
+            articleRepo.readingByDay(fromDay, STATS_WINDOW_DAYS),
+            articleRepo.readingByHour(fromDay),
+            articleRepo.readingTime(fromDay),
             sourcesRepo.getAllSourcesFlow(),
             articleRepo.engagementPerSource(from),
         ) { days, hours, time, feeds, engagement ->

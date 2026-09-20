@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -58,6 +59,7 @@ class ArticleRepository(db: NeoFeedDb) {
     private val cc = Dispatchers.IO
     private val jcc = Dispatchers.IO + SupervisorJob()
     private val articlesDao = db.feedArticleDao()
+    private val tallyDao = db.readingTallyDao()
     private val feedsDao = db.feedSourceDao()
 
     suspend fun deleteArticles(ids: List<String>) = withContext(jcc) {
@@ -150,7 +152,13 @@ class ArticleRepository(db: NeoFeedDb) {
 
     /** Records that an article was opened. First open wins; re-opens are a no-op. */
     suspend fun markRead(articleId: String) = withContext(jcc) {
-        articlesDao.markRead(articleId, System.currentTimeMillis())
+        // Tallied only when the update actually changed a row. The query
+        // carries `AND readAt = 0`, so re-reading an article is already a
+        // no-op here; counting the call rather than the change would let a
+        // list that redraws inflate the chart.
+        if (articlesDao.markRead(articleId, System.currentTimeMillis()) == 1) {
+            tally(seen = 1)
+        }
     }
 
     /**
@@ -164,7 +172,11 @@ class ArticleRepository(db: NeoFeedDb) {
      * read would punish exactly the articles somebody went furthest to read.
      */
     suspend fun markOpened(articleId: String) = withContext(jcc) {
-        articlesDao.markOpened(articleId, System.currentTimeMillis())
+        // The same query sets readAt when it was still zero, so an article
+        // opened without ever being scrolled past counts once as both.
+        if (articlesDao.markOpened(articleId, System.currentTimeMillis()) == 1) {
+            tally(seen = 1, opened = 1)
+        }
     }
 
     /** Where a recent article from this feed actually lives; see the DAO. */
@@ -187,7 +199,15 @@ class ArticleRepository(db: NeoFeedDb) {
      */
     suspend fun addReading(articleId: String, millis: Long) = withContext(jcc) {
         if (millis <= 0L) return@withContext
+        // Read first so the tally gets what was actually applied rather than
+        // what was asked for. The article's own total is capped, and once it
+        // is at the cap every further tick adds nothing — tallying the request
+        // would keep adding time to the chart that nothing is counting.
+        val before = articlesDao.readingMsOf(articleId) ?: return@withContext
+        val applied = appliedReading(before, millis, READ_CAP_MS)
+        if (applied <= 0L) return@withContext
         articlesDao.addReading(articleId, millis, READ_CAP_MS)
+        tally(readMs = applied, timed = if (before == 0L) 1 else 0)
     }
 
     /**
@@ -205,12 +225,18 @@ class ArticleRepository(db: NeoFeedDb) {
         val ids = articlesDao.unreadIds()
         val now = System.currentTimeMillis()
         ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.markReadBatch(it, now) }
+        if (ids.isNotEmpty()) tally(seen = ids.size)
         ids
     }
 
     /** Puts back what [markAllRead], or a run of scroll marks, took. */
     suspend fun unmarkRead(ids: List<String>) = withContext(jcc) {
         ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.unmarkRead(it) }
+        // Out of the current hour, which is where they went in a moment ago.
+        // An undo that crosses the turn of an hour takes them out of the wrong
+        // bucket; the subtraction floors at zero so that is a rounding error
+        // in one bar rather than a negative count.
+        if (ids.isNotEmpty()) untally(seen = ids.size)
     }
 
     /** Reads per source since [since], for the reading-habit weight term. */
@@ -237,25 +263,57 @@ class ArticleRepository(db: NeoFeedDb) {
         ).map { rows -> rows.associateBy { it.feedId } }
 
     /**
-     * Reading per day over a window, with the quiet days included.
+     * Today's date and hour, as the tally keys them.
      *
-     * The query can only return days that have rows in them, and a chart drawn
-     * from those alone lies twice over: a fortnight away from the app closes
-     * up into nothing, and the bars either side of the gap end up adjacent, so
-     * a break in reading reads as continuous reading. The zeroes are as much
-     * of the answer as the counts are, so they are filled in here.
+     * Local rather than UTC. The chart answers "what are my days like", and a
+     * reader's 11pm belongs on their own Tuesday whatever UTC thinks.
+     */
+    private fun dayKey(): String = LocalDate.now().toString()
+
+    private fun hourKey(): String = "%02d".format(LocalDateTime.now().hour)
+
+    /** Adds to the current hour's counts. See [ReadingTally] for why it exists. */
+    private suspend fun tally(
+        seen: Int = 0,
+        opened: Int = 0,
+        readMs: Long = 0L,
+        timed: Int = 0,
+    ) = tallyDao.add(dayKey(), hourKey(), seen, opened, readMs, timed)
+
+    private suspend fun untally(seen: Int = 0, opened: Int = 0) =
+        tallyDao.subtract(dayKey(), hourKey(), seen, opened)
+
+    /**
+     * Reading per day, from the tally rather than from the articles.
+     *
+     * The quiet days are filled in here, and they are as much of the answer as
+     * the counts are: the query returns only days that have a row, and a chart
+     * drawn from those alone lies twice over — a fortnight away from the app
+     * closes up into nothing, and the bars either side of the gap end up
+     * adjacent, so a break in reading reads as continuous reading.
      *
      * [today] is a parameter so a test can pin the window; nothing else passes
-     * it. The dates are formatted the same way SQLite's
-     * `date(..., 'localtime')` formats them, and both run in the device's own
-     * zone, so the keys line up without any parsing on either side.
+     * it.
      */
     fun readingByDay(
-        since: Long,
+        sinceDay: String,
         days: Int,
         today: LocalDate = LocalDate.now(),
     ): Flow<List<DayCount>> =
-        articlesDao.readingByDay(since).map { rows -> fillDays(rows, days, today) }
+        tallyDao.byDay(sinceDay).map { rows -> fillDays(rows, days, today) }
+
+    fun readingByHour(sinceDay: String): Flow<List<HourCount>> =
+        tallyDao.byHour(sinceDay).map { rows -> fillHours(rows) }
+
+    /** Time spent reading since [sinceDay], from the tally. */
+    fun readingTime(sinceDay: String): Flow<ReadingTime> =
+        tallyDao.readingTime(sinceDay)
+
+    /** Drops tally rows the charts can no longer reach. Called from the sync. */
+    suspend fun pruneTally(beforeDay: String) = withContext(jcc) {
+        tallyDao.prune(beforeDay)
+    }
+
 
     /**
      * Reading by hour of the day, with all twenty-four buckets present.
@@ -273,12 +331,6 @@ class ArticleRepository(db: NeoFeedDb) {
      */
     fun sourcePace(): Flow<Map<Long, Float>> =
         articlesDao.sourcePace().map(::sourcePaceHours)
-
-    /** Time spent inside articles over a window, and how many it covers. */
-    fun readingTime(since: Long): Flow<ReadingTime> = articlesDao.readingTime(since)
-
-    fun readingByHour(since: Long): Flow<List<HourCount>> =
-        articlesDao.readingByHour(since).map(::fillHours)
 
     fun readsPerSource(since: Long): Flow<Map<Long, Int>> =
         articlesDao.readsPerSource(since)
@@ -359,6 +411,12 @@ class ArticleRepository(db: NeoFeedDb) {
      * list too long to bind is left alone rather than half-applied.
      */
     suspend fun markReadFromServer(unreadRemoteIds: List<String>): Int = withContext(cc) {
+        // Deliberately not tallied. These were read somewhere else, at a time
+        // the server did not tell us, and the only timestamp available is when
+        // this sync happened to run. Putting fifty of them into whatever hour
+        // the sync fired would invent an evening reading session out of a
+        // scheduled job — the time-of-day chart would be showing WorkManager's
+        // habits rather than the reader's.
         if (unreadRemoteIds.size > SQLITE_ARG_LIMIT) 0
         else articlesDao.markReadExcept(unreadRemoteIds, System.currentTimeMillis())
     }
@@ -461,4 +519,21 @@ internal fun fillHours(rows: List<HourCount>): List<HourCount> {
     return (0..23).map { hour ->
         byHour[hour] ?: HourCount(hour = "%02d".format(hour), seen = 0, opened = 0)
     }
+}
+
+/**
+ * How much of a requested reading increment the article's total will take.
+ *
+ * The article's own `readMs` is capped, so past the cap every further tick
+ * adds nothing. The tally has to add what was applied rather than what was
+ * asked for, or a single article left open would go on contributing to the
+ * chart's reading total long after it stopped contributing to its own.
+ *
+ * Pulled out of the repository because it is the one piece of arithmetic here
+ * that can be wrong in a way nothing would notice: an off-by-one at the cap
+ * shows up as a reading total that drifts slowly upward over months.
+ */
+internal fun appliedReading(before: Long, requested: Long, cap: Long): Long {
+    if (requested <= 0L) return 0L
+    return (minOf(before + requested, cap) - before).coerceAtLeast(0L)
 }

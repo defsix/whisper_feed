@@ -158,52 +158,11 @@ interface FeedArticleDao {
     @Query("UPDATE Article SET readAt = :readAt WHERE uuid IN (:ids)")
     suspend fun markReadBatch(ids: List<String>, readAt: Long)
 
-    /**
-     * Articles seen and opened, by day, for the reading chart.
-     *
-     * Grouped in SQL with SQLite's own date functions rather than by pulling
-     * thirty days of rows into Kotlin to bucket them: the answer is sixty
-     * numbers and the question should not cost more than that.
-     *
-     * `readAt` is the clock, not `pubDate` — this is a chart about when
-     * somebody read, and an article published last year and read this morning
-     * belongs to this morning.
-     *
-     * `localtime` because a day boundary is a human fact. Bucketing by UTC
-     * puts an evening's reading into tomorrow for half the year.
-     */
-    @Query(
-        """
-        SELECT date(readAt / 1000, 'unixepoch', 'localtime') AS day,
-            COUNT(*) AS seen,
-            SUM(CASE WHEN openedAt > 0 THEN 1 ELSE 0 END) AS opened
-        FROM Article
-        WHERE readAt >= :since
-        GROUP BY day
-        ORDER BY day
-        """
-    )
-    fun readingByDay(since: Long): Flow<List<DayCount>>
+    /** How much reading an article has already accrued, for the tally. */
+    @Query("SELECT readMs FROM Article WHERE uuid = :id")
+    suspend fun readingMsOf(id: String): Long?
 
-    /**
-     * The hour of day each article was read, summed across the window.
-     *
-     * `%H` gives 00-23 as text, which is what the chart's twenty-four buckets
-     * are keyed on; the caller turns it into an integer rather than trusting a
-     * cast in SQL to mean the same thing on every SQLite build.
-     */
-    @Query(
-        """
-        SELECT strftime('%H', readAt / 1000, 'unixepoch', 'localtime') AS hour,
-            COUNT(*) AS seen,
-            SUM(CASE WHEN openedAt > 0 THEN 1 ELSE 0 END) AS opened
-        FROM Article
-        WHERE readAt >= :since
-        GROUP BY hour
-        ORDER BY hour
-        """
-    )
-    fun readingByHour(since: Long): Flow<List<HourCount>>
+
 
     /**
      * The address of a recent article from this feed.
@@ -280,23 +239,6 @@ interface FeedArticleDao {
     )
     suspend fun addReading(id: String, addMs: Long, capMs: Long)
 
-    /**
-     * Time spent reading over a window, and how many articles it covers.
-     *
-     * Only articles with something recorded are counted, so the average is
-     * over articles that were actually read rather than over everything that
-     * went past — the second is a number about scrolling wearing the name of
-     * a number about reading.
-     */
-    @Query(
-        """
-        SELECT COALESCE(SUM(readMs), 0) AS totalMs,
-            COUNT(*) AS articles
-        FROM Article
-        WHERE readAt >= :since AND readMs > 0
-        """
-    )
-    fun readingTime(since: Long): Flow<ReadingTime>
 
     /**
      * How much ground each source's articles cover in time, and how many there
