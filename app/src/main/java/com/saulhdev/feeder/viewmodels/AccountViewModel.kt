@@ -25,6 +25,8 @@ import com.saulhdev.feeder.manager.sync.service.SyncOutcome
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.saulhdev.feeder.manager.sync.greader.AccountProblem
+import com.saulhdev.feeder.manager.sync.greader.problemFrom
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -37,8 +39,15 @@ data class AccountState(
     val username: String = "",
     val lastSync: Long = 0L,
     val busy: Boolean = false,
-    /** Set when something went wrong, cleared when the reader changes anything. */
-    val error: String? = null,
+    /**
+     * Set when something went wrong, cleared when the reader changes anything.
+     *
+     * A problem rather than a sentence, so the wording and its translations
+     * stay on the screen that shows them. [detail] is whatever the server or
+     * the exception said, kept for the cases with nothing better to offer.
+     */
+    val error: AccountProblem? = null,
+    val detail: String? = null,
 )
 
 class AccountViewModel(
@@ -58,7 +67,7 @@ class AccountViewModel(
     )
 
     fun clearError() {
-        _state.value = _state.value.copy(error = null)
+        _state.value = _state.value.copy(error = null, detail = null)
     }
 
     /**
@@ -78,13 +87,11 @@ class AccountViewModel(
                     syncNow()
                 }
 
-                is GoogleReaderApi.AuthResult.Rejected ->
-                    _state.value = _state.value.copy(busy = false, error = result.reason)
-
-                is GoogleReaderApi.AuthResult.Unreachable ->
+                is GoogleReaderApi.AuthResult.Failed ->
                     _state.value = _state.value.copy(
                         busy = false,
-                        error = result.cause.message ?: "Could not reach that server",
+                        error = result.problem,
+                        detail = result.detail,
                     )
             }
         }
@@ -103,11 +110,15 @@ class AccountViewModel(
                 is SyncOutcome.Success -> read()
                 SyncOutcome.SignedOut -> {
                     account.signOut()
-                    read().copy(error = "The server no longer accepts that sign-in")
+                    read().copy(error = AccountProblem.SIGNED_OUT)
                 }
 
+                // The same translation as a failed sign-in, because it is the
+                // same set of causes: a certificate, a name, a port, a server
+                // that has gone away since the credential was stored.
                 is SyncOutcome.Failed -> read().copy(
-                    error = outcome.cause?.message ?: "Sync failed",
+                    error = problemFrom(outcome.cause),
+                    detail = outcome.cause?.message,
                 )
             }
         }

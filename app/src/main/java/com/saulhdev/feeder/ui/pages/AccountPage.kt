@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.manager.sync.greader.AccountProblem
 import com.saulhdev.feeder.manager.sync.greader.normalisedServerUrl
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
@@ -255,10 +256,10 @@ fun AccountPage(
                 }
             }
 
-            state.error?.let { message ->
+            state.error?.let { problem ->
                 item {
                     Text(
-                        text = message,
+                        text = accountProblemText(problem, state.detail),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -275,4 +276,37 @@ fun AccountPage(
             }
         }
     }
+}
+
+/**
+ * A sentence for a connection problem, with the next thing to try in it.
+ *
+ * Here rather than in the view model because it is wording, and wording gets
+ * translated. What arrives from below is an [AccountProblem]; what the reader
+ * gets is a sentence naming what went wrong and what to do about it, instead
+ * of the exception text the screen used to print.
+ *
+ * Three of them carry the original message. There is genuinely nothing better
+ * to say about a 502 than that the server said 502, and throwing that away to
+ * look tidy would take the one fact worth having.
+ */
+@Composable
+private fun accountProblemText(problem: AccountProblem, detail: String?): String = when (problem) {
+    AccountProblem.BAD_ADDRESS -> stringResource(R.string.account_problem_bad_address)
+    AccountProblem.CERTIFICATE -> stringResource(R.string.account_problem_certificate)
+    AccountProblem.HOST_NOT_FOUND -> stringResource(R.string.account_problem_host_not_found)
+    AccountProblem.REFUSED -> stringResource(R.string.account_problem_refused)
+    AccountProblem.TIMEOUT -> stringResource(R.string.account_problem_timeout)
+    AccountProblem.CLEARTEXT -> stringResource(R.string.account_problem_cleartext)
+    AccountProblem.CREDENTIALS -> stringResource(R.string.account_problem_credentials)
+    AccountProblem.NOT_FOUND -> stringResource(R.string.account_problem_not_found)
+    AccountProblem.NO_TOKEN -> stringResource(R.string.account_problem_no_token)
+    AccountProblem.SIGNED_OUT -> stringResource(R.string.account_problem_signed_out)
+
+    AccountProblem.SERVER_ERROR ->
+        stringResource(R.string.account_problem_server_error, detail.orEmpty())
+
+    AccountProblem.UNKNOWN ->
+        if (detail.isNullOrBlank()) stringResource(R.string.account_problem_unknown_bare)
+        else stringResource(R.string.account_problem_unknown, detail)
 }

@@ -297,6 +297,22 @@
     <string name="account_server">Server address</string>
     <string name="account_username">Username</string>
     <string name="account_password">Password</string>
+    <!-- What went wrong connecting to a sync server. Each one names the cause
+         and the next thing to try: the screen used to print the exception,
+         which told the reader neither. -->
+    <string name="account_problem_bad_address">That does not look like a web address. It should look like https://example.com/api/greader.php</string>
+    <string name="account_problem_certificate">Whisper could not verify that server\'s security certificate. Self-signed certificates are not supported — the certificate has to come from a recognised authority.</string>
+    <string name="account_problem_host_not_found">No server was found at that address. Check the spelling, and that this phone is on a network that can reach it.</string>
+    <string name="account_problem_refused">That address was reached but nothing answered on it. Check the server is running, and that the port is right.</string>
+    <string name="account_problem_timeout">The server took too long to answer. It may be busy, or not reachable from this network.</string>
+    <string name="account_problem_cleartext">Whisper only connects over https. Change the address to start with https://</string>
+    <string name="account_problem_credentials">That username or password was not accepted. Many services want an application password here rather than the one you log in with.</string>
+    <string name="account_problem_not_found">The server answered, but there is nothing at that path. A FreshRSS address usually ends in /api/greader.php</string>
+    <string name="account_problem_server_error">The server reported a problem of its own (%1$s). Nothing is wrong at this end — try again later.</string>
+    <string name="account_problem_no_token">The server answered, but not the way a Google Reader service does. Check the address points at the API rather than the website.</string>
+    <string name="account_problem_signed_out">The server no longer accepts that sign-in. Sign in again.</string>
+    <string name="account_problem_unknown">Could not reach that server. %1$s</string>
+    <string name="account_problem_unknown_bare">Could not reach that server.</string>
     <string name="account_server_upgraded">Changed to https, so your password is not sent in the clear. Plain http will not connect.</string>
     <string name="account_password_hint">Most services offer an application password for this. Use one if yours does — it can be revoked without changing your real password.</string>
     <string name="account_sign_in">Sign in</string>

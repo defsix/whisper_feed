@@ -56,11 +56,21 @@ class GoogleReaderApi(
     private val client: OkHttpClient = defaultClient,
 ) {
 
-    /** What a sign-in produced, or why it did not. */
+    /**
+     * What a sign-in produced, or why it did not.
+     *
+     * [Failed] carries an [AccountProblem] rather than a sentence. This class
+     * speaks the protocol and has no business choosing words for a screen it
+     * cannot see, let alone words that would then need translating from here.
+     * [Failed.detail] is the original text, kept for the cases where there is
+     * nothing better to say than what the server or the exception said.
+     */
     sealed interface AuthResult {
         data class Success(val token: String) : AuthResult
-        data class Rejected(val reason: String) : AuthResult
-        data class Unreachable(val cause: Throwable) : AuthResult
+        data class Failed(
+            val problem: AccountProblem,
+            val detail: String? = null,
+        ) : AuthResult
     }
 
     private val base: HttpUrl? =
@@ -78,7 +88,7 @@ class GoogleReaderApi(
             val url = base?.newBuilder()
                 ?.addPathSegments("accounts/ClientLogin")
                 ?.build()
-                ?: return@withContext AuthResult.Rejected("That is not a valid address")
+                ?: return@withContext AuthResult.Failed(AccountProblem.BAD_ADDRESS)
 
             val body = FormBody.Builder()
                 .add("Email", username)
@@ -88,18 +98,21 @@ class GoogleReaderApi(
             try {
                 client.newCall(Request.Builder().url(url).post(body).build()).execute().use { r ->
                     if (!r.isSuccessful) {
-                        return@withContext AuthResult.Rejected("The server said ${r.code}")
+                        return@withContext AuthResult.Failed(
+                            problem = problemFromStatus(r.code),
+                            detail = r.code.toString(),
+                        )
                     }
                     val auth = r.body.string()
                         .lineSequence()
                         .firstOrNull { it.startsWith("Auth=") }
                         ?.removePrefix("Auth=")
                         ?.trim()
-                    if (auth.isNullOrEmpty()) AuthResult.Rejected("No token in the reply")
+                    if (auth.isNullOrEmpty()) AuthResult.Failed(AccountProblem.NO_TOKEN)
                     else AuthResult.Success(auth)
                 }
             } catch (t: Throwable) {
-                AuthResult.Unreachable(t)
+                AuthResult.Failed(problemFrom(t), t.message)
             }
         }
 
