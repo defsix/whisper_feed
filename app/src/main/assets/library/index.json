@@ -21,31 +21,31 @@
     "slug": "architecture",
     "name": "Architecture",
     "kind": "topic",
-    "count": 10
+    "count": 13
   },
   {
     "slug": "beauty",
     "name": "Beauty",
     "kind": "topic",
-    "count": 7
+    "count": 8
   },
   {
     "slug": "books",
     "name": "Books",
     "kind": "topic",
-    "count": 8
+    "count": 11
   },
   {
     "slug": "business_economy",
     "name": "Business & Economy",
     "kind": "topic",
-    "count": 15
+    "count": 22
   },
   {
     "slug": "cars",
     "name": "Cars",
     "kind": "topic",
-    "count": 11
+    "count": 12
   },
   {
     "slug": "cricket",
@@ -63,13 +63,13 @@
     "slug": "fashion",
     "name": "Fashion",
     "kind": "topic",
-    "count": 8
+    "count": 10
   },
   {
     "slug": "food",
     "name": "Food",
     "kind": "topic",
-    "count": 19
+    "count": 22
   },
   {
     "slug": "football",
@@ -87,7 +87,7 @@
     "slug": "gaming",
     "name": "Gaming",
     "kind": "topic",
-    "count": 14
+    "count": 13
   },
   {
     "slug": "history",
@@ -105,19 +105,19 @@
     "slug": "movies",
     "name": "Movies",
     "kind": "topic",
-    "count": 9
+    "count": 11
   },
   {
     "slug": "music",
     "name": "Music",
     "kind": "topic",
-    "count": 5
+    "count": 7
   },
   {
     "slug": "news",
     "name": "News",
     "kind": "topic",
-    "count": 9
+    "count": 16
   },
   {
     "slug": "personal_finance",
@@ -129,7 +129,7 @@
     "slug": "photography",
     "name": "Photography",
     "kind": "topic",
-    "count": 7
+    "count": 9
   },
   {
     "slug": "programming",
@@ -141,7 +141,7 @@
     "slug": "science",
     "name": "Science",
     "kind": "topic",
-    "count": 20
+    "count": 23
   },
   {
     "slug": "space",
@@ -153,7 +153,7 @@
     "slug": "sports",
     "name": "Sports",
     "kind": "topic",
-    "count": 10
+    "count": 13
   },
   {
     "slug": "startups",
@@ -165,7 +165,7 @@
     "slug": "tech",
     "name": "Tech",
     "kind": "topic",
-    "count": 27
+    "count": 32
   },
   {
     "slug": "television",
@@ -183,7 +183,7 @@
     "slug": "travel",
     "name": "Travel",
     "kind": "topic",
-    "count": 11
+    "count": 12
   },
   {
     "slug": "ui_ux",

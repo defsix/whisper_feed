@@ -8,7 +8,7 @@
   </head>
   <body>
     <outline text="UI / UX" title="UI / UX">
-      <outline text="Articles on Smashing Magazine — For Web Designers And Developers" title="Articles on Smashing Magazine — For Web Designers And Developers" description="Recent content in Articles on Smashing Magazine — For Web Designers And Developers" xmlUrl="https://www.smashingmagazine.com/feed" type="rss" />
+      <outline text="Smashing Magazine" title="Smashing Magazine" description="Recent content in Articles on Smashing Magazine — For Web Designers And Developers" xmlUrl="https://www.smashingmagazine.com/feed" type="rss" />
       <outline text="JUST™ Creative" title="JUST™ Creative" description="Logo Designer, Graphic Designer, Graphic Design Portfolio, Logo Design, Logo, Graphic, Design, Graphic Design, Brand Strategy, Branding" xmlUrl="https://feeds.feedburner.com/JustCreativeDesignBlog" type="rss" />
       <outline text="NN/g latest articles and announcements" title="NN/g latest articles and announcements" description="The latest articles and announcements from Nielsen Norman Group" xmlUrl="https://www.nngroup.com/feed/rss/" type="rss" />
       <outline text="UX Collective - Medium" title="UX Collective - Medium" description="We believe designers are thinkers as much as they are makers. https://linktr.ee/uxc - Medium" xmlUrl="https://uxdesign.cc/feed" type="rss" />

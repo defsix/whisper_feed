@@ -15,6 +15,8 @@
       <outline text="PetaPixel" title="PetaPixel" description="Photography and Camera News, Reviews, and Inspiration" xmlUrl="https://petapixel.com/feed/" type="rss" />
       <outline text="Strobist" title="Strobist" description="Learn How to Light." xmlUrl="https://feeds.feedburner.com/blogspot/WOBq" type="rss" />
       <outline text="The Boston Globe" title="The Boston Globe" description="The Boston Globe News Feed" xmlUrl="https://www.bostonglobe.com/rss/bigpicture" type="rss" />
+      <outline type="rss" text="British Journal of Photography" title="British Journal of Photography" xmlUrl="https://www.1854.photography/feed/"/>
+      <outline type="rss" text="Magnum Photos" title="Magnum Photos" xmlUrl="https://www.magnumphotos.com/feed/"/>
     </outline>
   </body>
 </opml>

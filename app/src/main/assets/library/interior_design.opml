@@ -10,7 +10,7 @@
     <outline text="Interior design" title="Interior design">
       <outline text="BLOG - decor8" title="BLOG - decor8" description="" xmlUrl="https://www.decor8blog.com/blog?format=rss" type="rss" />
       <outline text="Core77" title="Core77" description="Launched in 1995, Core77 serves a devoted global audience of design professionals, corporations, students, enthusiasts and fans." xmlUrl="https://feeds.feedburner.com/core77/blog" type="rss" />
-      <outline text="Design MilkInterior Design Ideas for Your Modern Home | Design Milk" title="Design MilkInterior Design Ideas for Your Modern Home | Design Milk" description="Dedicated to modern design" xmlUrl="https://design-milk.com/category/interior-design/feed/" type="rss" />
+      <outline text="Design Milk" title="Design Milk" description="Dedicated to modern design" xmlUrl="https://design-milk.com/category/interior-design/feed/" type="rss" />
       <outline text="Fubiz Media" title="Fubiz Media" description="The latest creative news from Fubiz about art, design and pop-culture." xmlUrl="https://feeds.feedburner.com/fubiz" type="rss" />
       <outline text="In My Own Style" title="In My Own Style" description="Top Budget DIY Home Decorating Blog and Creative Lifestyle Ideas" xmlUrl="https://inmyownstyle.com/feed" type="rss" />
       <outline text="Interior Design" title="Interior Design" description="The leading authority for the Architecture &amp; Design community" xmlUrl="https://www.interiordesign.net/rss/" type="rss" />
@@ -26,7 +26,7 @@
       <outline text="Yatzer | Live Beautifully. Explore Endlessly." title="Yatzer | Live Beautifully. Explore Endlessly." description="Since 2006, Yatzer has explored the many ways design shapes our lives,curating soulful interiors, visionary creatives, and immersive destinations — celebrating the art of living beautifully." xmlUrl="https://www.yatzer.com/rss.xml" type="rss" />
       <outline text="Young House Love" title="Young House Love" description="Home Decorating &amp; DIY Tutorials" xmlUrl="https://www.younghouselove.com/feed/" type="rss" />
       <outline text="decoist" title="decoist" description="Obsessed with the cult of beauty" xmlUrl="https://www.decoist.com/feed/" type="rss" />
-      <outline text="design archives | designboom | architecture &amp; design magazine" title="design archives | designboom | architecture &amp; design magazine" description="designboom magazine | your first source for architecture, design &amp; art news" xmlUrl="https://www.designboom.com/design/feed" type="rss" />
+      <outline text="designboom" title="designboom" description="designboom magazine | your first source for architecture, design &amp; art news" xmlUrl="https://www.designboom.com/design/feed" type="rss" />
     </outline>
   </body>
 </opml>

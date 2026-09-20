@@ -8,7 +8,7 @@
   </head>
   <body>
     <outline text="Business &amp; Economy" title="Business &amp; Economy">
-      <outline text="All News" title="All News" description="" xmlUrl="https://www.investing.com/rss/news.rss" type="rss" />
+      <outline text="Investing.com" title="Investing.com" description="" xmlUrl="https://www.investing.com/rss/news.rss" type="rss" />
       <outline text="Bloomberg Originals" title="Bloomberg Originals" description="" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=Bloomberg" type="rss" />
       <outline text="Breaking News on Seeking Alpha" title="Breaking News on Seeking Alpha" description="© seekingalpha.com. Use of this feed is limited to personal, non-commercial use and is governed by Seeking Alpha's Terms of Use (https://about.seekingalpha.com/terms). Publishing this feed for public or commercial use and/or misrepresentation by a third party is prohibited." xmlUrl="https://seekingalpha.com/market_currents.xml" type="rss" />
       <outline text="Business Insider" title="Business Insider" description="" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=businessinsider" type="rss" />
@@ -21,8 +21,15 @@
       <outline text="Startup Stories - Mixergy" title="Startup Stories - Mixergy" description="Business tips for startups by proven entrepreneurs" xmlUrl="https://feeds.feedburner.com/Mixergy-main-podcast" type="rss" />
       <outline text="The Blog of Author Tim Ferriss" title="The Blog of Author Tim Ferriss" description="Tim Ferriss is the author of five #1 New York Times bestsellers and host of The Tim Ferriss Show podcast." xmlUrl="https://tim.blog/feed/" type="rss" />
       <outline text="The Duct Tape Marketing Podcast" title="The Duct Tape Marketing Podcast" description="Insightful interviews with authors, experts, entrepreneurs, and thought leaders who share valuable marketing tips, growth strategies, and resources. Hosted by John Jantsch, one of America's top small business marketing experts, this show is dedicated to helping you craft effective marketing strategies that will grow your business. Whether you're a small business owner, marketing professional, or marketing agency owner, you'll gain valuable insights and actionable advice on topics such as marketing strategy, consulting, social media marketing, content marketing, SEO, email marketing, lead generation, business management, entrepreneurship and much more. With over 900 episodes since its inception in 2005, The Duct Tape Marketing podcast is your go-to resource for all things marketing or business growth. Join us each week as we dive into the latest marketing trends and strategies that will help you achieve your business goals. Don't miss out on this opportunity to learn from the best in the business. Tune in to The Duct Tape Marketing podcast and start listening today!" xmlUrl="https://ducttape.libsyn.com/rss" type="rss" />
-      <outline text="US Top News and Analysis" title="US Top News and Analysis" description="CNBC is the world leader in business news and real-time financial market coverage. Find fast, actionable information." xmlUrl="https://www.cnbc.com/id/100003114/device/rss/rss.html" type="rss" />
+      <outline text="CNBC" title="CNBC" description="CNBC is the world leader in business news and real-time financial market coverage. Find fast, actionable information." xmlUrl="https://www.cnbc.com/id/100003114/device/rss/rss.html" type="rss" />
       <outline text="Yahoo Finance" title="Yahoo Finance" description="At Yahoo Finance, you get free stock quotes, up-to-date news, portfolio management resources, international market data, social interaction and mortgage rates that help you manage your financial life." xmlUrl="https://finance.yahoo.com/news/rssindex" type="rss" />
+      <outline type="rss" text="The Economist" title="The Economist" xmlUrl="https://www.economist.com/finance-and-economics/rss.xml"/>
+      <outline type="rss" text="El País Economía" title="El País Economía" xmlUrl="https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada"/>
+      <outline type="rss" text="Nikkei Asia" title="Nikkei Asia" xmlUrl="https://asia.nikkei.com/rss/feed/nar"/>
+      <outline type="rss" text="Les Echos" title="Les Echos" xmlUrl="https://services.lesechos.fr/rss/les-echos-economie.xml"/>
+      <outline type="rss" text="Financial Times" title="Financial Times" xmlUrl="https://www.ft.com/rss/home"/>
+      <outline type="rss" text="Handelsblatt" title="Handelsblatt" xmlUrl="https://www.handelsblatt.com/contentexport/feed/schlagzeilen"/>
+      <outline type="rss" text="Business Standard" title="Business Standard" xmlUrl="https://www.business-standard.com/rss/home_page_top_stories.rss"/>
     </outline>
   </body>
 </opml>

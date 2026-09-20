@@ -13,6 +13,8 @@
       <outline text="Music Business Worldwide" title="Music Business Worldwide" description="News, jobs and analysis for the global music industry" xmlUrl="https://www.musicbusinessworldwide.com/feed/" type="rss" />
       <outline text="RSS: News" title="RSS: News" description="News content RSS feed" xmlUrl="https://pitchfork.com/rss/news" type="rss" />
       <outline text="Song Exploder" title="Song Exploder" description="&lt;p&gt;Song Exploder is a podcast where musicians take apart their songs, and piece by piece, tell the story of how they were made. Each episode features an artist discussing a song of theirs, breaking down the sounds and ideas that went into the writing and recording. Hosted and produced by Hrishikesh Hirway.&lt;/p&gt;" xmlUrl="https://feed.songexploder.net/songexploder" type="rss" />
+      <outline type="rss" text="NME" title="NME" xmlUrl="https://www.nme.com/feed"/>
+      <outline type="rss" text="The Quietus" title="The Quietus" xmlUrl="https://thequietus.com/feed"/>
     </outline>
   </body>
 </opml>

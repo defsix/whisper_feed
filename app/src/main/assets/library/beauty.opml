@@ -15,6 +15,7 @@
       <outline text="POPSUGAR Beauty" title="POPSUGAR Beauty" description="Top Beauty Stories" xmlUrl="https://www.popsugar.com/beauty/feed" type="rss" />
       <outline text="Refinery29" title="Refinery29" description="Refinery29" xmlUrl="https://www.refinery29.com/beauty/rss.xml" type="rss" />
       <outline text="The Beauty Look Book" title="The Beauty Look Book" description="Beauty Blog, Reviews + Makeup Looks" xmlUrl="https://thebeautylookbook.com/feed" type="rss" />
+      <outline text="Makeup and Beauty Blog" title="Makeup and Beauty Blog" description="A beauty blog blooming with fresh makeup reviews, swatches and beauty tips from your friendly neighborhood beauty addict" xmlUrl="https://www.makeupandbeautyblog.com/feed/" type="rss" />
     </outline>
   </body>
 </opml>

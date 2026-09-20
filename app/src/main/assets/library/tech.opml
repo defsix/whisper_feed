@@ -35,6 +35,11 @@
       <outline text="This Week in Tech (Audio)" title="This Week in Tech (Audio)" description="This Week in Tech is the top-ranked flagship tech podcast from TWiT.tv. Every Sunday, Leo Laporte and a roundtable of insiders explore the week's hottest tech news from AI to robots, and PCs to privacy. When it comes to tech, TWiT is IT. You can join Club TWiT for $10 per month and get ad-free audio and video feeds for all our shows plus everything else the club offers...or get just this podcast ad-free for $5 per month. New episodes every Sunday." xmlUrl="https://feeds.twit.tv/twit.xml" type="rss" />
       <outline text="Unbox Therapy" title="Unbox Therapy" description="" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=unboxtherapy" type="rss" />
       <outline text="www.theregister.com - Articles" title="www.theregister.com - Articles" description="Articles from www.theregister.com" xmlUrl="https://www.theregister.com/headlines.rss" type="rss" />
+      <outline type="rss" text="Rest of World" title="Rest of World" xmlUrl="https://restofworld.org/feed/latest/"/>
+      <outline type="rss" text="TechRadar" title="TechRadar" xmlUrl="https://www.techradar.com/rss"/>
+      <outline type="rss" text="Golem.de" title="Golem.de" xmlUrl="https://rss.golem.de/rss.php?feed=RSS2.0"/>
+      <outline type="rss" text="The Register" title="The Register" xmlUrl="https://www.theregister.com/headlines.atom"/>
+      <outline type="rss" text="heise online" title="heise online" xmlUrl="https://www.heise.de/rss/heise-atom.xml"/>
     </outline>
   </body>
 </opml>

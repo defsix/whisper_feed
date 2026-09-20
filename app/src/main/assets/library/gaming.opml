@@ -13,7 +13,6 @@
       <outline text="IGN Articles" title="IGN Articles" description="This feed contains the latest 20 articles from IGN" xmlUrl="https://feeds.ign.com/ign/all" type="rss" />
       <outline text="Indie Games Plus" title="Indie Games Plus" description="Creative, Personal, Passionate Digital Experiences" xmlUrl="https://indiegamesplus.com/feed" type="rss" />
       <outline text="Kotaku" title="Kotaku" description="Gaming Reviews, News, Tips and More." xmlUrl="https://kotaku.com/rss" type="rss" />
-      <outline text="Makeup and Beauty Blog | Makeup Reviews, Swatches and How-To Makeup" title="Makeup and Beauty Blog | Makeup Reviews, Swatches and How-To Makeup" description="A beauty blog blooming with fresh makeup reviews, swatches and beauty tips from your friendly neighborhood beauty addict" xmlUrl="https://www.makeupandbeautyblog.com/feed/" type="rss" />
       <outline text="PlayStation.Blog" title="PlayStation.Blog" description="Official PlayStation Blog for news and video updates on PlayStation, PS5, PS4, PS VR, PlayStation Plus and more." xmlUrl="https://feeds.feedburner.com/psblog" type="rss" />
       <outline text="Polygon.com" title="Polygon.com" description="Your source for the latest in video games, sci-fi, fantasy, tabletop games, anime, horror, books, and comics." xmlUrl="https://www.polygon.com/rss/index.xml" type="rss" />
       <outline text="Rock, Paper, Shotgun" title="Rock, Paper, Shotgun" description="" xmlUrl="https://feeds.feedburner.com/RockPaperShotgun" type="rss" />

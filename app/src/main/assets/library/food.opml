@@ -27,6 +27,9 @@
       <outline text="Shutterbean" title="Shutterbean" description="food, photography &amp; creative inspiration" xmlUrl="https://www.shutterbean.com/feed/" type="rss" />
       <outline text="Sprouted Kitchen" title="Sprouted Kitchen" description="" xmlUrl="https://www.sproutedkitchen.com/home?format=rss" type="rss" />
       <outline text="smitten kitchen" title="smitten kitchen" description="Fearless cooking from a tiny NYC kitchen." xmlUrl="https://feeds.feedburner.com/smittenkitchen" type="rss" />
+      <outline type="rss" text="The Guardian Food" title="The Guardian Food" xmlUrl="https://www.theguardian.com/food/rss"/>
+      <outline type="rss" text="BBC Good Food" title="BBC Good Food" xmlUrl="https://www.bbcgoodfood.com/feed"/>
+      <outline type="rss" text="Delicious Magazine" title="Delicious Magazine" xmlUrl="https://www.deliciousmagazine.co.uk/feed/"/>
     </outline>
   </body>
 </opml>

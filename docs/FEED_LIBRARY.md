@@ -178,6 +178,41 @@ put candidates in front of one — `FeedLibraryAssetTest` does not attempt it,
 because a matcher confident enough to decide it silently deleted three feeds
 that belonged.
 
+## The topic packs
+
+The country packs were levelled first, and levelling them made the topic
+packs' own problem visible. Their counts were fine; their contents were not.
+
+**Origin.** Business & Economy was fifteen feeds, thirteen of them American —
+Bloomberg, Forbes, Fortune, CNBC, Business Insider, Yahoo Finance, Seeking
+Alpha and five US podcasts — with no Financial Times, no Economist, no Nikkei,
+nothing from continental Europe. News was the BBC, the New York Times, the
+Guardian and Google News. The counts said the packs were full; what they were
+full of said something else.
+
+61 addresses were probed and 44 added across fourteen packs: the FT, the
+Economist, Nikkei Asia, Handelsblatt, Les Echos and Business Standard to
+Business & Economy; Reuters, AP, Al Jazeera, Deutsche Welle, France 24, ABC
+Australia and Euronews to News; The Register, heise, Rest of World and Golem
+to Tech; L'Équipe, Marca, Gazzetta and Eurosport to Sports; and so on through
+Science, Film, Books, Food, Travel, Architecture, Photography and Music.
+
+The packs where origin does not change what you read — Programming, iOS
+Development, Web Development, UI/UX — were left alone. A Swift blog is a Swift
+blog, and adding feeds to hit a quota there would be arithmetic rather than
+balance.
+
+**Names.** 41 rows carried a title that named no publication, and four were
+*blank* — an unlabelled checkbox in a picker. The rest were search-engine
+furniture: "All News", "World", "Science Latest", "US Top News and Analysis",
+or the whole of "Cricket News Today, Latest Cricket Updates, Cricket…". A feed
+reports its own title, and a site optimising that string for a search engine
+has not written a name for a row in a list. All 41 now carry the
+publication's name.
+
+**And one plain filing error**: the Gaming pack contained a makeup blog. It is
+in Beauty now.
+
 ## Refreshing it
 
 Re-run the fetch and verification against the upstream repository, then
