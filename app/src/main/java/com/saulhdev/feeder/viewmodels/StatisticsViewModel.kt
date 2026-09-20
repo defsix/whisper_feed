@@ -301,6 +301,6 @@ internal fun exampleSources(): List<SourceShare> = listOf(
     SourceShare(id = 2, title = "Ars Technica", seen = 164, opened = 41),
     SourceShare(id = 3, title = "Hackaday", seen = 121, opened = 19),
     SourceShare(id = 4, title = "Quanta Magazine", seen = 88, opened = 27),
-    SourceShare(id = 5, title = "RTE News", seen = 74, opened = 9),
+    SourceShare(id = 5, title = "Reuters", seen = 74, opened = 9),
     SourceShare(id = -1, title = "", seen = 265, opened = 31, other = true),
 )

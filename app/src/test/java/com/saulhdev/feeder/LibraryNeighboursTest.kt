@@ -31,7 +31,7 @@ import org.junit.Test
  * the BBC. The obvious suggestion — that ITV and Sky News exist and are not
  * being followed — was sitting in the bundled library the whole time.
  *
- * The packs here mirror the real ones: the BBC and the Guardian are in a
+ * The packs here mirror the shape of the real ones: the BBC and the Guardian are in a
  * great many, because a large publication has a feed for everything, and the
  * whole difficulty is that this must not make them look like cricket readers.
  */
@@ -40,9 +40,9 @@ class LibraryNeighboursTest {
     private val library = mapOf(
         "bbci.co.uk" to setOf("united_kingdom", "news", "sports", "cricket", "tennis", "science"),
         "theguardian.com" to setOf("united_kingdom", "news", "sports", "cricket", "tennis", "food", "books"),
-        "rte.ie" to setOf("ireland"),
-        "irishtimes.com" to setOf("ireland"),
-        "independent.ie" to setOf("ireland"),
+        "natpaper.example" to setOf("country_a"),
+        "daily.example" to setOf("country_a"),
+        "herald.example" to setOf("country_a"),
         "arstechnica.com" to setOf("tech"),
         "theverge.com" to setOf("tech"),
         "quantamagazine.org" to setOf("science"),
@@ -55,19 +55,19 @@ class LibraryNeighboursTest {
      */
     @Test
     fun `a large publication does not make somebody a cricket reader`() {
-        val mine = setOf("bbci.co.uk", "theguardian.com", "rte.ie", "irishtimes.com")
+        val mine = setOf("bbci.co.uk", "theguardian.com", "natpaper.example", "daily.example")
         val packs = LibraryNeighbours.topPacks(mine, library).map { it.first }
-        assertEquals("ireland", packs.first())
+        assertEquals("country_a", packs.first())
         assertTrue("cricket outranked a real interest", packs.indexOf("cricket") != 0)
     }
 
     /** A source in one pack says something definite; one in seven says little. */
     @Test
     fun `a focused source outvotes a promiscuous one`() {
-        val mine = setOf("bbci.co.uk", "theguardian.com", "rte.ie", "irishtimes.com")
+        val mine = setOf("bbci.co.uk", "theguardian.com", "natpaper.example", "daily.example")
         val scores = LibraryNeighbours.packScores(mine, library)
-        assertTrue(scores["ireland"]!! > scores["united_kingdom"]!!)
-        assertTrue(scores["ireland"]!! > scores["cricket"]!!)
+        assertTrue(scores["country_a"]!! > scores["united_kingdom"]!!)
+        assertTrue(scores["country_a"]!! > scores["cricket"]!!)
     }
 
     /** One shared source is a coincidence, not a pattern. */
@@ -97,8 +97,8 @@ class LibraryNeighboursTest {
 
     @Test
     fun `the shared count is the evidence, and it is honest`() {
-        val mine = setOf("rte.ie", "irishtimes.com", "independent.ie")
-        assertEquals(3, LibraryNeighbours.sharedCounts(mine, library)["ireland"])
+        val mine = setOf("natpaper.example", "daily.example", "herald.example")
+        assertEquals(3, LibraryNeighbours.sharedCounts(mine, library)["country_a"])
     }
 
     @Test
@@ -125,8 +125,8 @@ class LibraryNeighboursTest {
     /** Ordering must not depend on which order the sources happen to arrive in. */
     @Test
     fun `the answer does not depend on set iteration order`() {
-        val a = setOf("rte.ie", "irishtimes.com", "bbci.co.uk", "theguardian.com")
-        val b = setOf("theguardian.com", "bbci.co.uk", "irishtimes.com", "rte.ie")
+        val a = setOf("natpaper.example", "daily.example", "bbci.co.uk", "theguardian.com")
+        val b = setOf("theguardian.com", "bbci.co.uk", "daily.example", "natpaper.example")
         assertEquals(LibraryNeighbours.topPacks(a, library), LibraryNeighbours.topPacks(b, library))
     }
 }

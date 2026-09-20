@@ -533,7 +533,7 @@
         <item quantity="one">Also in %1$s, where %2$d of your sources is</item>
         <item quantity="other">Also in %1$s, where %2$d of your sources are</item>
     </plurals>
-    <string name="suggestions_none">Nothing yet. Once a week Whisper looks for two things: other sites that the articles you opened keep linking to, and publications that sit beside your own sources in its bundled collections \u2014 so following two Irish papers can turn up a third.\n\nNeither asks anything of anyone. The collections ship with the app, and the links are counted in articles already on your phone.</string>
+    <string name="suggestions_none">Nothing yet. Once a week Whisper looks for two things: other sites that the articles you opened keep linking to, and publications that sit beside your own sources in its bundled collections \u2014 so following two papers from one country can turn up a third.\n\nNeither asks anything of anyone. The collections ship with the app, and the links are counted in articles already on your phone.</string>
     <string name="suggestion_dismiss">Not interested</string>
     <!-- Statistics -->
     <string name="pref_statistics">Your reading</string>

@@ -42,11 +42,11 @@ private fun feed(id: Long, title: String) =
  */
 class ActiveFiltersTest {
 
-    private val sources = listOf(feed(1, "BBC"), feed(2, "RTÉ"), feed(3, "Hackaday"))
+    private val sources = listOf(feed(1, "BBC"), feed(2, "Reuters"), feed(3, "Hackaday"))
 
     @Test
     fun `a muted source is named rather than numbered`() {
-        assertEquals(listOf(2L to "RTÉ"), mutedSources(setOf("2"), sources))
+        assertEquals(listOf(2L to "Reuters"), mutedSources(setOf("2"), sources))
     }
 
     @Test

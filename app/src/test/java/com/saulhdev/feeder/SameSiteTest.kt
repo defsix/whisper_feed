@@ -66,7 +66,7 @@ class SameSiteTest {
     fun `every title segment is offered as a key`() {
         assertTrue("hackaday" in titleKeys("Blog \u2013 Hackaday"))
         assertTrue("hackaday" in titleKeys("Hack a Day \u2014 Fresh hacks every day"))
-        assertTrue("theguardian" in titleKeys("Ireland | The Guardian"))
+        assertTrue("theguardian" in titleKeys("Culture | The Guardian"))
         assertEquals(setOf("engadget"), titleKeys("Engadget"))
     }
 

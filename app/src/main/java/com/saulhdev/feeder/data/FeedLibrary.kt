@@ -30,7 +30,7 @@ import org.xml.sax.InputSource
 import org.xml.sax.helpers.DefaultHandler
 import javax.xml.parsers.SAXParserFactory
 
-/** One bundled collection: a topic like Photography, or a country like Ireland. */
+/** One bundled collection: a topic like Photography, or a country. */
 data class LibraryPack(
     val slug: String,
     val name: String,
@@ -57,7 +57,7 @@ data class LibraryFeed(
  *
  * **Bundled, not fetched, and for the same reason the starter list is.** A
  * directory served over the network would mean the app asking somewhere what
- * feeds exist, and a query like "photography" or "Irish politics" says quite a
+ * feeds exist, and a query like "photography" or "local politics" says quite a
  * lot about a person. The privacy notice lists exactly one developer-initiated
  * third-party call, and a feed catalogue is not worth making it two.
  *
@@ -150,8 +150,8 @@ object FeedLibrary {
  *
  * The OPML nests one level: a category outline with no address, holding the
  * feeds. That outer title is worth keeping — it is what the feed's category
- * becomes, so importing the Ireland pack files its feeds under News and Sport
- * rather than all under "Ireland".
+ * becomes, so importing a country pack files its feeds under News and Sport
+ * rather than all under the country.
  */
 private class PackHandler : DefaultHandler() {
     val feeds = mutableListOf<LibraryFeed>()

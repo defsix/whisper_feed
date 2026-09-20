@@ -239,7 +239,7 @@ class DiscoveryWorker(
          * How many to take from any one pack.
          *
          * Two, so three packs cannot become one pack's catalogue. Somebody
-         * who follows three Irish papers wants to hear about a fourth, not
+         * who follows three papers from one country wants to hear about a fourth, not
          * about the other eleven.
          */
         private const val MAX_PER_PACK = 2

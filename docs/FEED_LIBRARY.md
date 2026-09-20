@@ -20,7 +20,7 @@ GPL-3.0. It is the directory a different Android reader uses for the same
 purpose, which is some evidence it is maintained for the job.
 
 Bundled, never fetched. A directory served over the network would mean asking
-somewhere what feeds exist, and a query like "photography" or "Irish politics"
+somewhere what feeds exist, and a query like "photography" or "local politics"
 says a good deal about a person. `PRIVACY.md` lists exactly one
 developer-initiated third-party call, and a catalogue is not worth making it
 two.
@@ -98,9 +98,8 @@ from bot walls and one 451 — kept for the same reason the first tranche keeps
 them, that a datacentre IP is not a phone.
 
 Ireland, Japan and Poland already had packs and were merged into rather than
-replaced. Ireland is the clearest case for why this tranche exists: it had six
-feeds and none of RTÉ, the Irish Times or the Irish Independent, which is most
-of what an Irish reader would look for first.
+replaced. Ireland is the sharpest illustration of why the tranche was needed:
+six feeds, and not one of the country's three largest news publishers.
 
 ### One editorial decision, stated plainly
 

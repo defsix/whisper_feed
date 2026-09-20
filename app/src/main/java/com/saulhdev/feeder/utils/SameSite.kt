@@ -133,8 +133,8 @@ fun titleKeys(title: String): Set<String> =
  * titles instead. That is the case that matters most, because a FeedBurner
  * alias is the commonest way to end up subscribed to one publication twice.
  *
- * **These are candidates, not duplicates.** The Guardian's Ireland, World and
- * Europe feeds share a domain and are three different things; so do NPR's
+ * **These are candidates, not duplicates.** The Guardian's World, Europe and
+ * Culture feeds share a domain and are three different things; so do NPR's
  * topic feeds. Anything built on this has to show the groups and let the
  * reader decide, never act on them — which is exactly why this is separate
  * from [normalizeFeedUrl], where a match means the same address and can be

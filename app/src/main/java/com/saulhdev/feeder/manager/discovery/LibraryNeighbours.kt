@@ -65,8 +65,9 @@ object LibraryNeighbours {
      *
      * So a source's vote is divided by the number of packs it appears in. A
      * source that sits in one pack says something definite about that pack; a
-     * source that sits in fourteen says almost nothing about any of them. RTÉ
-     * votes 1.0 for Ireland; the Guardian votes 0.07 for each of its fourteen.
+     * source that sits in fourteen says almost nothing about any of them. A
+     * national paper in one country pack votes 1.0 for it; the Guardian votes
+     * 0.07 for each of its fourteen.
      *
      * Returned unsorted; [topPacks] is what orders them.
      */

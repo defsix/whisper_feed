@@ -166,7 +166,7 @@ interface FeedArticleDao {
      * belongs to this morning.
      *
      * `localtime` because a day boundary is a human fact. Bucketing by UTC
-     * puts an evening's reading in Ireland into tomorrow for half the year.
+     * puts an evening's reading into tomorrow for half the year.
      */
     @Query(
         """
