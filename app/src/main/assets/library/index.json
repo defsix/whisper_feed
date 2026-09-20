@@ -207,7 +207,7 @@
     "slug": "argentina",
     "name": "Argentina",
     "kind": "country",
-    "count": 4
+    "count": 6
   },
   {
     "slug": "australia",
@@ -219,7 +219,7 @@
     "slug": "austria",
     "name": "Austria",
     "kind": "country",
-    "count": 4
+    "count": 5
   },
   {
     "slug": "bangladesh",
@@ -231,7 +231,7 @@
     "slug": "belgium",
     "name": "Belgium",
     "kind": "country",
-    "count": 3
+    "count": 6
   },
   {
     "slug": "brazil",
@@ -249,31 +249,31 @@
     "slug": "china",
     "name": "China",
     "kind": "country",
-    "count": 3
+    "count": 8
   },
   {
     "slug": "czechia",
     "name": "Czechia",
     "kind": "country",
-    "count": 3
+    "count": 7
   },
   {
     "slug": "denmark",
     "name": "Denmark",
     "kind": "country",
-    "count": 3
+    "count": 6
   },
   {
     "slug": "egypt",
     "name": "Egypt",
     "kind": "country",
-    "count": 3
+    "count": 7
   },
   {
     "slug": "finland",
     "name": "Finland",
     "kind": "country",
-    "count": 4
+    "count": 5
   },
   {
     "slug": "france",
@@ -285,31 +285,31 @@
     "slug": "germany",
     "name": "Germany",
     "kind": "country",
-    "count": 4
+    "count": 6
   },
   {
     "slug": "greece",
     "name": "Greece",
     "kind": "country",
-    "count": 4
+    "count": 6
   },
   {
     "slug": "gulf",
     "name": "Gulf States",
     "kind": "country",
-    "count": 2
+    "count": 6
   },
   {
     "slug": "hong_kong_sar_china",
     "name": "Hong Kong SAR China",
     "kind": "country",
-    "count": 3
+    "count": 6
   },
   {
     "slug": "hungary",
     "name": "Hungary",
     "kind": "country",
-    "count": 4
+    "count": 7
   },
   {
     "slug": "india",
@@ -321,7 +321,7 @@
     "slug": "indonesia",
     "name": "Indonesia",
     "kind": "country",
-    "count": 2
+    "count": 6
   },
   {
     "slug": "ireland",
@@ -333,7 +333,7 @@
     "slug": "israel",
     "name": "Israel",
     "kind": "country",
-    "count": 4
+    "count": 6
   },
   {
     "slug": "italy",
@@ -351,13 +351,13 @@
     "slug": "kenya",
     "name": "Kenya",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "malaysia",
     "name": "Malaysia",
     "kind": "country",
-    "count": 2
+    "count": 5
   },
   {
     "slug": "mexico",
@@ -375,7 +375,7 @@
     "slug": "newzealand",
     "name": "New Zealand",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "nigeria",
@@ -411,13 +411,13 @@
     "slug": "portugal",
     "name": "Portugal",
     "kind": "country",
-    "count": 4
+    "count": 5
   },
   {
     "slug": "romania",
     "name": "Romania",
     "kind": "country",
-    "count": 3
+    "count": 6
   },
   {
     "slug": "russia",
@@ -429,7 +429,7 @@
     "slug": "singapore",
     "name": "Singapore",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "south_africa",
@@ -441,7 +441,7 @@
     "slug": "korea",
     "name": "South Korea",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "spain",
@@ -459,25 +459,25 @@
     "slug": "switzerland",
     "name": "Switzerland",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "taiwan",
     "name": "Taiwan",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "thailand",
     "name": "Thailand",
     "kind": "country",
-    "count": 3
+    "count": 5
   },
   {
     "slug": "turkey",
     "name": "Turkey",
     "kind": "country",
-    "count": 2
+    "count": 5
   },
   {
     "slug": "ukraine",
@@ -489,7 +489,7 @@
     "slug": "united_kingdom",
     "name": "United Kingdom",
     "kind": "country",
-    "count": 4
+    "count": 5
   },
   {
     "slug": "united_states",
@@ -501,6 +501,6 @@
     "slug": "vietnam",
     "name": "Vietnam",
     "kind": "country",
-    "count": 3
+    "count": 7
   }
 ]

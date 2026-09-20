@@ -104,10 +104,23 @@ class FeedLibraryAssetTest {
         assertEquals(emptySet<String>(), onDisk - listed)
     }
 
-    /** A one-feed collection overstates what is there. */
+    /**
+     * Five is the floor, for a country as much as for a topic.
+     *
+     * A pack of two is worse than no pack. Somebody opening "Denmark" and
+     * finding a pair of feeds learns that the app does not really cover
+     * Denmark, which is a more damaging thing to learn than that it does not
+     * list Denmark at all — and the reader in a country the directory happened
+     * to skimp on is exactly the reader who most needs the library to work.
+     *
+     * This is a promise about verification as much as coverage: reaching five
+     * means five addresses that were actually fetched, not five names.
+     */
     @Test
-    fun `no pack is a collection of one`() {
-        index().forEach { (slug, _, count) -> assertTrue("$slug has $count", count >= 2) }
+    fun `every pack has at least five feeds`() {
+        index().forEach { (slug, _, count) ->
+            assertTrue("$slug has only $count", count >= 5)
+        }
     }
 
     @Test

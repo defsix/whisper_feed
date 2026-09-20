@@ -10,5 +10,8 @@
       <outline type="rss" text="Observador" title="Observador" xmlUrl="https://observador.pt/feed/"/>
       <outline type="rss" text="RTP Notícias" title="RTP Notícias" xmlUrl="https://www.rtp.pt/noticias/rss"/>
     </outline>
+    <outline text="Business" title="Business">
+      <outline type="rss" text="ECO" title="ECO" xmlUrl="https://eco.sapo.pt/feed/"/>
+    </outline>
   </body>
 </opml>

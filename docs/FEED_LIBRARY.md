@@ -125,9 +125,32 @@ Each was asked for over https: 97 answered with a feed and were rewritten, and
 the dead ones. A feed the app is structurally incapable of reading is not a
 feed to offer somebody on their first day.
 
-No pack ships with fewer than two feeds. A one-feed country is a country the
-verification could not cover, and offering it as a collection would overstate
-what is there.
+## Five is the floor
+
+The first pass left 28 of the 50 countries with fewer than five feeds — four
+had two — while the United States had nine. That is a directory with an
+opinion about whose news matters, arrived at by nobody deciding anything: it
+is simply where the upstream list was thickest and where the first round of
+probing happened to succeed.
+
+So every pack now carries at least five, countries and topics alike. A third
+tranche of 131 addresses was probed to get there, and the four countries still
+short after it — Indonesia, China, Kenya, Vietnam — were given a round of
+their own rather than left at four.
+
+A pack of two is worse than no pack. Somebody opening "Denmark" and finding a
+pair of feeds learns that the app does not really cover Denmark, which is a
+more damaging thing to learn than that Denmark is not listed — and the reader
+in a country the directory skimped on is the one who most needs it to work.
+
+The floor is now a test rather than an intention: `FeedLibraryAssetTest` fails
+the build if any pack drops below five. Because every address is verified
+before it ships, that is a promise about five *working* feeds rather than five
+names.
+
+China was the hardest. Most Chinese outlets' English feeds have been retired,
+and eight candidate addresses returned HTML or 404 before CGTN, ECNS, Nikkei
+Asia and The Diplomat filled the pack out.
 
 ## Refreshing it
 

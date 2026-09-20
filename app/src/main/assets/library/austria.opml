@@ -9,6 +9,7 @@
       <outline type="rss" text="ORF News" title="ORF News" xmlUrl="https://rss.orf.at/news.xml"/>
       <outline type="rss" text="Der Standard" title="Der Standard" xmlUrl="https://www.derstandard.at/rss"/>
       <outline type="rss" text="Die Presse" title="Die Presse" xmlUrl="https://www.diepresse.com/rss/home"/>
+      <outline type="rss" text="Kleine Zeitung" title="Kleine Zeitung" xmlUrl="https://www.kleinezeitung.at/rss"/>
     </outline>
   </body>
 </opml>

@@ -9,6 +9,10 @@
       <outline type="rss" text="Clarín" title="Clarín" xmlUrl="https://www.clarin.com/rss/lo-ultimo/"/>
       <outline type="rss" text="Infobae" title="Infobae" xmlUrl="https://www.infobae.com/arc/outboundfeeds/rss/?outputType=xml"/>
       <outline type="rss" text="La Nación" title="La Nación" xmlUrl="https://www.lanacion.com.ar/arc/outboundfeeds/rss/"/>
+      <outline type="rss" text="Perfil" title="Perfil" xmlUrl="https://www.perfil.com/feed"/>
+    </outline>
+    <outline text="Business" title="Business">
+      <outline type="rss" text="Ámbito" title="Ámbito" xmlUrl="https://www.ambito.com/rss/pages/home.xml"/>
     </outline>
   </body>
 </opml>

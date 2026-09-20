@@ -1,15 +1,18 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <opml version="1.0">
   <head>
-    <title>Export from Plenary</title>
-    <url>https://play.google.com/store/apps/details?id=com.spians.plenary</url>
+    <title>Germany</title>
   </head>
   <body>
     <outline text="Germany" title="Germany">
-      <outline text="ZEIT ONLINE | Nachrichten, Hintergründe und Debatten" title="ZEIT ONLINE | Nachrichten, Hintergründe und Debatten" description="Aktuelle Nachrichten, Kommentare, Analysen und Hintergrundberichte aus Politik, Wirtschaft, Gesellschaft, Wissen, Kultur und Sport lesen Sie auf ZEIT ONLINE. Aktuelle Nachrichten, Kommentare, Analysen und Hintergrundberichte aus Politik, Wirtschaft, Gesellschaft, Wissen, Kultur und Sport lesen Sie auf ZEIT.de. Aktuelle Nachrichten, Kommentare, Analysen und Hintergrundberichte aus Politik, Wirtschaft, Gesellschaft, Wissen, Kultur und Sport lesen Sie bei der ZEIT. Aktuelle Nachrichten, Kommentare, Analysen und Hintergrundberichte aus Politik, Wirtschaft, Gesellschaft, Wissen, Kultur und Sport – die ZEIT. Aktuelle News, Kommentare, Analysen und Hintergrundberichte aus Politik, Wirtschaft, Gesellschaft, Wissen, Kultur und Sport lesen Sie auf ZEIT ONLINE." xmlUrl="https://newsfeed.zeit.de/index" type="rss" />
-      <outline text="Aktuell - FAZ.NET" title="Aktuell - FAZ.NET" description="News, Nachrichten und aktuelle Meldungen aus allen Ressorts. Politik, Wirtschaft, Sport, Feuilleton und Finanzen im Überblick." xmlUrl="https://www.faz.net/rss/aktuell/" type="rss" />
-      <outline text="tagesschau.de - Die Nachrichten der ARD" title="tagesschau.de - Die Nachrichten der ARD" description="tagesschau.de" xmlUrl="https://www.tagesschau.de/xml/rss2" type="rss" />
-      <outline text="Deutsche Welle" title="Deutsche Welle" description="Deutsche Welle" xmlUrl="https://rss.dw.com/rdf/rss-en-all" type="rss" />
+      <outline type="rss" text="ZEIT ONLINE | Nachrichten, Hintergründe und Debatten" title="ZEIT ONLINE | Nachrichten, Hintergründe und Debatten" xmlUrl="https://newsfeed.zeit.de/index"/>
+      <outline type="rss" text="Aktuell - FAZ.NET" title="Aktuell - FAZ.NET" xmlUrl="https://www.faz.net/rss/aktuell/"/>
+      <outline type="rss" text="tagesschau.de - Die Nachrichten der ARD" title="tagesschau.de - Die Nachrichten der ARD" xmlUrl="https://www.tagesschau.de/xml/rss2"/>
+      <outline type="rss" text="Deutsche Welle" title="Deutsche Welle" xmlUrl="https://rss.dw.com/rdf/rss-en-all"/>
+    </outline>
+    <outline text="News" title="News">
+      <outline type="rss" text="Der Spiegel" title="Der Spiegel" xmlUrl="https://www.spiegel.de/schlagzeilen/index.rss"/>
+      <outline type="rss" text="Tagesschau" title="Tagesschau" xmlUrl="https://www.tagesschau.de/index~rss2.xml"/>
     </outline>
   </body>
 </opml>
