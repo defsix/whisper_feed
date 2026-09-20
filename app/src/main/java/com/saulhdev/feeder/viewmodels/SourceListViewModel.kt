@@ -35,6 +35,14 @@ import kotlinx.coroutines.plus
  */
 const val MAX_PINNED_SOURCES = 5
 
+/** The ordering inputs, together, because combine's typed arity stops at five. */
+private data class Order(
+    val sort: SourceSort,
+    val ascending: Boolean,
+    val pinned: Set<Long>,
+    val hidden: Set<Long>,
+)
+
 class SourceListViewModel(
     private val feedsRepo: SourcesRepository,
     private val articleRepo: ArticleRepository,
@@ -119,12 +127,21 @@ class SourceListViewModel(
         combine(_query, _category, _duplicatesOnly, _duplicateIds, _sameSite) { q, c, d, ids, same ->
             Narrowing(q as String, c as String?, d as Boolean, ids as Set<Long>, same as Boolean)
         },
-        combine(sort, ascending, prefs.pinnedSources.get()) { sort, ascending, pinned ->
-            Triple(sort, ascending, pinned.mapNotNull(String::toLongOrNull).toSet())
+        combine(
+            sort, ascending, prefs.pinnedSources.get(), prefs.hiddenSources.get(),
+        ) { sort, ascending, pinned, hidden ->
+            Order(
+                sort = sort,
+                ascending = ascending,
+                pinned = pinned.mapNotNull(String::toLongOrNull).toSet(),
+                hidden = hidden.mapNotNull(String::toLongOrNull).toSet(),
+            )
         },
         articleRepo.latestArticlePerFeed(),
     ) { allSources, allTags, narrowing, order, latestPosts ->
-        val (sort, ascending, pinned) = order
+        val sort = order.sort
+        val ascending = order.ascending
+        val pinned = order.pinned
         // By name while the loose filter is on, whatever the chosen sort:
         // members of a group are only recognisable as a group when they sit
         // next to each other, and they nearly always share a title.
@@ -151,6 +168,7 @@ class SourceListViewModel(
             tagsSourcesMap = groupByTag(allSources, allTags),
             allTags = allTags,
             pinned = pinned,
+            hidden = order.hidden,
         )
     }
         // A sync writes to every feed row twice — once to mark it syncing and
@@ -481,6 +499,8 @@ data class SourceListState(
     val allTags: List<String> = emptyList(),
     /** Ids of the sources kept at the top, so a row can show it is one. */
     val pinned: Set<Long> = emptySet(),
+    /** Ids kept out of the feed, so a row can say why its articles are absent. */
+    val hidden: Set<Long> = emptySet(),
 ) {
     /**
      * The sources actually on screen, in the order they are drawn.

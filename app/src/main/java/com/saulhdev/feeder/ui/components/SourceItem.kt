@@ -51,6 +51,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
+import com.saulhdev.feeder.ui.icons.phosphor.EyeSlash
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.data.db.models.Feed
 
@@ -80,6 +81,8 @@ fun SourceItem(
     pinned: Boolean = false,
     /** Null hides the control entirely, for the screens that have no list to top. */
     onPin: ((Feed) -> Unit)? = null,
+    /** Kept out of the feed while still syncing, which the row has to say. */
+    hidden: Boolean = false,
 ) {
     val extend = onExtendSelection ?: onLongClick
     val (isEnabled, enable) = remember(source.isEnabled) {
@@ -121,7 +124,7 @@ fun SourceItem(
         },
         supportingContent = {
             val tags = source.tags
-            if (tags.isNotEmpty() || isStale) {
+            if (tags.isNotEmpty() || isStale || hidden) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -137,6 +140,22 @@ fun SourceItem(
                             text = stringResource(R.string.source_not_updating),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    // Said on the row, because a source whose articles are
+                    // absent while its switch is on is otherwise a mystery
+                    // that can only be solved by opening it.
+                    if (hidden) {
+                        Icon(
+                            imageVector = Phosphor.EyeSlash,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.source_hidden_marker),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (tags.isNotEmpty()) {

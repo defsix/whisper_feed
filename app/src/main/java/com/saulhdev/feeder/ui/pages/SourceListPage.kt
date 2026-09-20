@@ -79,6 +79,7 @@ import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.FILE_DATETIME_FORMAT
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import com.saulhdev.feeder.viewmodels.MAX_PINNED_SOURCES
+import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -141,6 +142,18 @@ fun SourceListPage(
     // so the offer to undo has to be made here, on the screen the user lands
     // back on. The repository holds the removed row until this is answered.
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // The editor dismisses before its write finishes, so a refused save has
+    // nobody left to tell. This screen is still here, and has the snackbar.
+    val editViewModel: SourceEditViewModel = koinNeoViewModel()
+    LaunchedEffect(Unit) {
+        editViewModel.saveFailed.collect { name ->
+            snackbarHostState.showSnackbar(
+                context.getString(R.string.source_address_taken, name),
+                withDismissAction = true,
+            )
+        }
+    }
 
     // Removing a subscription leaves its id in the pinned set, which does
     // nothing visible until the reader has five of those and cannot pinned
@@ -654,6 +667,7 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
+                                hidden = item.id in state.hidden,
                                 pinned = item.id in state.pinned,
                                 onPin = {
                                     scope.launch {
@@ -698,6 +712,7 @@ fun SourceListPage(
                                     viewModel.extendSelection(shownIds, it.id)
                                 },
                                 staleSince = staleSince,
+                                hidden = item.id in state.hidden,
                                 onClick = {
                                     scope.launch {
                                         paneNavigator.navigateTo(

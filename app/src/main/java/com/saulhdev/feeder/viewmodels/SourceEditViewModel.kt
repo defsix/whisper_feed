@@ -22,12 +22,16 @@ import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.entity.SourceEditViewState
 import com.saulhdev.feeder.data.repository.ArticleRepository
+import com.saulhdev.feeder.data.content.FeedPreferences
+import kotlinx.coroutines.runBlocking
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.sync.requestFeedSync
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -39,6 +43,7 @@ import org.koin.java.KoinJavaComponent.inject
 class SourceEditViewModel : NeoViewModel() {
     private val repository: SourcesRepository by inject(SourcesRepository::class.java)
     private val articleRepository: ArticleRepository by inject(ArticleRepository::class.java)
+    private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
 
     private val _feedId: MutableSharedFlow<Long> = MutableSharedFlow(replay = 1)
 
@@ -70,6 +75,31 @@ class SourceEditViewModel : NeoViewModel() {
      * cancel the save halfway through — the screen leaving is exactly when
      * this must not stop.
      */
+    /**
+     * Edits that could not be saved, with the name of the source they were for.
+     *
+     * A SharedFlow rather than state: this is an event, and an event replayed
+     * into a screen that has just been reopened would announce a failure the
+     * reader already saw and already dealt with.
+     */
+    private val _saveFailed = MutableSharedFlow<String>()
+    val saveFailed: SharedFlow<String> = _saveFailed.asSharedFlow()
+
+    /**
+     * The hidden set as it stands, read rather than collected.
+     *
+     * The view state is built from the feed row, and hiding lives in
+     * preferences instead — so this is one read at the moment the screen is
+     * composed. Good enough: nothing else changes the set while the editor
+     * is open.
+     */
+    /** Whether this source is currently kept out of the feed. */
+    suspend fun isHidden(feedId: Long): Boolean =
+        feedId.toString() in prefs.hiddenSources.getValue()
+
+    private fun hiddenNow(): Set<String> =
+        runCatching { runBlocking { prefs.hiddenSources.getValue() } }.getOrDefault(emptySet())
+
     fun updateFeed(state: SourceEditViewState) {
         viewModelScope.launch { applyUpdate(state) }
     }
@@ -85,7 +115,7 @@ class SourceEditViewModel : NeoViewModel() {
                 || currentFeed.isEnabled != state.isEnabled
                 || filtersChanged
 
-        repository.updateSource(
+        val saved = repository.updateSource(
             feed = currentFeed.copy(
                 title = state.title,
                 url = sloppyLinkToStrictURL(state.url),
@@ -98,6 +128,26 @@ class SourceEditViewModel : NeoViewModel() {
             ),
             resync = needsResync
         )
+        // updateSource refuses rather than crashes when another subscription
+        // already holds the address, and this threw that answer away: the
+        // sheet closed, nothing was written, and nothing said so. A save that
+        // silently does nothing is worse than the crash it replaced, because
+        // the crash at least told you something had gone wrong.
+        //
+        // Reported rather than returned, because saving is deliberately
+        // fire-and-forget — the screen dismisses before the write finishes, so
+        // there is nobody left on it to hand a result to. The sources list
+        // outlives the editor and has the snackbar.
+        if (!saved) _saveFailed.emit(state.title.ifBlank { state.url })
+
+        // Hiding is a preference rather than a column, so it is written here
+        // rather than carried in the feed row — and written whether or not
+        // the row itself saved, because a refused address change is no reason
+        // to also discard an unrelated decision made on the same screen.
+        val key = currentFeed.id.toString()
+        val hidden = prefs.hiddenSources.getValue()
+        if (state.hidden && key !in hidden) prefs.hiddenSources.setValue(hidden + key)
+        if (!state.hidden && key in hidden) prefs.hiddenSources.setValue(hidden - key)
 
         if (filtersChanged) {
             articleRepository.deleteArticlesForFeed(currentFeed.id)
@@ -118,6 +168,7 @@ class SourceEditViewModel : NeoViewModel() {
             tag = feed.tag,
             fullTextByDefault = feed.fullTextByDefault,
             isEnabled = feed.isEnabled,
+            hidden = feed.id.toString() in hiddenNow(),
             sourceType = feed.sourceType,
             requireLink = feed.requireLink,
             requireImage = feed.requireImage,

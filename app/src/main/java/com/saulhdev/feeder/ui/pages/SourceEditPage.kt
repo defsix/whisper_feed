@@ -120,6 +120,9 @@ fun SourceEditPage(
                     tag = freshFeed.tag,
                     fullTextByDefault = freshFeed.fullTextByDefault,
                     isEnabled = freshFeed.isEnabled,
+                    // From preferences rather than the row, which is where
+                    // hiding has always lived.
+                    hidden = viewModel.isHidden(feedId),
                     sourceType = freshFeed.sourceType,
                     requireLink = freshFeed.requireLink,
                     requireImage = freshFeed.requireImage,
@@ -342,7 +345,7 @@ fun SourceEditView(
                     onEdited()
                 },
                 index = 0,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+                groupSize = if (editState.value.sourceType == "mastodon") 6 else 3
             )
             Spacer(modifier = Modifier.height(4.dp))
             ComposeSwitchView(
@@ -353,7 +356,25 @@ fun SourceEditView(
                     onEdited()
                 },
                 index = 1,
-                groupSize = if (editState.value.sourceType == "mastodon") 5 else 2
+                groupSize = if (editState.value.sourceType == "mastodon") 6 else 3
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            // Next to the switch it is most likely to be confused with, and
+            // the summary says the difference rather than leaving somebody to
+            // work out why an app has two ways to stop showing them a source.
+            // Hiding used to be reachable only from an article's menu and
+            // undoable only from the Learned screen, which is not where
+            // anybody looks for a setting about a source.
+            ComposeSwitchView(
+                titleId = R.string.source_hide,
+                summaryId = R.string.source_hide_summary,
+                isChecked = editState.value.hidden,
+                onCheckedChange = {
+                    editState.value = editState.value.copy(hidden = it)
+                    onEdited()
+                },
+                index = 2,
+                groupSize = if (editState.value.sourceType == "mastodon") 6 else 3
             )
             if (editState.value.sourceType == "mastodon") {
                 Spacer(modifier = Modifier.height(4.dp))

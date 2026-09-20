@@ -63,6 +63,10 @@
     <string name="category_delete_desc">Removes “%1$s” from every source. The sources themselves are kept.</string>
     <string name="category_in_use">%1$d sources</string>
     <string name="category_merge_hint">Renaming onto an existing category merges the two.</string>
+    <string name="source_address_taken">%1$s was not saved \u2014 another source already uses that address.</string>
+    <string name="source_hidden_marker">Hidden from the feed</string>
+    <string name="source_hide">Hide from the feed</string>
+    <string name="source_hide_summary">Keeps syncing in the background, but its articles stay out of your feed. Turning the source off instead stops it syncing too.</string>
     <string name="source_hidden">Hiding %1$s</string>
     <string name="all_categories">All</string>
     <string name="home">Home</string>
