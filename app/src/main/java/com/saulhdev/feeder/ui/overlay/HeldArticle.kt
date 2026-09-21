@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -65,6 +67,34 @@ object Held {
      */
     const val RELEASE_AFTER = 5
 }
+
+/**
+ * Whether the card being drawn is the one held to the top of the feed.
+ *
+ * A held card is a `stickyHeader`: it is drawn over the list rather than in
+ * it, and the articles it is holding scroll underneath. That makes its opacity
+ * load-bearing in a way no other card's is — at anything less than solid it
+ * stops being a card and becomes a window onto whatever is passing beneath.
+ *
+ * Which is exactly what happened. Holding an article to the viewport means it
+ * never leaves the screen, the read tracker counts what does not leave the
+ * screen as read, and a read card is drawn at 55% opacity. So the app held a
+ * breaking story up to be noticed, decided from its own holding of it that the
+ * reader had seen it, and faded it into a translucent sheet lying across the
+ * next five articles.
+ *
+ * [com.saulhdev.feeder.ui.overlay.FeedArticleItem] already carries this exact
+ * argument for pins — "held at the top… which makes it permanently visible and
+ * therefore permanently read" — and a held cluster lead is the same case by
+ * the same reasoning. It was missed because the two are held by different
+ * machinery: a pin by the sort order, this by a sticky header.
+ *
+ * A composition local rather than another parameter, because the card is
+ * reached through a lambda the two feed surfaces each supply, and threading a
+ * flag through both of them would put the question in four places that do not
+ * otherwise care about it.
+ */
+val LocalHeldAtTop = compositionLocalOf { false }
 
 /**
  * The breaking story to hold at the top, or null.
@@ -149,7 +179,15 @@ fun LazyListScope.heldFeed(
         return
     }
 
-    stickyHeader(key = "held-${held.id}") { article(0, held) }
+    stickyHeader(key = "held-${held.id}") {
+        // Marked as held for the card itself, which has no other way to know.
+        // A sticky header is drawn *over* the list, so anything less than
+        // fully opaque turns it into a window onto the articles sliding past
+        // underneath — see [LocalHeldAtTop].
+        CompositionLocalProvider(LocalHeldAtTop provides true) {
+            article(0, held)
+        }
+    }
 
     val rest = articles.drop(1)
 

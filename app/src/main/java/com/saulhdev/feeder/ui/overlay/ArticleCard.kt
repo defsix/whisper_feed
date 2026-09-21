@@ -114,8 +114,21 @@ fun FeedArticleItem(
     // "you are unlikely to want this". Same alpha rather than a second, milder
     // one, because two shades of faded on one screen is a distinction nobody
     // can read and everybody has to wonder about.
+    //
+    // A held breaking story never fades either, and for the same reason
+    // reached by different machinery: a pin is held by the sort order, a
+    // cluster lead by a sticky header. Both are kept on screen by the app
+    // rather than by the reader, so "you have seen it" is not something the
+    // app learned — it is something it arranged. And a sticky header is drawn
+    // over the list, so fading one does not dim a card, it opens a window onto
+    // the five articles scrolling underneath.
     val faded = (dimRead && item.article.readAt != 0L) || dimSource
-    val shapeModifier = if (faded && !item.pinned) modifier.alpha(READ_ALPHA) else modifier
+    val shapeModifier =
+        if (isCardFaded(faded, pinned = item.pinned, heldAtTop = LocalHeldAtTop.current)) {
+            modifier.alpha(READ_ALPHA)
+        } else {
+            modifier
+        }
     // Worked out only when the menu is opened, not for every card in the feed:
     // this is an answer to a question almost nobody asks of almost any article.
     val reasons = rememberWeightReasons(item, clusterOf(item, cluster))
@@ -876,3 +889,15 @@ private fun CoverageLine(
         )
     }
 }
+
+
+/**
+ * Whether a card is drawn faded.
+ *
+ * Pulled out of the composable so the two exemptions can be argued with in a
+ * test. Both say the same thing: an article the app is keeping on screen by
+ * itself cannot be dimmed for having been seen, because it was the app that
+ * put it there and kept it there.
+ */
+internal fun isCardFaded(faded: Boolean, pinned: Boolean, heldAtTop: Boolean): Boolean =
+    faded && !pinned && !heldAtTop
