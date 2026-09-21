@@ -169,6 +169,30 @@ data class Article constructor(
     val readMs: Long = 0L,
 
     /**
+     * When the reader told this story to stop shouting, or 0.
+     *
+     * Breaking news is the one promotion the app makes entirely by itself: a
+     * story carried by several sources at once is inferred to matter, held to
+     * the top of the feed and weighted heavily. Nobody asked for it, so the
+     * only way out was to scroll — and scrolling is not a way out of something
+     * that is stuck to the top, because scrolling back up brings it straight
+     * back, exactly as it was.
+     *
+     * Dismissing is not hiding. The article stays in the feed and keeps its
+     * place in the ordering; what it loses is the promotion. The cluster it
+     * leads is dropped, which takes the hold, the weight bonus and the
+     * "Covered by N sources" line with it in one move, because all three are
+     * read from the same map.
+     *
+     * A column rather than a preference, so it is cleaned up with the article
+     * it belongs to. A story dismissed in April is of no interest once its
+     * articles have been pruned, and a set of ids in a preference file would
+     * have grown forever to remember it.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val dismissedAt: Long = 0L,
+
+    /**
      * What a Google Reader server calls this article, if one does.
      *
      * Null for every article on an account-less install, which is most of

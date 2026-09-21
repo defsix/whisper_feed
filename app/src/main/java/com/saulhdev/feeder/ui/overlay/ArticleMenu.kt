@@ -76,6 +76,13 @@ fun ArticleOverflowMenu(
     reasons: List<WeightReason> = emptyList(),
     pinned: Boolean = false,
     onPin: (Boolean) -> Unit = {},
+    /**
+     * Whether this card is leading a breaking story, and so has a promotion
+     * to give back. Every other card has nothing to dismiss, and an entry
+     * that does nothing on five cards out of six is worse than no entry.
+     */
+    breaking: Boolean = false,
+    onDismissStory: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     var explain by remember { mutableStateOf(false) }
@@ -104,6 +111,16 @@ fun ArticleOverflowMenu(
         ) {
             expanded = false
             onPin(!pinned)
+        }
+        if (breaking) {
+            // Only on the card that carries the promotion. Dismissing is not
+            // hiding: the article keeps its place in the feed and loses the
+            // treatment breaking news gets, which is the thing the reader is
+            // actually objecting to when they have scrolled past it twice.
+            MenuEntry(R.string.dismiss_story, Phosphor.Prohibit) {
+                expanded = false
+                onDismissStory()
+            }
         }
         MenuEntry(R.string.hide_source, Phosphor.EyeSlash) {
             expanded = false

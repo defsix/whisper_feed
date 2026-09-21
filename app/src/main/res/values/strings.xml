@@ -16,6 +16,7 @@
     <string name="more_options">More options</string>
     <string name="more_like_this">More like this</string>
     <string name="less_like_this">Less like this</string>
+    <string name="dismiss_story">Dismiss this story</string>
     <string name="hide_source">Hide source</string>
     <string name="pref_feed_layout">Feed layout</string>
     <string name="layout_cards">Cards</string>

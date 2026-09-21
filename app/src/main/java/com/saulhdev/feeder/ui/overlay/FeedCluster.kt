@@ -181,6 +181,15 @@ fun clusterStories(
         // The newest report leads. Not the longest or the most illustrated:
         // for a developing story the latest one is the one worth reading.
         val lead = members.maxByOrNull { candidates[it].value.timeMillis } ?: return@forEach
+        // A dismissed lead takes its whole story with it. Everything the
+        // promotion does — the hold at the top, the weight bonus, the "Covered
+        // by N sources" line — is read from the map this builds, so leaving
+        // the group out is the entire retraction, in one place, rather than
+        // three separate exemptions that could drift apart.
+        //
+        // The lead is what the reader dismissed, because the lead is the card
+        // they were looking at when they did it.
+        if (candidates[lead].value.article.dismissedAt != 0L) return@forEach
         val cluster = StoryCluster(
             sources = sources.size,
             leadId = candidates[lead].value.id,

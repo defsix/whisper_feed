@@ -361,6 +361,17 @@ class ArticleListViewModel(
      * reader had bookmarked from it out of Bookmarks, and merging the two
      * would have made hiding do that too.
      */
+    /**
+     * Gives a breaking story back its ordinary place in the feed.
+     *
+     * Not a hide and not a read: the article stays, keeps its position, and
+     * loses only the promotion the app gave it without being asked. See
+     * `Article.dismissedAt`.
+     */
+    fun dismissStory(articleId: String) {
+        ioScope.launch { articleRepo.dismissStory(articleId) }
+    }
+
     fun hideSource(item: FeedItem) {
         ioScope.launch {
             feedsRepo.setEnabled(listOf(item.feed.id), enabled = false)

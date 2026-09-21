@@ -156,6 +156,8 @@ fun FeedScaffold(
     onArticleSeen: (FeedItem) -> Unit = {},
     onArticleDwell: (String, Long) -> Unit = { _, _ -> },
     onPin: (FeedItem, Boolean) -> Unit = { _, _ -> },
+    /** Gives back a breaking story's promotion. See `Article.dismissedAt`. */
+    onDismissStory: (FeedItem) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -419,6 +421,7 @@ fun FeedScaffold(
                                     onMoreLikeThis = { onMoreLikeThis(item) },
                                     onLessLikeThis = { onLessLikeThis(item) },
                                     onHideSource = { onHideSource(item) },
+                                    onDismissStory = { onDismissStory(item) },
                                     layout = layout,
                                     emphasis = emphasis.getOrNull(index)
                                         ?: FeedEmphasis.Medium,
@@ -442,6 +445,7 @@ fun FeedScaffold(
                             onMoreLikeThis = { onMoreLikeThis(item) },
                             onLessLikeThis = { onLessLikeThis(item) },
                             onHideSource = { onHideSource(item) },
+                            onDismissStory = { onDismissStory(item) },
                             layout = layout,
                             emphasis = emphasis.getOrNull(index) ?: FeedEmphasis.Medium,
                             dimRead = dimRead,

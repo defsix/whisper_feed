@@ -574,6 +574,7 @@ fun ArticleListPage(
                                             onMoreLikeThis = { viewModel.recordAffinity(item.sourceId, 1) },
                                             onLessLikeThis = { viewModel.recordAffinity(item.sourceId, -1) },
                                             onHideSource = { viewModel.hideSource(item) },
+                                            onDismissStory = { viewModel.dismissStory(item.id) },
                                         )
                                     }
 

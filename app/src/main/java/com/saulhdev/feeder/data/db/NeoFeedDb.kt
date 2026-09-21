@@ -52,7 +52,7 @@ const val ID_ALL: Long = -1L
         Suggestion::class,
         ReadingTally::class,
     ],
-    version = 24,
+    version = 25,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -230,6 +230,7 @@ abstract class NeoFeedDb : RoomDatabase() {
 }
 
 val allMigrations = arrayOf(
+    MIGRATION_24_25,
     MIGRATION_23_24,
     MIGRATION_22_23,
     MIGRATION_21_22,
@@ -250,6 +251,15 @@ val allMigrations = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
 )
+
+@Suppress("ClassName")
+object MIGRATION_24_25 : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Nothing has been dismissed yet, so every existing article is simply
+        // one the reader has not told to stop shouting.
+        db.execSQL("ALTER TABLE Article ADD COLUMN dismissedAt INTEGER NOT NULL DEFAULT 0")
+    }
+}
 
 @Suppress("ClassName")
 object MIGRATION_23_24 : Migration(23, 24) {

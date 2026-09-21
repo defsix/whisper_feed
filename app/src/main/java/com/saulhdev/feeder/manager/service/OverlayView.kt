@@ -471,6 +471,7 @@ class OverlayView(val context: Context) :
                         onMoreLikeThis = { viewModel.recordAffinity(it.sourceId, 1) },
                         onLessLikeThis = { viewModel.recordAffinity(it.sourceId, -1) },
                         onHideSource = { viewModel.hideSource(it) },
+                        onDismissStory = { viewModel.dismissStory(it.id) },
                         hiddenSource = hiddenSourceState.value,
                         onUndoHideSource = { viewModel.undoHideSource() },
                         onDismissHideSource = { viewModel.forgetHiddenSource() },

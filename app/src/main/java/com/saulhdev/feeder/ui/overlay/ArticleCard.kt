@@ -98,6 +98,8 @@ fun FeedArticleItem(
     dimSource: Boolean = false,
     cluster: StoryCluster? = null,
     onPin: (Boolean) -> Unit = {},
+    /** Gives back a breaking story's promotion. See `Article.dismissedAt`. */
+    onDismissStory: () -> Unit = {},
 ) {
     val hasImage = !item.article.imageUrl.isNullOrBlank()
     // One place rather than five: every shape below takes this modifier, so a
@@ -146,6 +148,10 @@ fun FeedArticleItem(
             reasons = reasons,
             pinned = item.pinned,
             onPin = onPin,
+            // The same test that decides whether to show "Covered by N
+            // sources": only the promoted card has a promotion to return.
+            breaking = coverage != null,
+            onDismissStory = onDismissStory,
         )
     }
     when (feedCardShape(index, hasImage, layout, emphasis)) {

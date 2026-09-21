@@ -179,6 +179,17 @@ class ArticleRepository(db: NeoFeedDb) {
         }
     }
 
+    /**
+     * Takes back a breaking story's promotion, at the reader's request.
+     *
+     * Not tallied and not a read: dismissing is the reader declining to be
+     * shown something, which is the opposite of having read it, and counting
+     * it either way would teach the weighting the wrong lesson.
+     */
+    suspend fun dismissStory(articleId: String) = withContext(jcc) {
+        articlesDao.setDismissed(articleId, System.currentTimeMillis())
+    }
+
     /** Where a recent article from this feed actually lives; see the DAO. */
     suspend fun publisherLink(feedId: Long): String? = withContext(jcc) {
         articlesDao.latestArticleLink(feedId)

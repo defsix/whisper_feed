@@ -201,6 +201,10 @@ interface FeedArticleDao {
     )
     suspend fun markOpened(id: String, at: Long): Int
 
+    /** Retracts a breaking story's promotion. See `Article.dismissedAt`. */
+    @Query("UPDATE Article SET dismissedAt = :at WHERE uuid = :id")
+    suspend fun setDismissed(id: String, at: Long)
+
     /**
      * Adds to an article's time on screen.
      *
