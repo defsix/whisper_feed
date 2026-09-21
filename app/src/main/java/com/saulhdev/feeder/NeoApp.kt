@@ -207,7 +207,26 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         }
         .memoryCache {
             MemoryCache.Builder(this)
-                .maxSizePercent(0.20)
+                // Raised from 0.20 on measurement, not preference.
+                //
+                // A trace of a real scroll showed the decode count tracking
+                // the non-memory hits exactly — 59 images served, 25 from
+                // memory, 34 decodes; 80 served, 57 from memory, 23 decodes.
+                // Every picture the cache has dropped is decoded again in
+                // full, and a full-width article photograph costs 28-36ms of
+                // that. Nothing else in the feed comes close now.
+                //
+                // At 20% the cache held fewer than two screens of full-width
+                // cards, so scrolling back a little re-decoded everything it
+                // passed. Meanwhile the heap sat at 33MB of 256, 87% free, for
+                // the whole run: the app had stopped needing the room the
+                // cache was being denied.
+                //
+                // Not higher than this. The cache is the first thing to hurt
+                // under memory pressure on a device smaller than the one
+                // measured, and images are the part of a feed that can always
+                // be fetched again — unlike the article text, which cannot.
+                .maxSizePercent(MEMORY_CACHE_FRACTION)
                 .build()
         }
         .diskCache {
@@ -264,6 +283,15 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
 
     companion object {
         private const val TAG = "NeoFeed"
+
+        /**
+         * How much of the available memory the decoded-image cache may hold.
+         *
+         * Named rather than inline so the figure can be found from the trace
+         * that justifies it: FeedTrace reports images served against images
+         * decoded, and the gap between them is what this number moves.
+         */
+        private const val MEMORY_CACHE_FRACTION = 0.35
 
         @JvmStatic
         var instance: NeoApp? = null

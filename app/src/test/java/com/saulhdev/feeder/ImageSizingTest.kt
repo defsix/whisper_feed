@@ -140,6 +140,33 @@ class ImageSizingTest {
     }
 
     @Test
+    fun `the decoded-image cache is big enough to be worth having`() {
+        // A measured value, not a preference. The trace of a real scroll
+        // showed decodes tracking non-memory hits exactly: every picture the
+        // cache dropped was decoded again in full, at 28-36ms for a
+        // full-width photograph. At 20% the cache held fewer than two screens
+        // of cards, so scrolling back a little re-decoded everything.
+        //
+        // Pinned because it is a bare number in a builder: lowering it looks
+        // like prudence and costs a decode per card.
+        val app = read("NeoApp.kt")
+        val fraction = Regex("""MEMORY_CACHE_FRACTION = ([0-9.]+)""")
+            .find(app)?.groupValues?.get(1)?.toDouble()
+        assertTrue("the memory cache fraction is gone", fraction != null)
+        assertTrue(
+            "the image cache is back below what the scroll trace showed it needs: $fraction",
+            fraction!! >= 0.30,
+        )
+        // The other direction matters too. Images can always be fetched again;
+        // this is the first thing to hurt under pressure on a smaller device.
+        assertTrue("the image cache would crowd out everything else: $fraction", fraction <= 0.50)
+        assertTrue(
+            "the loader no longer uses the named fraction",
+            app.contains("maxSizePercent(MEMORY_CACHE_FRACTION)"),
+        )
+    }
+
+    @Test
     fun `the loader does not claim to do the sizing`() {
         val app = read("NeoApp.kt")
         val builder = app.substring(app.indexOf("override fun newImageLoader()"))
