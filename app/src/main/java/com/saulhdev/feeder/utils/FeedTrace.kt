@@ -213,9 +213,35 @@ object FeedTrace {
      * build — which is the one build where the question this answers cannot
      * come up.
      */
-    fun report(windowMs: Long) {
+    fun report(windowMs: Long, cache: CacheState? = null) {
         val line = drain(windowMs) ?: return
-        Log.println(Log.DEBUG, FEED_TAG, line)
+        val withCache = if (cache == null) line else "$line, $cache"
+        Log.println(Log.DEBUG, FEED_TAG, withCache)
+    }
+
+    /**
+     * How full the decoded-image cache is, at the moment of the report.
+     *
+     * Raising the cache from 20% to 35% did not visibly move the hit rate,
+     * and the reason could not be told from the outside: either the cache is
+     * full and still too small, or it is not full and something else decides
+     * what is kept. Those want opposite answers, and the numbers to tell them
+     * apart were sitting unread on the loader.
+     *
+     * A point-in-time reading rather than a rate, because that is what it is —
+     * an occupancy, sampled when the line is written.
+     */
+    data class CacheState(val usedBytes: Int, val maxBytes: Int, val entries: Int) {
+        override fun toString(): String {
+            val used = usedBytes / 1_048_576.0
+            val max = maxBytes / 1_048_576.0
+            // Long, because 100 * usedBytes overflows a signed Int once the
+            // cache passes 21MB — which is to say for every value this is
+            // actually going to be asked about. A full cache reported itself
+            // as negative.
+            val full = if (maxBytes > 0) 100L * usedBytes / maxBytes else 0L
+            return "cache %.0f/%.0fMB (%d%%, %d images)".format(used, max, full, entries)
+        }
     }
 
     /** Throws away anything counted so far, so a window starts clean. */

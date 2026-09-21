@@ -24,6 +24,7 @@ import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.FEED_TRACE_WINDOW_MS
 import com.saulhdev.feeder.utils.FeedTrace
 import com.saulhdev.feeder.utils.ImageTrace
+import coil.imageLoader
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import com.saulhdev.feeder.utils.MainThreadWatch
@@ -166,7 +167,18 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
                 FeedTrace.reset()
                 while (true) {
                     delay(FEED_TRACE_WINDOW_MS)
-                    FeedTrace.report(FEED_TRACE_WINDOW_MS)
+                    // Read here rather than inside FeedTrace, which has no
+                    // business knowing about an image loader — and read every
+                    // window, because occupancy is the question the hit rate
+                    // alone could not answer.
+                    val cache = imageLoader.memoryCache?.let {
+                        FeedTrace.CacheState(
+                            usedBytes = it.size,
+                            maxBytes = it.maxSize,
+                            entries = it.keys.size,
+                        )
+                    }
+                    FeedTrace.report(FEED_TRACE_WINDOW_MS, cache)
                 }
             }
         }
