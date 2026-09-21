@@ -24,6 +24,7 @@ import coil.decode.Decoder
 import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.fetch.SourceResult
+import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.request.Options
 import coil.request.SuccessResult
@@ -106,6 +107,23 @@ class ImageTrace private constructor() : EventListener {
         FeedTrace.imageServed(result.dataSource)
     }
 
+    /**
+     * A picture that did not arrive, and roughly why.
+     *
+     * The trace counted successes and decodes only, so an image that failed
+     * left no trace at all — the line simply had a smaller number in it. When
+     * article images came back as placeholders, the report could say nothing
+     * about them, and the cause had to be argued from the source instead.
+     *
+     * The throwable's type and message, never the address. A URL names the
+     * publisher and usually the article, and this goes into a file the reader
+     * sends to a stranger. "HttpException: HTTP 403" is the whole of what is
+     * needed to tell a refusal from a timeout from a bad address.
+     */
+    override fun onError(request: ImageRequest, result: ErrorResult) {
+        FeedTrace.imageFailed(reasonOf(result.throwable))
+    }
+
     object Factory : EventListener.Factory {
         override fun create(request: ImageRequest): EventListener = ImageTrace()
     }
@@ -118,6 +136,20 @@ class ImageTrace private constructor() : EventListener {
          * keeps the comparison honest: "avif is slow" means nothing without
          * the jpeg figure from the same scroll beside it.
          */
+        /**
+         * A failure, named by kind rather than by page.
+         *
+         * An HTTP status is the answer nine times in ten and is worth keeping
+         * exactly; anything else is identified by its class, which separates
+         * a timeout from a refused host from a decode that gave up.
+         */
+        internal fun reasonOf(t: Throwable?): String {
+            if (t == null) return "unknown"
+            val status = Regex("""\b([45][0-9]{2})\b""").find(t.message.orEmpty())
+            if (status != null) return "http ${status.groupValues[1]}"
+            return t.javaClass.simpleName.ifBlank { "unknown" }
+        }
+
         internal fun shortFormat(mimeType: String?): String = when {
             mimeType.isNullOrBlank() -> "unknown"
             else -> mimeType.substringAfter('/', mimeType)

@@ -67,6 +67,27 @@ object HttpIdentity {
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif," +
                 "image/webp,*/*;q=0.8"
 
+    /**
+     * Fetching a picture: ask as the page it belongs to would.
+     *
+     * Images had no identity at all — the loader was built with the network
+     * guards and nothing else, so every picture went out as `okhttp/5.5.0`
+     * with no Accept header. This file's own reasoning applies to them as
+     * much as to pages: a publisher's image CDN is exactly the sort of host
+     * that answers an unknown client with a 403, and hotlink protection is
+     * usually implemented as precisely that check.
+     *
+     * Deliberately does not advertise AVIF, and that is a measurement rather
+     * than a preference. A trace of a real scroll timed one AVIF image at
+     * 87.9ms against 29.1ms for the JPEGs beside it — Android decodes AVIF
+     * through a software AV1 codec, one MediaCodec instance at a time. A
+     * content-negotiating CDN sends the best format the client claims, so
+     * claiming AVIF asks for the expensive one. WebP is asked for, being
+     * smaller than JPEG and cheap to decode.
+     */
+    private const val IMAGE_ACCEPT =
+        "image/webp,image/png,image/jpeg,image/gif,*/*;q=0.8"
+
     /** What a feed reader should ask for first, falling back to anything. */
     private const val FEED_ACCEPT =
         "application/atom+xml,application/rss+xml,application/xml;q=0.9," +
@@ -85,6 +106,16 @@ object HttpIdentity {
         }
         chain.proceed(builder.build())
     }
+
+    /**
+     * Identifies as a browser, and asks for an image.
+     *
+     * The browser agent rather than Whisper's own: a picture is a subresource
+     * of a page, and the hosts that serve them are checking for the browser
+     * that would have requested it alongside the article.
+     */
+    fun OkHttpClient.Builder.asImageFetcher(): OkHttpClient.Builder =
+        addInterceptor(interceptor(ARTICLE_AGENT, IMAGE_ACCEPT))
 
     /** Identifies as Whisper, and asks for a feed. */
     fun OkHttpClient.Builder.asFeedReader(): OkHttpClient.Builder =

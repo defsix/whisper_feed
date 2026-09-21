@@ -447,6 +447,33 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
      * install without a version number to compare against: somebody who has
      * been using this for a year must not be welcomed to it.
      */
+    /**
+     * Whether the full-text articles cached before the mix-up were discarded.
+     *
+     * For a while the reader could write one article's page into another
+     * article's file: the id came from the navigation argument and changed the
+     * instant a card was tapped, while the link came from a database flow that
+     * was still delivering the article read before it. The pair existed only
+     * for a frame, and it was long enough to fetch the wrong page.
+     *
+     * The fetch skips a file that already exists, so those never corrected
+     * themselves — the reader kept showing the previous article under the
+     * right headline for as long as the file survived. Nothing distinguishes a
+     * wrong one from a right one by looking at it, so the only honest repair
+     * is to drop them all and let them be fetched again.
+     *
+     * Once, and only for installs that predate the fix. The files are written
+     * when somebody opens an article, so the set is small and the cost is a
+     * re-fetch of what they have already read.
+     */
+    var fullTextPurged = BooleanPref(
+        titleId = R.string.pref_show_tour,
+        icon = Phosphor.Info,
+        key = FULL_TEXT_PURGED,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
     var onboardingSeen = BooleanPref(
         titleId = R.string.pref_show_tour,
         icon = Phosphor.Info,
@@ -1033,6 +1060,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val PLATFORM_BACKUP_DEVICE = booleanPreferencesKey("pref_platform_backup_device")
         val PLATFORM_BACKUP_CLOUD = booleanPreferencesKey("pref_platform_backup_cloud")
         val ONBOARDING_SEEN = booleanPreferencesKey("pref_onboarding_seen")
+        val FULL_TEXT_PURGED = booleanPreferencesKey("pref_full_text_purged")
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")

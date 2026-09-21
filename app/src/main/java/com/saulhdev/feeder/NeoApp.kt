@@ -9,7 +9,9 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
+import com.saulhdev.feeder.utils.HttpIdentity.asImageFetcher
 import okhttp3.OkHttpClient
+import android.util.Log
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
@@ -52,6 +54,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         registerActivityLifecycleCallbacks(activityHandler)
         reportFeedTrace()
         stampOnboardingForExistingInstalls()
+        purgeMisfiledFullText()
         DiscoveryWorker.schedule(this)
     }
 
@@ -68,6 +71,34 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
      * welcome runs. It stays correct if they close the app before finishing:
      * still no sources, so they are still new.
      */
+    /**
+     * Throws away full-text articles cached before the mix-up was fixed.
+     *
+     * The reader could write one article's page into another's file — see
+     * FeedPreferences.fullTextPurged — and because the fetch skips a file that
+     * already exists, a wrong one stayed wrong through every reopening. The
+     * fix stops new ones being written; it cannot tell which existing ones are
+     * already wrong, because a correctly fetched page and a misfiled one are
+     * the same kind of file.
+     *
+     * So they all go. These are written only when somebody opens an article,
+     * so the set is small, and the cost is re-fetching pages they have read.
+     * Set the preference first: a purge interrupted halfway leaves the rest to
+     * the next launch, and a purge that ran but was not recorded would run
+     * again on every launch for ever.
+     */
+    private fun purgeMisfiledFullText() {
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            val prefs: FeedPreferences = get()
+            if (prefs.fullTextPurged.getValue()) return@launch
+            runCatching {
+                filesDir.listFiles { file -> file.name.endsWith(".full.html.gz") }
+                    ?.forEach { it.delete() }
+            }.onFailure { Log.w(TAG, "Could not clear the cached full-text articles", it) }
+            prefs.fullTextPurged.setValue(true)
+        }
+    }
+
     private fun stampOnboardingForExistingInstalls() {
         applicationCoroutineScope.launch(Dispatchers.IO) {
             val prefs: FeedPreferences = get()
@@ -213,7 +244,13 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
      */
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
         .okHttpClient {
+            // asImageFetcher, which this had been going without: every picture
+            // went out as okhttp/5.5.0 with no Accept header, and a
+            // publisher's image CDN is exactly the host that answers an
+            // unknown client with a 403. Two identities were defined in
+            // HttpIdentity and neither was applied here.
             OkHttpClient.Builder()
+                .asImageFetcher()
                 .onlyPublicHttps()
                 .build()
         }

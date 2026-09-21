@@ -100,8 +100,25 @@ fun ArticlePage(
     // showed the paragraph the feed sent rather than the article, which is
     // what sent people to the browser instead.
     val fullText by viewModel.fullText.collectAsState()
-    LaunchedEffect(articleId, state?.article?.link) {
-        val link = state?.article?.link
+    LaunchedEffect(articleId, state?.article?.uuid, state?.article?.link) {
+        val article = state?.article
+
+        // The id and the link must belong to the same article, and for a
+        // moment after every tap they do not. `articleId` is the navigation
+        // argument and changes instantly; `state` is fed by a database flow
+        // and still holds the article that was open before. This effect used
+        // to key on the id and the link alone, so it fired on the pair
+        // (new id, previous article's link) — which has never been a real
+        // article — and fetched the previous page into the new one's file.
+        //
+        // Permanently, because loadFullText returns early when the file
+        // already exists. Every later opening of that article then showed the
+        // one read before it: the right headline in the bar, somebody else's
+        // article underneath. It survived being closed and reopened, which is
+        // what made it look like the reader rather than the fetch.
+        if (article == null || article.uuid != articleId) return@LaunchedEffect
+
+        val link = article.link
         if (!link.isNullOrBlank()) {
             viewModel.loadFullText(articleId, link, context.filesDir)
         }

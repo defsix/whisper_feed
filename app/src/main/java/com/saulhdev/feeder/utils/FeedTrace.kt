@@ -103,6 +103,9 @@ object FeedTrace {
     /** Images served, by where they came from: memory, disk or network. */
     private val served = ConcurrentHashMap<String, AtomicInteger>()
 
+    /** Images that never arrived, by why. */
+    private val failures = ConcurrentHashMap<String, AtomicInteger>()
+
     fun invalidated() {
         invalidations.incrementAndGet()
     }
@@ -131,6 +134,10 @@ object FeedTrace {
         decodeMicros.getOrPut(format) { AtomicLong() }.addAndGet(micros)
     }
 
+    fun imageFailed(reason: String) {
+        failures.getOrPut(reason) { AtomicInteger() }.incrementAndGet()
+    }
+
     fun imageServed(source: DataSource) {
         served.getOrPut(source.shortName()) { AtomicInteger() }.incrementAndGet()
     }
@@ -146,7 +153,8 @@ object FeedTrace {
         val counts = decodeCounts.mapValues { it.value.getAndSet(0) }.filterValues { it > 0 }
         val micros = decodeMicros.mapValues { it.value.getAndSet(0) }
         val sources = served.mapValues { it.value.getAndSet(0) }.filterValues { it > 0 }
-        if (counts.isEmpty() && sources.isEmpty()) return null
+        val failed = failures.mapValues { it.value.getAndSet(0) }.filterValues { it > 0 }
+        if (counts.isEmpty() && sources.isEmpty() && failed.isEmpty()) return null
 
         return buildString {
             val total = sources.values.sum()
@@ -163,6 +171,11 @@ object FeedTrace {
                         val avg = (micros[format] ?: 0L) / n / 1000.0
                         "%s %d avg %.1fms".format(format, n, avg)
                     })
+            }
+            if (failed.isNotEmpty()) {
+                append(", failed %d: ".format(failed.values.sum()))
+                append(failed.entries.sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key} ${it.value}" })
             }
         }
     }
