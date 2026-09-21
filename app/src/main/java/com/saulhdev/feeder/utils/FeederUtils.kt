@@ -156,13 +156,36 @@ fun getBackgroundOptions(context: Context): Map<String, String> {
 }
 
 /**
- * Ensures a url is valid, having a scheme and everything. It turns 'google.com' into 'http://google.com' for example.
+ * Ensures a url is valid, having a scheme and everything. It turns
+ * 'google.com' into 'https://google.com' for example.
+ *
+ * https, not http, and the difference is a bug rather than a preference.
+ *
+ * This is what the add-a-source search box runs on whatever is typed, so
+ * somebody entering `collider.com/feed` — which is how anybody types an
+ * address — had a subscription stored as `http://collider.com/feed`. Four of
+ * them appeared on one test device in a single afternoon, all added by hand
+ * that day, and all listed by the "Feeds still on http" screen as though the
+ * publisher were at fault.
+ *
+ * What hid it is a change made in this app in September. Plaintext is refused
+ * outright, so an http address should have failed loudly and been noticed
+ * immediately; instead [com.saulhdev.feeder.manager.bookmarks.UpgradeToHttps]
+ * rewrites the scheme before the socket opens, the fetch succeeds over https,
+ * and the wrong address is quietly written down. A guard against one problem
+ * became the thing that concealed another.
+ *
+ * Nothing is lost by the new default. A host that genuinely speaks only http
+ * cannot be fetched by this app either way — the upgrade interceptor tries
+ * https regardless of what is stored — so an http default could only ever
+ * produce an address that is wrong about a feed that works, which is precisely
+ * what it did.
  */
 fun sloppyLinkToStrictURL(url: String): URL = try {
     // If no exception, it's valid
     URL(url)
 } catch (_: MalformedURLException) {
-    URL("http://$url")
+    URL("https://$url")
 }
 
 /**
