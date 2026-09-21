@@ -62,7 +62,20 @@ class BackupStore(
 
     /** What happened, in terms the settings screen can say out loud. */
     sealed interface Result {
-        data class Written(val name: String, val at: Long) : Result
+        /**
+         * A backup that was written, and what it consists of.
+         *
+         * Two names rather than one, because a backup is two files and saying
+         * only the OPML's name understates what left the phone. [settingsName]
+         * is null when the settings file could not be written — the
+         * subscriptions are still safe, and the screen should say which half
+         * it got rather than claim both.
+         */
+        data class Written(
+            val name: String,
+            val settingsName: String?,
+            val at: Long,
+        ) : Result
         data class Restored(val feeds: Int) : Result
         data class SettingsRestored(val count: Int) : Result
         data class FolderRestored(val feeds: Int, val settings: Int) : Result
@@ -101,15 +114,31 @@ class BackupStore(
 
             // Beside it, not inside it: the OPML is an interchange format and
             // has to stay one. See SettingsBackup.
-            tree.findFile(SettingsBackup.FILE_NAME)?.delete()
-            tree.createFile("application/json", SettingsBackup.FILE_NAME)?.let { settingsFile ->
+            //
+            // Caught separately from the OPML above. A settings file that
+            // cannot be written is not a failed backup — the subscriptions,
+            // which are the part nobody could reconstruct, are already on
+            // disk — and reporting it as one would have the reader believe
+            // they have no backup at all when they have most of it.
+            val settingsWritten = runCatching {
+                tree.findFile(SettingsBackup.FILE_NAME)?.delete()
+                val settingsFile = tree.createFile("application/json", SettingsBackup.FILE_NAME)
+                    ?: return@runCatching false
                 context.contentResolver.openOutputStream(settingsFile.uri)?.use { out ->
                     out.write(SettingsBackup.export(dataStore).toByteArray())
-                }
+                    true
+                } ?: false
+            }.getOrElse {
+                Log.e(TAG, "Settings backup failed", it)
+                false
             }
 
             Log.i(TAG, "Wrote backup to ${file.uri}")
-            Result.Written(FILE_NAME, System.currentTimeMillis())
+            Result.Written(
+                name = FILE_NAME,
+                settingsName = SettingsBackup.FILE_NAME.takeIf { settingsWritten },
+                at = System.currentTimeMillis(),
+            )
         } catch (t: Throwable) {
             Log.e(TAG, "Backup failed", t)
             Result.Failed(t)

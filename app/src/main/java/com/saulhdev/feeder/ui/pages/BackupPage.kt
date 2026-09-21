@@ -354,8 +354,16 @@ private fun report(
 ) {
     show(
         when (result) {
+            // Both names, because a backup is two files and naming only the
+            // OPML left readers of this screen believing their settings were
+            // not included — the paragraph above says two files, and the
+            // confirmation said one.
             is BackupStore.Result.Written ->
-                context.getString(R.string.backup_written, result.name)
+                if (result.settingsName != null) {
+                    context.getString(R.string.backup_written, result.name, result.settingsName)
+                } else {
+                    context.getString(R.string.backup_written_sources_only, result.name)
+                }
 
             is BackupStore.Result.SettingsRestored ->
                 context.getString(R.string.backup_settings_restored, result.count)
