@@ -179,8 +179,32 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
                 .maxSizeBytes(IMAGE_DISK_CACHE_BYTES)
                 .build()
         }
-        // Feed cards are small and fixed; decoding a 4000px newspaper photo at
-        // full size to draw it 300px wide is where a scroll's memory goes.
+        // Nothing in this builder controls decode size, and a comment that
+        // stood in this spot said it did — that a 4000px newspaper photo would
+        // otherwise be decoded at full size to be drawn 300px wide. The
+        // concern is real; the answer is not here. Coil sizes a decode from
+        // whichever bound it can find, and every image in this app has one:
+        //
+        //  - the feed cards in ArticleCard take theirs from the layout — an
+        //    aspectRatio on the three that run the card's width, a fixed size
+        //    on the compact thumbnail — so each is sampled down to the space
+        //    it occupies without anything being said about it;
+        //  - the article-body images in HtmlToComposable cannot, because they
+        //    are fillMaxWidth with the height left to the picture, which is
+        //    an unbounded constraint and no bound at all. Those carry an
+        //    explicit .size() on the request instead.
+        //
+        // So the sizing is real but it is distributed, and that is why the old
+        // comment did harm out of proportion to its length: read as a guard
+        // living here, it made those modifiers look decorative. They are the
+        // guard. Unbind one and the full-size decode it warned about starts
+        // happening, with nothing in this file to catch it.
+
+        // Feed images are served with cache headers written for browsers —
+        // no-store on a CDN's hot path, a few minutes on the rest — and
+        // honouring them means re-fetching a picture the reader scrolled past
+        // a moment ago. They are article illustrations: once published they do
+        // not change, and the URL changes when the picture does.
         .respectCacheHeaders(false)
         .crossfade(true)
         .build()
