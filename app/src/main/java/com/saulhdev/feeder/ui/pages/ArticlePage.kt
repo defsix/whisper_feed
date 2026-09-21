@@ -123,9 +123,14 @@ fun ArticlePage(
             viewModel.loadFullText(articleId, link, context.filesDir)
         }
     }
-    DisposableEffect(articleId) { onDispose { viewModel.resetFullText() } }
+    DisposableEffect(articleId) { onDispose { viewModel.resetFullText(articleId) } }
 
-    val showFullArticle = fullText == ArticleViewModel.FullText.Ready
+    // Both halves, and the id is the half that matters. One view model serves
+    // every article the reader opens, so a Ready left behind by the article
+    // read before this one would otherwise send this page looking for a file
+    // that was never fetched for it.
+    val showFullArticle = fullText.articleId == articleId &&
+            fullText.state == ArticleViewModel.FullText.Ready
 
     val appName = stringResource(R.string.app_name)
     // Both of these fell back to the literal "Neo Feed", which is the wrong
@@ -304,7 +309,11 @@ fun ArticlePage(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                if (fullText == ArticleViewModel.FullText.Loading) {
+                // Also matched on the id: a progress bar for the article
+                // read before this one is a progress bar that never finishes.
+                if (fullText.articleId == articleId &&
+                    fullText.state == ArticleViewModel.FullText.Loading
+                ) {
                     item {
                         // The feed's own excerpt stays on screen while the full
                         // article is fetched, so the screen has something to
