@@ -252,10 +252,22 @@ fun SourceListPage(
         // straight back: a filter that leaves an empty screen for as long as a
         // snackbar lasts reads as a screen that has broken.
         viewModel.setDuplicatesOnly(false)
-        snackbarHostState.showSnackbar(
-            message = context.getString(empty),
-            withDismissAction = true,
-        )
+        // In the screen's scope rather than this effect's, and that is the
+        // whole of the fix. `duplicatesOnly` is a key of this effect, so the
+        // line above cancels the coroutine it is running in — and took the
+        // snackbar down with it, every time, before it could be shown.
+        //
+        // So the filter armed, found nothing, disarmed itself and returned the
+        // list exactly as it was, with no message at all. From the outside
+        // that is a menu entry that does nothing, which is what it was
+        // reported as: the one explanation of why nothing changed was
+        // destroyed by the line that made nothing change.
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                message = context.getString(empty),
+                withDismissAction = true,
+            )
+        }
     }
 
     val opmlExporter = rememberLauncherForActivityResult(
