@@ -19,6 +19,33 @@ val releaseKeystore: Properties? = rootProject.file("keystore.properties")
     .takeIf { it.exists() }
     ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
+/**
+ * The commit this build was made from, or null outside a git checkout.
+ *
+ * Every preview APK carries the same `1.0.0 (1)`, so a tester holding two of
+ * them cannot tell which is which and neither can a diagnostics report — and
+ * the reports are the whole of how this app is debugged on a device. A report
+ * has already been read against the wrong build once, and the cost of that is
+ * an afternoon spent explaining a fix by numbers that predate it.
+ *
+ * Resolved at configuration time and deliberately forgiving: a source archive
+ * with no `.git`, a machine without git on its path, or a clone in some state
+ * git dislikes all produce null and an unstamped build rather than a failure.
+ * A version string is not worth breaking a build over.
+ */
+val gitCommit: String? = runCatching {
+    providers.exec {
+        commandLine("git", "rev-parse", "--short=7", "HEAD")
+    }.standardOutput.asText.get().trim().takeIf { it.isNotEmpty() }
+}.getOrNull()
+
+/** Whether the tree had uncommitted changes when this was built. */
+val gitDirty: Boolean = runCatching {
+    providers.exec {
+        commandLine("git", "status", "--porcelain")
+    }.standardOutput.asText.get().isNotBlank()
+}.getOrDefault(false)
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -119,6 +146,9 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".dev"
             signingConfig = signingConfigs.getByName("debug")
+            gitCommit?.let {
+                versionNameSuffix = "-$it" + if (gitDirty) "-dirty" else ""
+            }
         }
 
         release {
@@ -159,6 +189,19 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".dev"
+            // The commit, so a report names the code it came from.
+            //
+            // Only here and on debug. A release is identified by its version
+            // and its tag, and stamping a hash into a store listing's version
+            // name would be noise to everybody who reads it.
+            //
+            // The `-dirty` mark matters more than it looks: a preview built
+            // from a modified tree is not any commit, and a report from one
+            // that claimed to be a commit would send somebody reading a diff
+            // that never ran.
+            gitCommit?.let {
+                versionNameSuffix = "-$it" + if (gitDirty) "-dirty" else ""
+            }
             signingConfig = signingConfigs.getByName(
                 if (releaseKeystore != null) "release" else "debug"
             )
