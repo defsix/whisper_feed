@@ -18,6 +18,8 @@
 package com.saulhdev.feeder.utils
 
 import android.util.Log
+import coil.decode.DataSource
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -77,6 +79,20 @@ object FeedTrace {
     /** Dwell increments asked for, whether or not they have been written yet. */
     private val dwellAsks = AtomicInteger()
 
+    /**
+     * Decodes per image format, and the microseconds they took.
+     *
+     * Per format rather than in total because the question is comparative:
+     * AVIF goes through a software AV1 codec on this device and JPEG does not,
+     * and "images are slow" is not an answer anyone can act on. A map because
+     * the formats a feed serves are whatever its publishers chose.
+     */
+    private val decodeCounts = ConcurrentHashMap<String, AtomicInteger>()
+    private val decodeMicros = ConcurrentHashMap<String, AtomicLong>()
+
+    /** Images served, by where they came from: memory, disk or network. */
+    private val served = ConcurrentHashMap<String, AtomicInteger>()
+
     fun emission(count: Int) {
         emissions.incrementAndGet()
         rows.addAndGet(count.toLong())
@@ -96,6 +112,47 @@ object FeedTrace {
         flushedRows.addAndGet(rowCount)
     }
 
+    fun imageDecoded(format: String, micros: Long) {
+        decodeCounts.getOrPut(format) { AtomicInteger() }.incrementAndGet()
+        decodeMicros.getOrPut(format) { AtomicLong() }.addAndGet(micros)
+    }
+
+    fun imageServed(source: DataSource) {
+        served.getOrPut(source.shortName()) { AtomicInteger() }.incrementAndGet()
+    }
+
+    /**
+     * The image half of a window, or null when no picture was drawn.
+     *
+     * Formats are ordered by how long they cost in total rather than
+     * alphabetically or by count: the one to look at first is the one taking
+     * the time, which is not always the one appearing most.
+     */
+    private fun drainImages(): String? {
+        val counts = decodeCounts.mapValues { it.value.getAndSet(0) }.filterValues { it > 0 }
+        val micros = decodeMicros.mapValues { it.value.getAndSet(0) }
+        val sources = served.mapValues { it.value.getAndSet(0) }.filterValues { it > 0 }
+        if (counts.isEmpty() && sources.isEmpty()) return null
+
+        return buildString {
+            val total = sources.values.sum()
+            append("images %d".format(total))
+            if (sources.isNotEmpty()) {
+                append(sources.entries.sortedBy { it.key }
+                    .joinToString(", ", " (", ")") { "${it.key} ${it.value}" })
+            }
+            if (counts.isNotEmpty()) {
+                append(", decoded %d: ".format(counts.values.sum()))
+                append(counts.entries
+                    .sortedByDescending { micros[it.key] ?: 0L }
+                    .joinToString(", ") { (format, n) ->
+                        val avg = (micros[format] ?: 0L) / n / 1000.0
+                        "%s %d avg %.1fms".format(format, n, avg)
+                    })
+            }
+        }
+    }
+
     /**
      * Empties the counters into one line, or returns null if nothing happened.
      *
@@ -111,7 +168,8 @@ object FeedTrace {
         val f = flushes.getAndSet(0)
         val fr = flushedRows.getAndSet(0)
         val asks = dwellAsks.getAndSet(0)
-        if (e == 0 && p == 0 && f == 0 && asks == 0) return null
+        val images = drainImages()
+        if (e == 0 && p == 0 && f == 0 && asks == 0 && images == null) return null
 
         val seconds = windowMs / 1000.0
         val perSecond = if (seconds > 0) e / seconds else 0.0
@@ -126,6 +184,7 @@ object FeedTrace {
             append(", processed %d avg %.1fms".format(p, avgMs))
             append(", dwell %d asks -> %d writes".format(asks, f))
             if (f > 0) append(" (%d rows)".format(fr))
+            if (images != null) append(", ").append(images)
         }
     }
 

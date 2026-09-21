@@ -23,6 +23,7 @@ import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.FEED_TRACE_WINDOW_MS
 import com.saulhdev.feeder.utils.FeedTrace
+import com.saulhdev.feeder.utils.ImageTrace
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import com.saulhdev.feeder.utils.MainThreadWatch
@@ -243,6 +244,17 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         // not change, and the URL changes when the picture does.
         .respectCacheHeaders(false)
         .crossfade(true)
+        // Counts decodes by format and where each picture came from; see
+        // ImageTrace. Always attached, never reported unless Debugging is on:
+        // a per-request object that records two longs costs nothing beside a
+        // decode, and a listener wired in only when a preference is set is a
+        // listener that is missing from the one report that needed it.
+        // The *factory*, not a listener. One instance per request is what
+        // makes the timing a plain field rather than a map keyed by request
+        // that has to be swept on every path a decode can fail down — and a
+        // single shared listener would have each request's decodeStart
+        // overwriting the last one's.
+        .eventListenerFactory(ImageTrace.Factory)
         .build()
 
     override fun onTerminate() {
