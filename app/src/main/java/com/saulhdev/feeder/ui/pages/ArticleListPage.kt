@@ -531,6 +531,7 @@ fun ArticleListPage(
                                         gridState = gridState,
                                         onRead = { viewModel.markReadOnScroll(it.id) },
                                         onDwell = viewModel::addDwell,
+                                        onLeave = viewModel::flushDwell,
                                     )
                                     val article: @Composable (Int, FeedItem, FeedEmphasis) -> Unit =
                                         { index, item, emphasis ->

@@ -155,6 +155,8 @@ fun FeedScaffold(
     onSettings: () -> Unit,
     onArticleSeen: (FeedItem) -> Unit = {},
     onArticleDwell: (String, Long) -> Unit = { _, _ -> },
+    /** Writes any batched dwell now; see TrackReading's onLeave. */
+    onDwellFlush: () -> Unit = {},
     onPin: (FeedItem, Boolean) -> Unit = { _, _ -> },
     /** Gives back a breaking story's promotion. See `Article.dismissedAt`. */
     onDismissStory: (FeedItem) -> Unit = {},
@@ -355,6 +357,7 @@ fun FeedScaffold(
                     gridState = gridState,
                     onRead = onArticleSeen,
                     onDwell = onArticleDwell,
+                    onLeave = onDwellFlush,
                 )
                 if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
                     SearchEmptyState(searchQuery)

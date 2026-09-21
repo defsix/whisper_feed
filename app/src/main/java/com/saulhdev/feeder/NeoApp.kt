@@ -21,6 +21,10 @@ import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
 import com.saulhdev.feeder.manager.service.OverlayBridge
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.Diagnostics
+import com.saulhdev.feeder.utils.FEED_TRACE_WINDOW_MS
+import com.saulhdev.feeder.utils.FeedTrace
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import com.saulhdev.feeder.utils.MainThreadWatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,6 +48,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
 
     fun onAppStarted() {
         registerActivityLifecycleCallbacks(activityHandler)
+        reportFeedTrace()
         stampOnboardingForExistingInstalls()
         DiscoveryWorker.schedule(this)
     }
@@ -131,6 +136,37 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         articles.onSavedRemoved = { feedId ->
             applicationCoroutineScope.launch(Dispatchers.IO) {
                 runCatching { sources.reapIfEmpty(feedId) }
+            }
+        }
+    }
+
+    /**
+     * Writes one FeedTrace line per window, while Debugging is on.
+     *
+     * Follows the preference rather than reading it once, so turning tracing
+     * on is enough — the reader is already being asked to reproduce something,
+     * and telling them to restart the app as well is how a report comes back
+     * with the lines missing. That happened once already: a scroll report
+     * arrived with no ReadGate lines in it at all.
+     *
+     * The counters themselves run whether or not anyone is watching; they are
+     * atomic adds on a path that allocates five hundred article rows, and
+     * making them conditional would cost more in branches than it saved. This
+     * only decides whether they are ever read out.
+     */
+    private fun reportFeedTrace() {
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            val prefs: FeedPreferences = get()
+            prefs.debugging.get().collectLatest { on ->
+                if (!on) return@collectLatest
+                // Whatever accumulated while nobody was reading would
+                // otherwise arrive as one enormous first window and read as a
+                // spike that never happened.
+                FeedTrace.reset()
+                while (true) {
+                    delay(FEED_TRACE_WINDOW_MS)
+                    FeedTrace.report(FEED_TRACE_WINDOW_MS)
+                }
             }
         }
     }

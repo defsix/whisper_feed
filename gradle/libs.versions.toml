@@ -28,6 +28,7 @@ readability4j = "1.0.8"
 retrofit = "3.0.0"
 rome = "2.1.0"
 room = "2.8.4"
+coroutines = "1.10.2"
 security-crypto = "1.1.0"
 serialization = "1.11.0"
 simple-storage = "3.0.1"
@@ -75,6 +76,7 @@ compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }

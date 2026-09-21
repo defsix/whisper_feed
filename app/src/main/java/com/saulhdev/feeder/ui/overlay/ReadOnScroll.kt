@@ -136,6 +136,16 @@ fun TrackReading(
     gridState: LazyStaggeredGridState,
     onRead: (FeedItem) -> Unit,
     onDwell: (String, Long) -> Unit,
+    /**
+     * Called once the last dwell has been handed over and no more is coming.
+     *
+     * Dwell increments are batched on a timer downstream, which is right while
+     * the reader is scrolling and wrong the moment they stop: the reason to
+     * hold them is that more are on the way, and here that has just ceased to
+     * be true. This says so, rather than leaving the batch to time out in a
+     * process the system is now free to kill.
+     */
+    onLeave: () -> Unit = {},
 ) {
     val prefs: FeedPreferences = koinInject()
     val setting by prefs.markReadOnScroll.asState()
@@ -230,6 +240,10 @@ fun TrackReading(
                     onDwell = onDwell,
                 )
             } finally {
+                // After tick's own finally, which is where the last increments
+                // are handed over: flushing before them would leave exactly
+                // the articles the reader was looking at when they left.
+                onLeave()
                 if (trace) gateLog("stopped: left the feed")
             }
         }

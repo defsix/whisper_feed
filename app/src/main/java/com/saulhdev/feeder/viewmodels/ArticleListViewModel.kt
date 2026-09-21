@@ -46,6 +46,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import com.saulhdev.feeder.utils.FeedTrace
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -131,14 +133,20 @@ class ArticleListViewModel(
                     if (categories.any()) articleRepo.getFeedItemsByTags(categories, limit)
                     else articleRepo.getEnabledFeedItems(limit)
                 var isFirst = true
-                source.debounce {
-                    if (isFirst) {
-                        isFirst = false
-                        0L
-                    } else {
-                        INVALIDATION_DEBOUNCE_MS
+                // Counted here rather than after the debounce, and that is the
+                // point of counting: the query has already run and built its
+                // rows by the time this sees them, so what the debounce drops
+                // was paid for in full. The gap between this number and the
+                // processed one below is the waste.
+                source.onEach { FeedTrace.emission(it.size) }
+                    .debounce {
+                        if (isFirst) {
+                            isFirst = false
+                            0L
+                        } else {
+                            INVALIDATION_DEBOUNCE_MS
+                        }
                     }
-                }
             }
             .conflate()
 
@@ -167,13 +175,14 @@ class ArticleListViewModel(
         // The five-flow overload is typed. One flow fewer and this stops
         // compiling rather than crashing on somebody's phone.
     ) { articles, sfm, removeDuplicate, query, readVisibility ->
+        val started = System.nanoTime()
         processArticles(
             articles = articles,
             sfm = sfm,
             removeDuplicate = removeDuplicate,
             query = query,
             hideRead = readVisibility == READ_HIDE,
-        )
+        ).also { FeedTrace.processed((System.nanoTime() - started) / 1_000) }
     }.flowOn(Dispatchers.Default)
 
     val articleListState: StateFlow<ArticleListState> = combine(
@@ -270,6 +279,24 @@ class ArticleListViewModel(
         viewModelScope.launch {
             articleRepo.addDwell(id, millis)
         }
+    }
+
+    /**
+     * Writes any dwell still held in memory, now.
+     *
+     * The batching in [ArticleRepository.addDwell] exists to keep a scroll
+     * from re-running the feed query once per article, and its timer is right
+     * for that. Leaving the feed is the one moment it is wrong for: the reason
+     * to hold the increments — more are coming — has just stopped being true,
+     * and waiting out the rest of the window would risk losing them to a
+     * process the system is now free to kill.
+     *
+     * On the repository's own scope rather than this view model's, because
+     * this is called as the screen goes away and a flush cancelled halfway
+     * through is the thing it was written to prevent.
+     */
+    fun flushDwell() {
+        ioScope.launch { articleRepo.flushDwell() }
     }
 
     /**

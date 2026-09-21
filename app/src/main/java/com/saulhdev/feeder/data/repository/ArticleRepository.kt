@@ -40,6 +40,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import androidx.room.withTransaction
+import com.saulhdev.feeder.utils.FeedTrace
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -58,6 +66,32 @@ class ArticleRepository(db: NeoFeedDb) {
     var onSavedRemoved: ((Long) -> Unit)? = null
     private val cc = Dispatchers.IO
     private val jcc = Dispatchers.IO + SupervisorJob()
+
+    /** Kept for [flushDwell]'s transaction; the DAOs below come from it. */
+    private val db = db
+
+    /**
+     * Dwell increments, collected and written together. See [DwellBatch].
+     *
+     * One transaction per batch, because Room notifies once at commit however
+     * many rows it carries — and that single fact is the whole of why this
+     * exists.
+     */
+    private val dwellBatch = DwellBatch(
+        scope = CoroutineScope(jcc),
+        windowMs = DWELL_FLUSH_MS,
+    ) { batch ->
+        db.withTransaction {
+            batch.forEach { (id, millis) ->
+                articlesDao.addDwell(id, millis, DWELL_CAP_MS)
+            }
+        }
+        // Counted here rather than at either caller: most flushes are the
+        // timer's, and a counter at the explicit flush alone would report the
+        // one kind that happens least.
+        FeedTrace.dwellFlushed(batch.size)
+    }
+
     private val articlesDao = db.feedArticleDao()
     private val tallyDao = db.readingTallyDao()
     private val feedsDao = db.feedSourceDao()
@@ -195,10 +229,54 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.latestArticleLink(feedId)
     }
 
-    /** Adds to an article's accumulated time on screen, up to [DWELL_CAP_MS]. */
-    suspend fun addDwell(articleId: String, millis: Long) = withContext(jcc) {
-        if (millis <= 0L) return@withContext
-        articlesDao.addDwell(articleId, millis, DWELL_CAP_MS)
+    /**
+     * Adds to an article's accumulated time on screen, up to [DWELL_CAP_MS].
+     *
+     * Held in memory and written in batches, which is a change of shape rather
+     * than of meaning, and the reason is worth setting down.
+     *
+     * The tracker calls this once per article as it leaves the screen, which
+     * during a scroll is a steady stream. Each call used to be its own UPDATE
+     * on Article — and Room invalidates per *table*, so every one of them
+     * re-ran the feed query. That query returns five hundred whole article
+     * rows including their full text; the pipeline downstream debounces at
+     * 300ms, but a debounce discards the list after it has been built, so the
+     * cost was paid every time and thrown away most times.
+     *
+     * A diagnostics report put a number on it: 100–200MB collected per cycle
+     * on a 256MB heap, a cycle every six to eight seconds, for the length of
+     * the scroll, with threads blocking on the allocations in between.
+     *
+     * So the increments accumulate here and go out together. One transaction
+     * is one invalidation however many rows it carries, which turns a scroll's
+     * worth of re-queries into one every [DWELL_FLUSH_MS]. What is written is
+     * identical — the same articles, the same milliseconds, the same cap
+     * applied by the same SQL.
+     *
+     * The risk is bounded and named: up to [DWELL_FLUSH_MS] of dwell is lost
+     * if the process dies mid-scroll. Dwell is a weighting signal built from
+     * thousands of small observations, not something the reader typed, and
+     * losing five seconds of it changes nothing they could notice. Anything
+     * that *is* the reader's — read state, bookmarks, pins — is written
+     * immediately, as before, and none of it comes through here.
+     */
+    suspend fun addDwell(articleId: String, millis: Long) {
+        if (millis <= 0L) return
+        FeedTrace.dwellAsked()
+        dwellBatch.add(articleId, millis)
+    }
+
+    /**
+     * Writes any dwell still held, now.
+     *
+     * Called when the reader leaves the feed. The batching timer is right
+     * while they are scrolling and wrong the moment they stop: the reason to
+     * hold increments is that more are coming, and leaving is that ceasing to
+     * be true.
+     */
+    suspend fun flushDwell() = withContext(jcc) {
+        dwellBatch.flush()
+        Unit
     }
 
     /**
@@ -485,6 +563,24 @@ const val FEED_WINDOW = 500
  * would dominate every comparison it took part in.
  */
 const val DWELL_CAP_MS = 30_000L
+
+/**
+ * How long dwell increments are held before being written together.
+ *
+ * Five seconds. The figure is a trade between two costs that pull opposite
+ * ways: every flush re-runs the feed query, so fewer is cheaper; and every
+ * unflushed increment is lost if the process dies, so fewer is riskier.
+ *
+ * Five puts the flush well below the six-to-eight second collection cycle seen
+ * in the field, so a scroll's worth of writes lands as a handful of
+ * invalidations rather than one per article, while the most that can be lost
+ * is five seconds of a signal that accumulates over weeks.
+ *
+ * It is deliberately not longer. Dwell feeds the weighting that decides what
+ * the reader sees next, and a window measured in minutes would leave the feed
+ * reasoning from what they were reading some time ago.
+ */
+const val DWELL_FLUSH_MS = 5_000L
 
 /**
  * The most reading time one article can accumulate.
