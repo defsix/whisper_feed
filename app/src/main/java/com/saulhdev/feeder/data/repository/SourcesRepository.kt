@@ -450,12 +450,23 @@ class SourcesRepository(db: NeoFeedDb) {
      *
      * Groups of one are dropped: a source with no twin is not a duplicate.
      */
-    suspend fun duplicateSources(): List<Feed> = withContext(jcc) {
+    suspend fun duplicateSources(): List<Feed> = duplicateGroups().flatten()
+
+    /**
+     * The same, kept as groups.
+     *
+     * The grouping was computed and then flattened away, so the screen could
+     * say how many sets there were and not which feed belonged to which. With
+     * a hundred sources sorted by name, the two halves of a pair can sit a
+     * screen apart, and "these are duplicates" is not a useful thing to be
+     * told about a list you then have to pair up yourself.
+     */
+    suspend fun duplicateGroups(): List<List<Feed>> = withContext(jcc) {
         feedsDao.loadAllFeeds()
             .groupBy { normalizeFeedUrl(it.url) }
             .values
             .filter { it.size > 1 }
-            .flatten()
+            .toList()
     }
 }
 

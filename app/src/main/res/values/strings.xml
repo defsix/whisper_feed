@@ -56,6 +56,10 @@
         <item quantity="other">%1$d groups that may each be the same publication. Whisper is guessing here \u2014 check before removing anything.</item>
     </plurals>
     <string name="sources_same_site_none">Nothing looks like a repeat of anything else.</string>
+    <plurals name="sources_duplicate_group">
+        <item quantity="one">%1$s · %2$d source</item>
+        <item quantity="other">%1$s · %2$d sources</item>
+    </plurals>
     <string name="sources_duplicates_showing">Sources sharing an address</string>
     <string name="sources_duplicates_none">No duplicate sources</string>
     <string name="sources_show_all">Show all</string>

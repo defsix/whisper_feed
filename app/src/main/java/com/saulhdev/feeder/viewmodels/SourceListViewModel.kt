@@ -4,6 +4,8 @@ import androidx.annotation.StringRes
 import com.saulhdev.feeder.R
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.db.models.Feed
+import com.saulhdev.feeder.utils.isFeedHost
+import com.saulhdev.feeder.utils.registrableDomain
 import com.saulhdev.feeder.utils.sameSiteGroups
 import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.data.repository.ArticleRepository
@@ -107,6 +109,16 @@ class SourceListViewModel(
     val sameSite: StateFlow<Boolean> = _sameSite.asStateFlow()
 
     /** How many groups the loose filter found, for the banner to report. */
+    /**
+     * The duplicate sets, as the screen shows them: a label and its members.
+     *
+     * Ids rather than feeds, looked up against the live list when drawn, so a
+     * source deleted while the filter is armed leaves its group rather than
+     * lingering in a snapshot taken when the filter was switched on.
+     */
+    private val _duplicateGroups = MutableStateFlow<List<SourceGroup>>(emptyList())
+    val duplicateGroups: StateFlow<List<SourceGroup>> = _duplicateGroups.asStateFlow()
+
     private val _sameSiteGroupCount = MutableStateFlow(0)
     val sameSiteGroupCount: StateFlow<Int> = _sameSiteGroupCount.asStateFlow()
 
@@ -272,12 +284,15 @@ class SourceListViewModel(
             _sameSite.value = false
             _duplicateIds.value = emptySet()
             _sameSiteGroupCount.value = 0
+            _duplicateGroups.value = emptyList()
             return
         }
         _category.value = null
         _query.value = ""
         ioScope.launch {
-            _duplicateIds.value = feedsRepo.duplicateSources().map(Feed::id).toSet()
+            val groups = feedsRepo.duplicateGroups()
+            _duplicateIds.value = groups.flatten().map(Feed::id).toSet()
+            _duplicateGroups.value = groups.map { it.toSourceGroup() }
             _sameSite.value = false
             _duplicatesOnly.value = true
         }
@@ -301,6 +316,7 @@ class SourceListViewModel(
                 { it.title },
             )
             _duplicateIds.value = groups.flatten().map(Feed::id).toSet()
+            _duplicateGroups.value = groups.map { it.toSourceGroup() }
             _sameSiteGroupCount.value = groups.size
             _sameSite.value = true
             _duplicatesOnly.value = true
@@ -698,3 +714,38 @@ internal fun Feed.matches(query: String): Boolean {
  */
 internal fun survivingCategory(chosen: String?, tags: List<String>): String? =
     chosen?.takeIf { it in tags }
+
+/**
+ * One set of sources that look like the same thing, with something to call it.
+ *
+ * @param label what the heading says: the site they share, or their common
+ *   title where the site is a feed service and says nothing about who
+ *   publishes them.
+ * @param ids the members, in the order the grouping found them.
+ */
+data class SourceGroup(val label: String, val ids: List<Long>)
+
+internal fun List<Feed>.toSourceGroup() = SourceGroup(
+    label = groupLabel(this),
+    ids = map(Feed::id),
+)
+
+/**
+ * What to call a group of duplicates.
+ *
+ * The site they share, which is what the reader recognises and what the
+ * grouping was mostly done on. A feed service is no answer — sixteen
+ * publications behind one FeedBurner domain are sixteen publications, and
+ * naming the group "feedburner.com" would describe the plumbing rather than
+ * the thing — so those fall back to the title the members have in common,
+ * which is what joined them in the first place.
+ */
+internal fun groupLabel(feeds: List<Feed>): String {
+    val site = feeds.asSequence()
+        .mapNotNull { runCatching { it.url.host }.getOrNull() }
+        .filterNot(::isFeedHost)
+        .map(::registrableDomain)
+        .firstOrNull { it.isNotBlank() }
+    if (site != null) return site
+    return feeds.firstOrNull { it.title.isNotBlank() }?.title.orEmpty()
+}

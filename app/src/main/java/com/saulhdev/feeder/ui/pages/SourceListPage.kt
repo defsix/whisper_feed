@@ -173,6 +173,7 @@ fun SourceListPage(
     val duplicatesOnly by viewModel.duplicatesOnly.collectAsState()
     val sameSite by viewModel.sameSite.collectAsState()
     val sameSiteGroupCount by viewModel.sameSiteGroupCount.collectAsState()
+    val duplicateGroups by viewModel.duplicateGroups.collectAsState()
     val articlesCleared by viewModel.articlesCleared.collectAsState()
     val sort by viewModel.sort.collectAsState()
     val ascending by viewModel.ascending.collectAsState()
@@ -646,6 +647,67 @@ fun SourceListPage(
                                 )
                             }
                         }
+                        if (duplicatesOnly) {
+                            // Grouped, because the answer to "which of these
+                            // is a duplicate of which" is the whole question.
+                            // Sorted into one flat list, the two halves of a
+                            // pair can sit a screen apart among a hundred
+                            // sources, which tells the reader that duplicates
+                            // exist and leaves them to do the pairing.
+                            //
+                            // Looked up against the live list rather than a
+                            // snapshot, so deleting one member removes it from
+                            // its group instead of leaving a row that is no
+                            // longer there.
+                            val byId = (state.enabledSources + state.disabledSources)
+                                .associateBy { it.id }
+                            duplicateGroups.forEach { group ->
+                                val members = group.ids.mapNotNull(byId::get)
+                                // A set with one member left is no longer a
+                                // set: the reader has already resolved it.
+                                if (members.size < 2) return@forEach
+                                item(key = "group-${group.label}-${group.ids.first()}") {
+                                    PreferenceGroupHeading(
+                                        heading = pluralStringResource(
+                                            R.plurals.sources_duplicate_group,
+                                            members.size,
+                                            group.label,
+                                            members.size,
+                                        )
+                                    )
+                                }
+                                items(members, key = { it.id }) { item ->
+                                    SourceItem(
+                                        modifier = Modifier.animateItem(),
+                                        source = item,
+                                        selectionMode = selection.isNotEmpty(),
+                                        selected = item.id in selection,
+                                        onLongClick = { viewModel.toggleSelected(it.id) },
+                                        onExtendSelection = {
+                                            viewModel.extendSelection(shownIds, it.id)
+                                        },
+                                        staleSince = staleSince,
+                                        onClick = {
+                                            scope.launch {
+                                                paneNavigator.navigateTo(
+                                                    ListDetailPaneScaffoldRole.Detail,
+                                                    item.id
+                                                )
+                                            }
+                                        },
+                                        onSwitch = {
+                                            viewModel.updateFeed(
+                                                it.copy(isEnabled = !it.isEnabled),
+                                                true,
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            item { Spacer(modifier = Modifier.height(64.dp)) }
+                            return@LazyColumn
+                        }
+
                         // A heading over nothing was tolerable when the list
                         // was only ever searched; with a category chip it is
                         // routine for one of the two sections to be empty.
