@@ -60,7 +60,17 @@ private const val FEED_TAG = "FeedTrace"
  */
 object FeedTrace {
 
-    /** Feed query emissions: how often Room handed the pipeline a new list. */
+    /**
+     * Table-change signals: how often Room said Article or Feeds had changed.
+     *
+     * Counted apart from the loads below because the gap between them is the
+     * measurement. A signal costs nothing to discard; a load rebuilds five
+     * hundred whole article rows. Before the debounce was moved onto the
+     * signal the two numbers were the same, and that was the bug.
+     */
+    private val invalidations = AtomicInteger()
+
+    /** Feed query emissions: how often the expensive query actually ran. */
     private val emissions = AtomicInteger()
 
     /** Rows across those emissions, for the cost each one carries. */
@@ -92,6 +102,10 @@ object FeedTrace {
 
     /** Images served, by where they came from: memory, disk or network. */
     private val served = ConcurrentHashMap<String, AtomicInteger>()
+
+    fun invalidated() {
+        invalidations.incrementAndGet()
+    }
 
     fun emission(count: Int) {
         emissions.incrementAndGet()
@@ -161,6 +175,7 @@ object FeedTrace {
      * window produces no line at all rather than a repeat of the last figures.
      */
     private fun drain(windowMs: Long): String? {
+        val inv = invalidations.getAndSet(0)
         val e = emissions.getAndSet(0)
         val r = rows.getAndSet(0)
         val p = processed.getAndSet(0)
@@ -169,7 +184,7 @@ object FeedTrace {
         val fr = flushedRows.getAndSet(0)
         val asks = dwellAsks.getAndSet(0)
         val images = drainImages()
-        if (e == 0 && p == 0 && f == 0 && asks == 0 && images == null) return null
+        if (inv == 0 && e == 0 && p == 0 && f == 0 && asks == 0 && images == null) return null
 
         val seconds = windowMs / 1000.0
         val perSecond = if (seconds > 0) e / seconds else 0.0
@@ -180,7 +195,8 @@ object FeedTrace {
         val avgMs = if (p > 0) micros / p / 1000.0 else 0.0
 
         return buildString {
-            append("emissions %d (%.1f/s, %d rows each)".format(e, perSecond, perEmission))
+            append("changes %d (%.1f/s)".format(inv, inv / seconds))
+            append(" -> loads %d (%.1f/s, %d rows each)".format(e, perSecond, perEmission))
             append(", processed %d avg %.1fms".format(p, avgMs))
             append(", dwell %d asks -> %d writes".format(asks, f))
             if (f > 0) append(" (%d rows)".format(fr))

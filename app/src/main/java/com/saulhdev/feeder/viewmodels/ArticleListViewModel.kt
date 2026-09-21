@@ -132,21 +132,15 @@ class ArticleListViewModel(
                 val source =
                     if (categories.any()) articleRepo.getFeedItemsByTags(categories, limit)
                     else articleRepo.getEnabledFeedItems(limit)
-                var isFirst = true
-                // Counted here rather than after the debounce, and that is the
-                // point of counting: the query has already run and built its
-                // rows by the time this sees them, so what the debounce drops
-                // was paid for in full. The gap between this number and the
-                // processed one below is the waste.
+                // The debounce that used to live here has moved into the
+                // repository, onto the invalidation signal itself — see
+                // ArticleRepository.whenChanged. Debouncing here dropped lists
+                // that had already been built, which is to say it saved the
+                // processing below and none of the cost that mattered.
+                //
+                // What arrives now has already survived that, so every
+                // emission counted here is a query that genuinely ran.
                 source.onEach { FeedTrace.emission(it.size) }
-                    .debounce {
-                        if (isFirst) {
-                            isFirst = false
-                            0L
-                        } else {
-                            INVALIDATION_DEBOUNCE_MS
-                        }
-                    }
             }
             .conflate()
 
@@ -203,7 +197,10 @@ class ArticleListViewModel(
 
     @OptIn(FlowPreview::class)
     private val processedBookmarks: Flow<List<FeedItem>> = combine(
-        articleRepo.getBookmarkedFeedItems().debounce(INVALIDATION_DEBOUNCE_MS).conflate(),
+        // Debounced in the repository now, on the signal rather than on the
+        // list — the same move as the feed above, and left here it would be
+        // the one flow still paying to build lists nobody reads.
+        articleRepo.getBookmarkedFeedItems().conflate(),
         sortFilterState,
         prefs.removeDuplicates.get(),
     ) { articles, sfm, removeDuplicate ->

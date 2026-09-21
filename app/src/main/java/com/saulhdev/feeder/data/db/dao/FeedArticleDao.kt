@@ -394,6 +394,31 @@ interface FeedArticleDao {
      */
     fun getAllEnabledFeedItems(limit: Int): Flow<List<FeedItem>>
 
+    /**
+     * The same query, run once on demand.
+     *
+     * The Flow above re-runs on every write to Article or Feeds, and a sync
+     * writes to both constantly — measured at thirty invalidations a second
+     * while sources were being added. Each one rebuilt five hundred whole
+     * rows, and the debounce downstream then threw most of them away, because
+     * a debounce discards a value it has already paid for.
+     *
+     * Debouncing the *signal* instead needs a query that can be run when the
+     * burst has settled rather than one that insists on running first. See
+     * ArticleRepository.getEnabledFeedItems.
+     */
+    @Transaction
+    @Query(
+        """
+    SELECT Article.* FROM Article
+    JOIN Feeds ON Article.feedId = Feeds.id
+    WHERE Feeds.isEnabled = 1
+    ORDER BY Article.primarySortTime DESC
+    LIMIT :limit
+    """
+    )
+    suspend fun loadAllEnabledFeedItems(limit: Int): List<FeedItem>
+
     @Transaction
     @Query(
         """
@@ -418,6 +443,26 @@ interface FeedArticleDao {
      */
     fun getAllBookmarkedFeedItems(): Flow<List<FeedItem>>
 
+    /**
+     * [getAllBookmarkedFeedItems], run once on demand; see
+     * [loadAllEnabledFeedItems].
+     *
+     * The query is the one above, character for character — the join that
+     * looks redundant is not (an article whose feed is gone must not appear),
+     * and the pinned-first ordering is what Bookmarks shows. A "simplified"
+     * copy here would be a second, quietly different Bookmarks screen.
+     */
+    @Transaction
+    @Query(
+        """
+    SELECT Article.* FROM Article
+    JOIN Feeds ON Article.feedId = Feeds.id
+    WHERE Article.bookmarked = 1
+    ORDER BY Article.pinned DESC, Article.pubDateV2 DESC
+    """
+    )
+    suspend fun loadAllBookmarkedFeedItems(): List<FeedItem>
+
     @Transaction
     @Query(
         """
@@ -429,6 +474,19 @@ interface FeedArticleDao {
     """
     )
     fun getFeedItemsByFeedIdsFlow(feedIds: List<Long>, limit: Int): Flow<List<FeedItem>>
+
+    /** [getFeedItemsByFeedIdsFlow], run once on demand; see [loadAllEnabledFeedItems]. */
+    @Transaction
+    @Query(
+        """
+    SELECT Article.* FROM Article
+    JOIN Feeds ON Article.feedId = Feeds.id
+    WHERE Article.feedId IN (:feedIds) AND Feeds.isEnabled = 1
+    ORDER BY Article.primarySortTime DESC
+    LIMIT :limit
+    """
+    )
+    suspend fun loadFeedItemsByFeedIds(feedIds: List<Long>, limit: Int): List<FeedItem>
 
 
 

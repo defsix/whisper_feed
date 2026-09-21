@@ -39,6 +39,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -139,8 +143,7 @@ class ArticleRepository(db: NeoFeedDb) {
             .flowOn(cc)
 
     fun getEnabledFeedItems(limit: Int = FEED_WINDOW): Flow<List<FeedItem>> =
-        articlesDao.getAllEnabledFeedItems(limit)
-        .flowOn(cc)
+        whenChanged { articlesDao.loadAllEnabledFeedItems(limit) }
 
     /**
      * Articles from every source carrying any of [tags].
@@ -167,9 +170,8 @@ class ArticleRepository(db: NeoFeedDb) {
             .distinctUntilChanged()
             .flatMapLatest { ids ->
                 if (ids.isEmpty()) flowOf(emptyList())
-                else articlesDao.getFeedItemsByFeedIdsFlow(ids, limit)
+                else whenChanged { articlesDao.loadFeedItemsByFeedIds(ids, limit) }
             }
-            .flowOn(cc)
 
     /**
      * Persists articles, then writes their bodies to disk *outside* the database
@@ -227,6 +229,48 @@ class ArticleRepository(db: NeoFeedDb) {
     /** Where a recent article from this feed actually lives; see the DAO. */
     suspend fun publisherLink(feedId: Long): String? = withContext(jcc) {
         articlesDao.latestArticleLink(feedId)
+    }
+
+    /**
+     * Reloads the feed when its tables change, once the change has finished.
+     *
+     * A Room `Flow` query re-runs on every write to any table it names, and
+     * this one names Article and Feeds — both of which a sync writes to
+     * continuously. Instrumentation measured thirty of those a second while
+     * sources were being added, each rebuilding five hundred whole article
+     * rows, full text included, against a 256MB heap. The collector was
+     * freeing 100-200MB per cycle and threads were blocking on allocation.
+     *
+     * A 300ms debounce was already sitting downstream and was not helping,
+     * for a reason worth stating plainly: a debounce drops a value it has
+     * already been handed. The query had run and built its rows before
+     * anything could decide they were not wanted. Of 151 emissions in one
+     * five-second window, 25 were used.
+     *
+     * So the debounce moves to the signal. `createFlow` reports *that* the
+     * tables changed without reading them, which costs nothing to discard,
+     * and the expensive query runs once the burst has settled. `mapLatest`
+     * abandons a load still running when another change arrives, so a long
+     * sync cannot queue work up behind itself.
+     *
+     * The first load is immediate. Tapping a category and waiting a third of
+     * a second for the list would be trading one visible fault for another.
+     */
+    @OptIn(FlowPreview::class)
+    private fun <T> whenChanged(load: suspend () -> T): Flow<T> {
+        var first = true
+        return db.invalidationTracker.createFlow("Article", "Feeds", emitInitialState = true)
+            .onEach { FeedTrace.invalidated() }
+            .debounce {
+                if (first) {
+                    first = false
+                    0L
+                } else {
+                    FEED_INVALIDATION_DEBOUNCE_MS
+                }
+            }
+            .mapLatest { load() }
+            .flowOn(cc)
     }
 
     /**
@@ -477,7 +521,8 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.getArticleIdLinks(allFeeds)
             .flowOn(cc)
 
-    fun getBookmarkedFeedItems(): Flow<List<FeedItem>> = articlesDao.getAllBookmarkedFeedItems()
+    fun getBookmarkedFeedItems(): Flow<List<FeedItem>> =
+        whenChanged { articlesDao.loadAllBookmarkedFeedItems() }
 
     /** Attaches a server's id to the article at that address. */
     suspend fun attachRemoteId(link: String, remoteId: String): Int = withContext(cc) {
@@ -562,6 +607,16 @@ const val FEED_WINDOW = 500
  * and every other signal here does, so without one a single forgotten session
  * would dominate every comparison it took part in.
  */
+/**
+ * How long to let a burst of table changes settle before reloading the feed.
+ *
+ * A sync writes to Feeds twice per source and inserts that source's articles,
+ * so a hundred sources is a storm rather than an event. Long enough to let one
+ * source's writes land together; short enough that finished sources appear
+ * while the sync is still running.
+ */
+const val FEED_INVALIDATION_DEBOUNCE_MS = 300L
+
 const val DWELL_CAP_MS = 30_000L
 
 /**
