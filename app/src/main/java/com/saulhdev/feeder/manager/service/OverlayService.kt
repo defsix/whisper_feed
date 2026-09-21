@@ -41,7 +41,13 @@ class OverlayService(): Service() {
         }
         // The one moment the app can know a launcher is actually using it.
         LauncherLink.onBound()
-        return overlaysController.onBind(intent)
+
+        // Wrapped, because the check above cannot be trusted on its own: it
+        // reads the caller's identity from the bind Uri, which the caller
+        // writes. LauncherOnlyBinder asks again inside the transaction, where
+        // the uid comes from the kernel rather than from the sender.
+        val binder = overlaysController.onBind(intent) ?: return null
+        return LauncherOnlyBinder(binder, applicationContext)
     }
     override fun onUnbind(intent: Intent): Boolean {
         LauncherLink.onUnbound()

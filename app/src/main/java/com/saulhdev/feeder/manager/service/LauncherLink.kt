@@ -125,6 +125,31 @@ object LauncherLink {
             .any { it.activityInfo?.packageName == pkg }
     }
 
+    /**
+     * Whether a uid the kernel vouched for belongs to a launcher.
+     *
+     * The difference from [callerIsALauncher] is the whole security property.
+     * That one reads a uid an app wrote into a Uri and checks it is a real
+     * pairing — which proves the *pair* exists, never that the caller is it.
+     * Anyone can write Lawnchair's package and Lawnchair's uid into a Uri and
+     * pass. This takes a uid from a binder transaction, where it was filled in
+     * by the kernel and cannot be chosen by the sender.
+     *
+     * Any package sharing that uid being a launcher is enough. A shared uid is
+     * one trust domain — the packages in it can already read each other's
+     * files — so a finer distinction here would be a distinction the platform
+     * does not make.
+     */
+    fun uidIsALauncher(context: Context, uid: Int): Boolean {
+        if (uid == Process.myUid()) return true
+        val pm = context.packageManager
+        val packages = pm.getPackagesForUid(uid)?.toSet() ?: return false
+
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        return pm.queryIntentActivities(home, PackageManager.MATCH_DEFAULT_ONLY)
+            .any { it.activityInfo?.packageName in packages }
+    }
+
     private fun Context.isInstalled(packageName: String): Boolean = try {
         packageManager.getPackageInfo(packageName, 0)
         true

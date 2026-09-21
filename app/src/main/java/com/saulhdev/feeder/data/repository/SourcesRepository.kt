@@ -47,6 +47,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import android.database.sqlite.SQLiteConstraintException
 import com.saulhdev.feeder.utils.isSameFeedUrl
+import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.utils.preferringHttps
 import org.koin.java.KoinJavaComponent.inject
 import java.net.URL
@@ -101,6 +102,49 @@ class SourcesRepository(db: NeoFeedDb) {
         if (existing != null) return@withContext existing.id
 
         feedsDao.insert(source)
+    }
+
+    /**
+     * Adds many sources at once, scanning what is already there once.
+     *
+     * [insertSource] asks the database what it already holds on every call,
+     * and so does the [findSourceByUrl] its callers run first — matching on
+     * the normalised address, which ignores `www.`, a trailing slash and the
+     * scheme, and therefore cannot be an indexed query. For one feed that is
+     * two scans nobody notices. For a bundled pack, a starter list or an
+     * imported bookmark file it is two scans per feed: a hundred feeds against
+     * a hundred and nineteen subscriptions is some twenty thousand rows
+     * materialised to add a hundred.
+     *
+     * Here the scan happens once and the comparison set is built from it, so
+     * the work is proportional to what is being added rather than to the
+     * product. Duplicates within the batch itself are caught by the same set,
+     * which the per-feed version could not do at all: two spellings of one
+     * address in a single OPML both passed their checks, and the second
+     * replaced the first.
+     *
+     * Returns how many were actually new, which is what the screens report.
+     */
+    suspend fun insertSources(feeds: List<Feed>): Int = withContext(jcc) {
+        if (feeds.isEmpty()) return@withContext 0
+
+        // Recorded over https, for the reason insertSource gives, and before
+        // anything is compared so the comparison sees what will be written.
+        val incoming = feeds.map { it.copy(url = it.url.preferringHttps()) }
+
+        val taken = feedsDao.loadAllFeeds()
+            .map { normalizeFeedUrl(it.url) }
+            .toMutableSet()
+
+        var added = 0
+        incoming.forEach { feed ->
+            // add() answers false for an address already present, whether it
+            // came from the database or from earlier in this same batch.
+            if (!taken.add(normalizeFeedUrl(feed.url))) return@forEach
+            feedsDao.insert(feed)
+            added++
+        }
+        added
     }
 
     /**

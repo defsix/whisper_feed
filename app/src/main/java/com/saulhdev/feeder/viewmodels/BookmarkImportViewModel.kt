@@ -154,24 +154,26 @@ class BookmarkImportViewModel(
     /** Subscribes to what is ticked, filed under the folder it came from. */
     suspend fun addSelected(): Int = withContext(Dispatchers.IO) {
         val review = _stage.value as? ImportStage.Review ?: return@withContext 0
-        var added = 0
-        review.found.filter { it.feedUrl in _selectedFeeds.value }.forEach { feed ->
-            val url = runCatching { sloppyLinkToStrictURL(feed.feedUrl) }.getOrNull()
-                ?: return@forEach
-            // Re-checked rather than trusted from the scan: Feeds.url is
-            // uniquely indexed with REPLACE, so an unnoticed duplicate would
-            // take the original's articles down with it.
-            if (sources.findSourceByUrl(url) != null) return@forEach
-            sources.insertSource(
-                Feed(
-                    title = feed.title,
-                    url = url,
-                    tag = review.category[feed.feedUrl].orEmpty(),
-                )
-            )
-            added++
-        }
-        added
+        // One batch. The duplicate check is still done and still re-checked
+        // rather than trusted from the scan — Feeds.url is uniquely indexed
+        // with REPLACE, so an unnoticed duplicate takes the original's
+        // articles down with it — but it now happens once against a set built
+        // from a single read, instead of a full scan per bookmark. A browser
+        // export is the largest thing this app imports, which made it the
+        // worst case for the shape this replaces.
+        sources.insertSources(
+            review.found
+                .filter { it.feedUrl in _selectedFeeds.value }
+                .mapNotNull { feed ->
+                    val url = runCatching { sloppyLinkToStrictURL(feed.feedUrl) }.getOrNull()
+                        ?: return@mapNotNull null
+                    Feed(
+                        title = feed.title,
+                        url = url,
+                        tag = review.category[feed.feedUrl].orEmpty(),
+                    )
+                }
+        )
     }
 
     fun restart() {

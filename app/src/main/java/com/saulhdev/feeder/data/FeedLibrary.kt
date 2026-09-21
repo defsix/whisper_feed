@@ -134,14 +134,17 @@ object FeedLibrary {
         repository: SourcesRepository,
         chosen: Collection<LibraryFeed>,
     ): Int {
-        var added = 0
-        chosen.forEach { feed ->
-            val url = runCatching { sloppyLinkToStrictURL(feed.url) }.getOrNull() ?: return@forEach
-            if (repository.findSourceByUrl(url) != null) return@forEach
-            repository.insertSource(Feed(title = feed.title, url = url, tag = feed.category))
-            added++
+        // One batch, so what is already subscribed is read once rather than
+        // once per feed in the pack. See SourcesRepository.insertSources; the
+        // duplicate check it does is the one that used to be here, and it also
+        // catches two spellings of the same address inside a single pack,
+        // which this loop could not.
+        val incoming = chosen.mapNotNull { feed ->
+            val url = runCatching { sloppyLinkToStrictURL(feed.url) }.getOrNull()
+                ?: return@mapNotNull null
+            Feed(title = feed.title, url = url, tag = feed.category)
         }
-        return added
+        return repository.insertSources(incoming)
     }
 }
 

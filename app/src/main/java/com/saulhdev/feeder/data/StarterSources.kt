@@ -143,19 +143,19 @@ object StarterSources {
         chosen: Collection<StarterSource>,
         categoryName: (Int) -> String,
     ): Int {
-        var added = 0
-        chosen.forEach { starter ->
-            val url = sloppyLinkToStrictURL(starter.url)
-            if (repository.findSourceByUrl(url) != null) return@forEach
-            repository.insertSource(
+        // One batch; see SourcesRepository.insertSources. The starter list is
+        // the first thing a new reader does, on a database that is empty, so
+        // the scan it saves is small — but this and the library pack are the
+        // same operation and were written twice, which is how they came to
+        // differ in what they counted.
+        return repository.insertSources(
+            chosen.map { starter ->
                 Feed(
                     title = starter.title,
-                    url = url,
+                    url = sloppyLinkToStrictURL(starter.url),
                     tag = categoryName(starter.categoryId),
                 )
-            )
-            added++
-        }
-        return added
+            }
+        )
     }
 }
