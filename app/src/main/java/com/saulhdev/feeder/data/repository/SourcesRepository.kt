@@ -47,6 +47,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import android.database.sqlite.SQLiteConstraintException
 import com.saulhdev.feeder.utils.isSameFeedUrl
+import com.saulhdev.feeder.utils.preferringHttps
 import org.koin.java.KoinJavaComponent.inject
 import java.net.URL
 
@@ -68,13 +69,38 @@ class SourcesRepository(db: NeoFeedDb) {
      * friendlier answer and the only consistent one.
      */
     suspend fun insertSource(feed: Feed) = withContext(jcc) {
-        val removed = feedsDao.findRemovedByUrl(feed.url)
+        // Recorded over https, whatever scheme it arrived with. Every client
+        // that fetches a feed upgrades the scheme before opening a socket, so
+        // an address stored as http was never the address used — it was a
+        // working subscription described wrongly, and then listed on the
+        // "Feeds still on http" screen as though its publisher were at fault.
+        //
+        // Here rather than at the seven places that add a source, and here
+        // rather than in the type converter: the converter runs after the
+        // duplicate checks below, so an address that changed there could
+        // collide with a row those checks had already cleared — and with a
+        // unique index and REPLACE, that collision deletes the other feed and
+        // its articles. Converting first means every check sees the address
+        // that will actually be written.
+        val source = feed.copy(url = feed.url.preferringHttps())
+
+        val removed = feedsDao.findRemovedByUrl(source.url)
         if (removed != null) {
             feedsDao.restoreRemoved(removed.id)
             requestFeedSync(removed.id)
             return@withContext removed.id
         }
-        feedsDao.insert(feed)
+
+        // Five of the six callers check this for themselves before calling,
+        // with the same comment about REPLACE each time; the sixth does not,
+        // and is the one that would quietly take a feed's articles with it.
+        // A check that has to be remembered at each call site is one that
+        // will be missed at the next, so it lives here now and the callers'
+        // own checks are merely redundant.
+        val existing = feedsDao.loadAllFeeds().firstOrNull { isSameFeedUrl(it.url, source.url) }
+        if (existing != null) return@withContext existing.id
+
+        feedsDao.insert(source)
     }
 
     /**
@@ -121,6 +147,9 @@ class SourcesRepository(db: NeoFeedDb) {
      *   react may ignore it; what none of them may do is crash.
      */
     suspend fun updateSource(feed: Feed, resync: Boolean = false): Boolean = withContext(jcc) {
+        // See insertSource: converted before the clash check, never after.
+        @Suppress("NAME_SHADOWING")
+        val feed = feed.copy(url = feed.url.preferringHttps())
         if (!feedsDao.existsById(feed.id)) return@withContext false
         // Asked first, so the ordinary case reports rather than relying on an
         // exception to notice. The catch is the backstop for the race between
