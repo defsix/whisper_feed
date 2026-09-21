@@ -17,24 +17,24 @@ class ReadOnScrollTest {
 
     @Test
     fun `an article above everything on screen has been passed`() {
-        val ready = mapOf("a" to 2, "b" to 3)
-        assertEquals(listOf("a"), passedIds(ready, topmostVisible = 3))
+        val position = mapOf("a" to 2, "b" to 3)
+        assertEquals(listOf("a"), passedIds(setOf("a", "b"), position, topmostVisible = 3))
     }
 
     @Test
     fun `an article still on screen has not been passed`() {
         // The bug in one line: this is the article being read, and it must not
         // be marked while the reader is still looking at it.
-        val ready = mapOf("reading-it" to 5)
-        assertTrue(passedIds(ready, topmostVisible = 5).isEmpty())
+        val position = mapOf("reading-it" to 5)
+        assertTrue(passedIds(setOf("reading-it"), position, topmostVisible = 5).isEmpty())
     }
 
     @Test
     fun `an article below the viewport has not been passed`() {
         // Scrolled back up, not read past. It keeps the time it earned and is
         // marked when the reader eventually goes by it.
-        val ready = mapOf("below" to 9)
-        assertTrue(passedIds(ready, topmostVisible = 4).isEmpty())
+        val position = mapOf("below" to 9)
+        assertTrue(passedIds(setOf("below"), position, topmostVisible = 4).isEmpty())
     }
 
     @Test
@@ -42,13 +42,34 @@ class ReadOnScrollTest {
         // An empty layout means the list is still being measured. Treating it
         // as "everything scrolled past" would mark the whole feed read on a
         // rotation.
-        val ready = mapOf("a" to 0, "b" to 1, "c" to 2)
-        assertTrue(passedIds(ready, topmostVisible = null).isEmpty())
+        val position = mapOf("a" to 0, "b" to 1, "c" to 2)
+        assertTrue(passedIds(setOf("a", "b", "c"), position, topmostVisible = null).isEmpty())
     }
 
     @Test
     fun `a run of articles passed together are all marked`() {
-        val ready = mapOf("a" to 0, "b" to 1, "c" to 2, "d" to 7)
-        assertEquals(setOf("a", "b", "c"), passedIds(ready, topmostVisible = 6).toSet())
+        val position = mapOf("a" to 0, "b" to 1, "c" to 2, "d" to 7)
+        val ready = setOf("a", "b", "c", "d")
+        assertEquals(setOf("a", "b", "c"), passedIds(ready, position, topmostVisible = 6).toSet())
+    }
+
+    @Test
+    fun `an article that has left the feed is not passed`() {
+        // The case the loop can now meet and could not before: it used to be
+        // restarted by any change to the list, so an article in `ready` was
+        // always still in the feed. Now the loop outlives the list, and an
+        // article that is gone has no position to judge it by.
+        assertTrue(passedIds(setOf("gone"), position = emptyMap(), topmostVisible = 6).isEmpty())
+    }
+
+    @Test
+    fun `a position is read from the current feed, not from when it was ready`() {
+        // A sync inserting a newer article pushes everything down by one. The
+        // article at 2 is now at 3, and the answer has to follow it: a
+        // remembered position would call it passed when it is on screen.
+        val before = mapOf("a" to 2)
+        val after = mapOf("a" to 3)
+        assertEquals(listOf("a"), passedIds(setOf("a"), before, topmostVisible = 3))
+        assertTrue(passedIds(setOf("a"), after, topmostVisible = 3).isEmpty())
     }
 }

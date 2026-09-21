@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -152,27 +153,56 @@ fun TrackReading(
     // this every visible article would start its clock again from zero.
     val marked = remember { mutableSetOf<String>() }
 
-    LaunchedEffect(thresholdMs, isGrid, articles, lifecycleOwner, feedVisible) {
+    // Looked up by the key the list was given rather than by layout position.
+    // The two are not the same and were being treated as such: a sticky held
+    // article occupies a slot of its own, and so does the empty one that
+    // releases it, so from the release onwards every layout index pointed at
+    // the article before the one actually on screen — and any header added
+    // above the feed would have shifted the lot.
+    //
+    // Rebuilt when the list really changes, and read live by the loop below
+    // rather than captured by it. See the effect's keys for why.
+    val lookup = remember(articles) {
+        FeedLookup(
+            byId = articles.associateBy { it.id },
+            position = articles.withIndex().associate { (i, item) -> item.id to i },
+        )
+    }
+    val currentLookup by rememberUpdatedState(lookup)
+
+    // Deliberately not keyed on `articles`.
+    //
+    // It was, and the feed hands down a new list instance on every emission —
+    // a sync, a read mark, a filter change. Each one cancelled the loop and
+    // started another: two maps over every article rebuilt, the dwell clocks
+    // of everything on screen thrown away, and the `finally` below flushing
+    // partial dwell to the database. A diagnostics report caught it happening
+    // thirty-five times in ninety seconds, in bursts of nine within a single
+    // second, while somebody was doing nothing but scrolling.
+    //
+    // None of that work is needed. The list is only ever *read* in here, so
+    // the loop now reads whatever the current list is and keeps its clocks
+    // across the change — which is what `marked` above already does, and for
+    // the same reason.
+    LaunchedEffect(thresholdMs, isGrid, lifecycleOwner, feedVisible) {
         if (!feedVisible) {
             if (trace) gateLog("panel not visible — tracker idle")
             return@LaunchedEffect
         }
 
-        // Looked up by the key the list was given rather than by layout
-        // position. The two are not the same and were being treated as such:
-        // a sticky held article occupies a slot of its own, and so does the
-        // empty one that releases it, so from the release onwards every layout
-        // index pointed at the article before the one actually on screen — and
-        // any header added above the feed would have shifted the lot.
-        val position = articles.withIndex().associate { (i, item) -> item.id to i }
-        val byId = articles.associateBy { it.id }
-
         val dwell = mutableMapOf<String, Long>()
         // Articles that have earned their dwell and are now only waiting to be
-        // scrolled past, held with their position in the feed: deciding whether
-        // one left through the top or the bottom is the whole point, and once
-        // it is gone from the layout there is nothing left to ask.
-        val ready = mutableMapOf<String, Int>()
+        // scrolled past: deciding whether one left through the top or the
+        // bottom is the whole point, and once it is gone from the layout there
+        // is nothing left to ask.
+        //
+        // A set rather than a map of remembered positions. It held the
+        // position an article had when it became ready, which was correct only
+        // because a change to the list used to restart the whole loop; now
+        // that the loop outlives the list, a remembered position is a position
+        // in a feed that may no longer exist. The current one is looked up
+        // when the question is actually asked.
+        val ready = mutableSetOf<String>()
 
         // The gate. repeatOnLifecycle cancels the loop on pause and starts a
         // fresh one on resume; below DESTROYED it simply parks here, so there
@@ -181,7 +211,7 @@ fun TrackReading(
         // away before its threshold: a glance is a glance.
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (trace) {
-                gateLog("running: ${articles.size} articles, threshold ${thresholdMs}ms")
+                gateLog("running: ${currentLookup.byId.size} articles, threshold ${thresholdMs}ms")
             }
             // A cancelled loop leaves through here, so the stop is logged in
             // the same place as the start rather than inferred from its absence.
@@ -192,8 +222,7 @@ fun TrackReading(
                     isGrid = isGrid,
                     listState = listState,
                     gridState = gridState,
-                    byId = byId,
-                    position = position,
+                    lookup = { currentLookup },
                     dwell = dwell,
                     ready = ready,
                     marked = marked,
@@ -217,10 +246,10 @@ private suspend fun tick(
     isGrid: Boolean,
     listState: LazyListState,
     gridState: LazyStaggeredGridState,
-    byId: Map<String, FeedItem>,
-    position: Map<String, Int>,
+    /** The current feed, read afresh each tick rather than captured once. */
+    lookup: () -> FeedLookup,
     dwell: MutableMap<String, Long>,
-    ready: MutableMap<String, Int>,
+    ready: MutableSet<String>,
     marked: MutableSet<String>,
     onRead: (FeedItem) -> Unit,
     onDwell: (String, Long) -> Unit,
@@ -239,6 +268,7 @@ private suspend fun tick(
     try {
         while (true) {
             delay(TICK_MS)
+            val (byId, position) = lookup()
             val visible = visibleEnoughKeys(isGrid, listState, gridState)
             val onScreen = visibleKeys(isGrid, listState, gridState)
             val ids = HashSet<String>(visible.size)
@@ -262,7 +292,7 @@ private suspend fun tick(
                     // Not marked yet. It has been looked at long enough to
                     // count, and now has to be left behind before it counts.
                     dwell -= id
-                    ready[id] = position[id] ?: return@forEach
+                    ready += id
                 }
             }
 
@@ -277,7 +307,10 @@ private suspend fun tick(
             // Non-article keys — a sticky header, the glance row, the chips —
             // simply have no position and drop out of the comparison.
             val topmost = onScreen.mapNotNull { position[it] }.minOrNull()
-            passedIds(ready, topmost).forEach { id ->
+            // An article that has left the feed entirely can no longer be
+            // judged passed or not, and keeping it would be a slow leak.
+            ready.retainAll { it in position }
+            passedIds(ready, position, topmost).forEach { id ->
                 ready -= id
                 marked += id
                 val item = byId[id] ?: return@forEach
@@ -374,7 +407,23 @@ private fun visibleFraction(
  * still being measured, and treating that as "everything scrolled past" would
  * mark the whole feed read on a rotation.
  */
-internal fun passedIds(ready: Map<String, Int>, topmostVisible: Int?): List<String> {
+internal fun passedIds(
+    ready: Set<String>,
+    position: Map<String, Int>,
+    topmostVisible: Int?,
+): List<String> {
     if (topmostVisible == null) return emptyList()
-    return ready.filterValues { it < topmostVisible }.keys.toList()
+    return ready.filter { id -> position[id]?.let { it < topmostVisible } == true }
 }
+
+/**
+ * The current feed, by the two keys the tracker asks it about.
+ *
+ * One object rather than two parameters so the loop takes a single snapshot
+ * per tick: reading them separately would let the list change between the two
+ * and pair an article with another article's position.
+ */
+internal data class FeedLookup(
+    val byId: Map<String, FeedItem>,
+    val position: Map<String, Int>,
+)
