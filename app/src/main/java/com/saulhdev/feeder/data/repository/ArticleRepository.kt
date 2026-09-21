@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.mapLatest
@@ -257,21 +259,30 @@ class ArticleRepository(db: NeoFeedDb) {
      * a second for the list would be trading one visible fault for another.
      */
     @OptIn(FlowPreview::class)
-    private fun <T> whenChanged(load: suspend () -> T): Flow<T> {
+    private fun <T> whenChanged(load: suspend () -> T): Flow<T> = flow {
+        // `first` is declared inside the builder, so each collector gets its
+        // own. Declared outside it — which is where it was first written, and
+        // where the version this replaced had it — one flag is shared by every
+        // collection of the same Flow, and the second collector inherits a
+        // `false` set by the first. Its opening list then arrives 300ms late
+        // for no reason it could know about, on a screen that has just been
+        // opened. The old code got away with the same shape only because it
+        // sat inside a flatMapLatest that rebuilt the flow every time.
         var first = true
-        return db.invalidationTracker.createFlow("Article", "Feeds", emitInitialState = true)
-            .onEach { FeedTrace.invalidated() }
-            .debounce {
-                if (first) {
-                    first = false
-                    0L
-                } else {
-                    FEED_INVALIDATION_DEBOUNCE_MS
+        emitAll(
+            db.invalidationTracker.createFlow("Article", "Feeds", emitInitialState = true)
+                .onEach { FeedTrace.invalidated() }
+                .debounce {
+                    if (first) {
+                        first = false
+                        0L
+                    } else {
+                        FEED_INVALIDATION_DEBOUNCE_MS
+                    }
                 }
-            }
-            .mapLatest { load() }
-            .flowOn(cc)
-    }
+                .mapLatest { load() }
+        )
+    }.flowOn(cc)
 
     /**
      * Adds to an article's accumulated time on screen, up to [DWELL_CAP_MS].

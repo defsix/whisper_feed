@@ -1571,6 +1571,62 @@ The custom `ImageLoader` the audit added is the natural seam: it already puts
 the cache limits and the private-network interceptor in one place, so the
 migration has somewhere to land instead of being spread across call sites.
 
+#### 19e. Material 3 Expressive — after the store listing, not before
+
+Recommendation: **after launch**, and the version numbers decide it rather
+than taste.
+
+The app is on `androidx.compose.material3:1.4.0` via Compose BOM 2026.08.00,
+which is the current stable. Checked against the artifact rather than from
+memory, 1.4.0 already carries:
+
+- `MaterialExpressiveTheme(colorScheme, motionScheme, shapes, typography)`,
+  public;
+- `MotionScheme` and `MaterialTheme.motionScheme`, with the spatial and
+  effects specs;
+- `LocalUsingExpressiveTheme`, which existing components consult and change
+  their defaults under;
+- `ShortNavigationBar`, `WideNavigationRail`, Carousel.
+
+And carries these as `internal`, so they cannot be called: the `MotionScheme`
+factories (`standard()`, `expressive()`), the emphasized type roles
+(`displayLargeEmphasized` and its siblings), and the increased shape tokens
+(`largeIncreased`, `extraLargeIncreased`, `extraExtraLarge`).
+
+Absent entirely: `ButtonGroup`, `FloatingToolbar`, `LoadingIndicator`,
+`SplitButton`, `FlexibleBottomAppBar`. Those are in 1.5.0, which is at
+`alpha28` — alpha, not beta, and nowhere near the build that should carry the
+first signed release.
+
+The sharper point is that the two new components 1.4.0 *does* ship are a
+navigation bar and a navigation rail, and this app uses neither. So on stable
+today, "adopt Expressive" means one line at the two theme entry points and
+nothing else — which then changes shape and motion defaults across 108
+`Button` call sites, 25 `TopAppBar`, 20 `Card`, 15 `CircularProgressIndicator`,
+7 `LinearProgressIndicator`, 6 FAB, 6 `Switch` and a `Slider`.
+
+That lands squarely on the card geometry and the overlay panel, both of which
+were tuned by measurement against a launcher surface that is translucent and
+not ours. With no screenshot tests (see *Debt worth clearing*), the whole
+verification would be somebody looking at it on a phone.
+
+Three routes, in preference order:
+
+1. **Wait for 1.5.0 stable**, then adopt theme and components together. This
+   is the plan.
+2. **Take the look without the framework** — adopt the larger corner radii and
+   heavier heading weights into `WhisperShapes` and the typography directly.
+   No alpha dependency, no behavioural surprises, and the values stay ours.
+   Worth doing at any point if the look is wanted sooner than the components.
+3. **Switch `MaterialTheme` to `MaterialExpressiveTheme` on 1.4.0 now** —
+   cheap to try behind the existing theme preference, and the only honest way
+   to see it. Not to be merged on the strength of the diff being small.
+
+The natural moment is the same one §19d names for Coil: the first time the
+theme is opened for its own reasons. `ui/theme/Theme.kt` is the seam — two
+entry points, already passing `colorScheme`, `typography` and `shapes`
+explicitly, so a fourth argument has somewhere to go.
+
 ### 17. Scroll parallax on the feed — parked, at the bottom
 
 Prototyped, demonstrated, and deliberately not built. The image inside a card's

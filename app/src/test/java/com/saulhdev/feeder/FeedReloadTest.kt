@@ -108,8 +108,19 @@ class FeedReloadTest {
         // would trade one visible fault for another.
         val at = repo.indexOf("private fun <T> whenChanged")
         assertTrue("whenChanged is gone", at > 0)
-        val body = repo.substring(at, minOf(at + 900, repo.length))
+        val body = repo.substring(at, minOf(at + 2200, repo.length))
         assertTrue("the first emission is no longer immediate", body.contains("0L"))
+        // Per collection, not per flow. Shared, the second collector inherits
+        // a flag the first one cleared and waits out the debounce for an
+        // opening list — on a screen that has only just been opened.
+        val declaration = body.indexOf("var first = true")
+        val builder = body.indexOf("flow {")
+        assertTrue("the first-load flag is gone", declaration > 0)
+        assertTrue("whenChanged no longer builds its own flow", builder > 0)
+        assertTrue(
+            "the first-load flag is shared by every collector of this flow",
+            builder < declaration,
+        )
         assertTrue(
             "a load still running is no longer abandoned when another change arrives",
             body.contains("mapLatest"),
