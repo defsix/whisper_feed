@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.data.repository.FAILURES_BEFORE_BROKEN
 import com.saulhdev.feeder.ui.icons.Phosphor
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
@@ -99,6 +100,7 @@ fun SourceItem(
         lastSyncMs = source.lastSync.toEpochMilliseconds(),
         isEnabled = source.isEnabled,
         staleSince = staleSince,
+        consecutiveFailures = source.consecutiveFailures,
     )
     val isStale = health != SourceHealth.Fine
 
@@ -238,9 +240,25 @@ enum class SourceHealth { Fine, NeverUpdated, NotUpdating }
  * to, and reporting that as a fault would put a red line against every source
  * the reader deliberately switched off.
  */
-fun sourceHealth(lastSyncMs: Long, isEnabled: Boolean, staleSince: Long): SourceHealth = when {
+fun sourceHealth(
+    lastSyncMs: Long,
+    isEnabled: Boolean,
+    staleSince: Long,
+    consecutiveFailures: Int = 0,
+): SourceHealth = when {
     !isEnabled -> SourceHealth.Fine
     lastSyncMs <= 0L -> SourceHealth.NeverUpdated
+    // A run of failures is the direct evidence and is believed before the
+    // clock. This list used to ask only how long ago the last *success* was,
+    // and a feed that has been failing since breakfast succeeded this morning
+    // — so ten feeds could be failing, the app could know the count for each,
+    // the Broken feeds screen could be listing the worst of them, and the
+    // screen anybody would actually look at said nothing was wrong.
+    //
+    // The same three as Broken feeds, so the two screens cannot disagree. One
+    // timeout is noise; three in a row is a feed that has stopped rather than
+    // stumbled, and that argument belongs in one place.
+    consecutiveFailures >= FAILURES_BEFORE_BROKEN -> SourceHealth.NotUpdating
     // Zero means the caller has not worked out a threshold yet, which happens
     // for one frame on a cold screen. Saying nothing is better than saying
     // everything is broken.

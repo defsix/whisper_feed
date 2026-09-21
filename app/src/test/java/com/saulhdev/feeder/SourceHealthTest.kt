@@ -73,6 +73,52 @@ class SourceHealthTest {
     }
 
     @Test
+    fun `a feed failing repeatedly is reported even though it synced today`() {
+        // The reported gap. Ten feeds were failing, the app had the count for
+        // every one of them, and Data sources said nothing was wrong — because
+        // it asked only how long ago the last success was, and a feed failing
+        // since breakfast succeeded this morning.
+        assertEquals(
+            SourceHealth.NotUpdating,
+            sourceHealth(
+                lastSyncMs = NOW - 60_000,
+                isEnabled = true,
+                staleSince = STALE_SINCE,
+                consecutiveFailures = 5,
+            ),
+        )
+    }
+
+    @Test
+    fun `one or two failures are still noise`() {
+        // Servers have bad days. The same three the Broken feeds screen uses,
+        // so the two screens cannot disagree about what counts as broken.
+        for (failures in 0..2) {
+            assertEquals(
+                "$failures failures should not raise a badge",
+                SourceHealth.Fine,
+                sourceHealth(NOW - 60_000, isEnabled = true, staleSince = STALE_SINCE, consecutiveFailures = failures),
+            )
+        }
+    }
+
+    @Test
+    fun `a disabled source is still silent however badly it was failing`() {
+        assertEquals(
+            SourceHealth.Fine,
+            sourceHealth(NOW - 60_000, isEnabled = false, staleSince = STALE_SINCE, consecutiveFailures = 9),
+        )
+    }
+
+    @Test
+    fun `never updated outranks failing, being the more specific answer`() {
+        assertEquals(
+            SourceHealth.NeverUpdated,
+            sourceHealth(lastSyncMs = 0L, isEnabled = true, staleSince = STALE_SINCE, consecutiveFailures = 9),
+        )
+    }
+
+    @Test
     fun `an unset threshold accuses nobody`() {
         // One frame on a cold screen before "now" has been worked out.
         assertEquals(
