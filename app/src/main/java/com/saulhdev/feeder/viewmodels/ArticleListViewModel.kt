@@ -73,6 +73,26 @@ class ArticleListViewModel(
         _searchQuery.value = value
     }
 
+    /**
+     * The one source the feed is narrowed to, or null for all of them.
+     *
+     * Set by tapping a source's name on a card. Deliberately *not* stored in a
+     * preference, unlike the filter sheet's own settings: this is a detour
+     * that a back gesture ends, and a narrowing that survived a restart would
+     * be a feed that had quietly lost most of itself with nothing on screen
+     * still explaining why.
+     */
+    private val _focusedSource = MutableStateFlow<String?>(null)
+    val focusedSource: StateFlow<String?> = _focusedSource.asStateFlow()
+
+    fun focusSource(sourceId: String) {
+        _focusedSource.value = sourceId
+    }
+
+    fun clearFocusedSource() {
+        _focusedSource.value = null
+    }
+
     private val sortFilterState = combine(
         prefs.sortingFilter.get(),
         prefs.sortingAsc.get(),
@@ -86,6 +106,25 @@ class ArticleListViewModel(
             SharingStarted.Eagerly,
             SortFilterModel()
         )
+
+    /**
+     * The sort settings and the focused source, as one value.
+     *
+     * Folded together rather than passed separately, and the reason is a
+     * crash. The combine below takes five flows, which is the last of the
+     * typed overloads; a sixth silently selects the `Array<Any?>` version
+     * where the positions are checked by nobody, and the last time this list
+     * changed length that produced an ArrayIndexOutOfBoundsException on a
+     * background worker with no line number in it. See CombineArityTest.
+     *
+     * So anything new travels with something already there.
+     */
+    private data class FeedFilter(
+        val sort: SortFilterModel,
+        val focusedSource: String?,
+    )
+
+    private val filterState = combine(sortFilterState, _focusedSource, ::FeedFilter)
 
     /**
      * Articles for the current category selection, with sync-time invalidation
@@ -111,17 +150,24 @@ class ArticleListViewModel(
         // something about X" does not come with a memory of which category it
         // was filed under, and a search that silently only covered the chip you
         // happen to have selected would look like the article was gone.
+        //
+        // Focusing one source bypasses them for the same reason, and a sharper
+        // one: the tap named a source, not a source within whichever chip
+        // happens to be selected. Left in force, tapping a Tech source while
+        // the News chip was active would open an empty screen that had
+        // obediently done what both instructions said.
         combine(
             prefs.categoryFilter.get(),
             _searchQuery.map { it.isNotBlank() },
-        ) { categories, searching ->
+            _focusedSource,
+        ) { categories, searching, focused ->
             // The searching flag travels with the categories rather than being
             // read again inside flatMapLatest. distinctUntilChanged below
             // compares whatever comes through here, and with only the
             // categories in it, starting a search while no chip was selected
             // would produce the same empty set twice — so the query would not
             // restart and the wider limit would never take effect.
-            (if (searching) emptySet() else categories) to searching
+            (if (searching || focused != null) emptySet() else categories) to searching
         }
             .distinctUntilChanged()
             .flatMapLatest { (categories, searching) ->
@@ -152,7 +198,7 @@ class ArticleListViewModel(
      */
     private val processedArticles: Flow<List<FeedItem>> = combine(
         categoryArticles,
-        sortFilterState,
+        filterState,
         prefs.removeDuplicates.get(),
         // Debounced so a fast typist does not re-filter and re-sort the whole
         // feed on every keystroke; the list is rebuilt once they pause.
@@ -168,14 +214,15 @@ class ArticleListViewModel(
         //
         // The five-flow overload is typed. One flow fewer and this stops
         // compiling rather than crashing on somebody's phone.
-    ) { articles, sfm, removeDuplicate, query, readVisibility ->
+    ) { articles, filter, removeDuplicate, query, readVisibility ->
         val started = System.nanoTime()
         processArticles(
             articles = articles,
-            sfm = sfm,
+            sfm = filter.sort,
             removeDuplicate = removeDuplicate,
             query = query,
             hideRead = readVisibility == READ_HIDE,
+            focusedSource = filter.focusedSource,
         ).also { FeedTrace.processed((System.nanoTime() - started) / 1_000) }
     }.flowOn(Dispatchers.Default)
 
@@ -426,6 +473,7 @@ class ArticleListViewModel(
         removeDuplicate: Boolean,
         query: String = "",
         hideRead: Boolean = false,
+        focusedSource: String? = null,
     ): List<FeedItem> {
         val terms = query.trim().takeIf(String::isNotEmpty)
         // One pass rather than four. Each `let` here used to allocate a whole
@@ -435,6 +483,14 @@ class ArticleListViewModel(
         val filtered = articles.asSequence()
             .filter { item ->
                 when {
+                    // Matched on the source's id rather than on its name.
+                    // Reusing the search for this was the obvious shortcut and
+                    // is wrong twice over: `contains` makes "slate" match
+                    // "translate" and any article merely mentioning Slate, and
+                    // a search widens the query to every article ever stored
+                    // instead of the five-hundred-row window.
+                    focusedSource != null && item.sourceId != focusedSource -> false
+
                     terms != null && !item.matchesSearch(terms) -> false
                     seenLinks != null && !seenLinks.add(item.link) -> false
                     // "Hide source" is permanent and survives a filter reset;
@@ -458,6 +514,15 @@ class ArticleListViewModel(
                 }
             }
             .toList()
+
+        // Newest first inside one source, whatever the feed is sorted by.
+        // The weighting exists to choose between a hundred and nineteen
+        // sources; within one there is nothing to weigh against, and an
+        // article from Tuesday sitting above one from an hour ago reads as a
+        // fault. It is also what every publication's own front page does.
+        if (focusedSource != null) {
+            return filtered.sortedByDescending { it.timeMillis }
+        }
 
         val comparator = when (sfm.sort) {
             SORT_TITLE  -> compareBy(FeedItem::contentTitle)

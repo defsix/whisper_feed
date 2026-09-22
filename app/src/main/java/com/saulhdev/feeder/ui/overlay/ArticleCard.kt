@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -263,6 +264,7 @@ fun ArticleHeroCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ArticleMeta(
                         source = item.feedTitle,
+                        sourceId = item.sourceId,
                         age = item.relativeAge(context),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.85f),
@@ -379,6 +381,7 @@ fun ArticleCard(
             ) {
                 ArticleMeta(
                     source = item.feedTitle,
+                    sourceId = item.sourceId,
                     age = item.relativeAge(context),
                     // A size down. It is a byline, not a heading, and at
                     // labelLarge it competed with the summary above it.
@@ -453,6 +456,7 @@ fun ArticleCompactRow(
                 Spacer(Modifier.height(6.dp))
                 ArticleMeta(
                     source = item.feedTitle,
+                    sourceId = item.sourceId,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -545,6 +549,7 @@ fun ArticleTextRow(
                 Spacer(Modifier.height(4.dp))
                 ArticleMeta(
                     source = item.feedTitle,
+                    sourceId = item.sourceId,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -708,6 +713,7 @@ fun ArticleMosaicTile(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ArticleMeta(
                     source = item.feedTitle,
+                    sourceId = item.sourceId,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -739,6 +745,15 @@ fun ArticleMosaicTile(
  * row's 231dp on its own. The age is given its intrinsic width first, so only
  * the source name shortens and the age is always readable.
  */
+/**
+ * Narrows the feed to one source, where that is possible.
+ *
+ * Null by default, which is the launcher panel's answer: its back gesture
+ * belongs to the launcher, so a filter opened there would have no way out.
+ * The app provides it.
+ */
+val LocalFocusSource = compositionLocalOf<((String) -> Unit)?> { null }
+
 @Composable
 private fun ArticleMeta(
     source: String,
@@ -746,20 +761,42 @@ private fun ArticleMeta(
     style: androidx.compose.ui.text.TextStyle,
     color: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
+    sourceId: String? = null,
     iconUrl: String? = null,
     onImage: Boolean = false,
 ) {
+    // Null on a surface that cannot narrow the feed — the launcher panel has
+    // no way back from one, since its back gesture belongs to the launcher.
+    // A CompositionLocal rather than another parameter because this row is
+    // reached through five card shapes, and threading an optional callback
+    // through all of them to be ignored by one surface is how the two feeds
+    // drift apart.
+    val focusSource = LocalFocusSource.current
+
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        SourceMark(iconUrl = iconUrl, sourceName = source, onImage = onImage)
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = source,
-            style = style,
-            color = color,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
+        // The mark and the name together, and nothing else. The age sits
+        // beside them and the buttons beyond that; a target that swallowed
+        // the whole row would take taps meant for the article, since this row
+        // sits directly under the headline.
+        val identity = if (focusSource != null && sourceId != null) {
+            Modifier.clickable { focusSource(sourceId) }
+        } else {
+            Modifier
+        }
+        Row(
+            modifier = identity.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SourceMark(iconUrl = iconUrl, sourceName = source, onImage = onImage)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = source,
+                style = style,
+                color = color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             text = " · $age",
             style = style,

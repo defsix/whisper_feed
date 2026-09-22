@@ -136,6 +136,10 @@ import com.saulhdev.feeder.ui.overlay.CategoryChipRow
 import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
 import com.saulhdev.feeder.ui.components.FeedSearchBar
+import com.saulhdev.feeder.ui.components.SourceFilterBar
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.CompositionLocalProvider
+import com.saulhdev.feeder.ui.overlay.LocalFocusSource
 import com.saulhdev.feeder.ui.components.HeaderAction
 import com.saulhdev.feeder.ui.icons.phosphor.MagnifyingGlass
 import com.saulhdev.feeder.ui.components.FeedEmptyReason
@@ -178,6 +182,14 @@ fun ArticleListPage(
     val bookmarked by viewModel.bookmarksState.collectAsState()
     val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val focusedSource by viewModel.focusedSource.collectAsState()
+    // Resolved from the articles on screen rather than fetched: the feed is
+    // already filtered to this source, so its first card carries the name and
+    // the icon the bar needs, and a second query for what is already in hand
+    // would be a second query.
+    val focusedFeed = remember(focusedSource, state.articles) {
+        state.articles.firstOrNull { it.sourceId == focusedSource }
+    }
     var searching by remember { mutableStateOf(false) }
     val gridState = rememberLazyStaggeredGridState()
 
@@ -261,7 +273,18 @@ fun ArticleListPage(
     // modal for everybody except the people it matters most to.
     val covered = !onboardingSeen || (!tourSeen && state.articles.isNotEmpty() && !searching)
 
+    // The way out that the reader will reach for first. The filter is not a
+    // navigation destination — it narrows the feed in place — so there is no
+    // back stack entry for the system to pop, and without this the gesture
+    // leaves the app with the feed still narrowed.
+    BackHandler(enabled = focusedSource != null) { viewModel.clearFocusedSource() }
+
     ProvideTourTargets {
+    // Offered here, so every card on this surface can narrow the feed, and
+    // offered *only* here: the launcher panel leaves it null, because its back
+    // gesture belongs to the launcher and a filter opened there could not be
+    // undone. See LocalFocusSource.
+    CompositionLocalProvider(LocalFocusSource provides viewModel::focusSource) {
     Box(modifier = Modifier.fillMaxSize()) {
     NavigableListDetailPaneScaffold(
         modifier = if (covered) Modifier.clearAndSetSemantics { } else Modifier,
@@ -289,7 +312,11 @@ fun ArticleListPage(
                         containerColor = Color.Transparent,
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
-                            if (searching) FeedSearchBar(
+                            if (focusedSource != null) SourceFilterBar(
+                                title = focusedFeed?.feedTitle.orEmpty(),
+                                iconUrl = focusedFeed?.feedIconUrl,
+                                onClear = viewModel::clearFocusedSource,
+                            ) else if (searching) FeedSearchBar(
                                 query = searchQuery,
                                 onQueryChange = viewModel::setSearchQuery,
                                 onClose = { searching = false },
@@ -715,6 +742,7 @@ fun ArticleListPage(
         !tourSeen && state.articles.isNotEmpty() && !searching -> TourOverlay {
             scope.launch(Dispatchers.IO) { prefs.tourSeen.setValue(true) }
         }
+    }
     }
     }
     }
