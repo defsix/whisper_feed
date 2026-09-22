@@ -866,12 +866,30 @@ switch is worth nothing without an answer to it:
 - Pull-to-refresh carries no constraints and must not grow one, for the same
   reason it carries no battery guard today: that sync was asked for.
 
-**Decide before building:** whether it is a third state of one "when to sync"
+~~**Decide before building:** whether it is a third state of one "when to sync"
 choice rather than a second independent switch. Three switches (frequency,
 wifi, charging) recreate exactly the boolean-pair muddle that
 `articleOpenMode` was built to replace — a single list ("Any time", "On Wi-Fi",
 "On Wi-Fi while charging") says the same thing and cannot be set to a
-combination nobody wants.
+combination nobody wants.~~
+
+**Decided: a second switch.** The list above was the wrong call, and it is
+worth saying why rather than quietly swapping it, because the reasoning is
+the reusable part.
+
+That list has no entry for *unlimited data, but not on battery* — the reader
+who does not care about Wi-Fi and does care about charge. Two switches give
+four states and all four are real: any network or Wi-Fi only, crossed with any
+time or while charging. A list that offers three of them is not simpler, it is
+short of one.
+
+The `articleOpenMode` comparison was a false match. There, two booleans encoded
+*three* modes, so one of the four combinations was meaningless and the switches
+misdescribed the shape of the choice — which is when a list is right. Here the
+conditions are genuinely independent, which is when switches are. Android
+agrees, for what it is worth: `Constraints.Builder` takes network type,
+charging, battery-not-low, idle and storage-not-low as separate constraints
+rather than one setting, and most apps follow it.
 
 `DiscoveryWorker` sets its own constraints and would want the same treatment,
 or an explicit note saying why it is exempt.
