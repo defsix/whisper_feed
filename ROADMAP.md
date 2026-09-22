@@ -679,10 +679,67 @@ Mosaic does not take part: a staggered grid has no sticky slot, and the lead
 already crosses both columns there, which is that layout's way of saying the
 same thing.
 
-Both settings sit with the personalisation switches, not in a category of
+Both settings sat with the personalisation switches, not in a category of
 their own: "Highlight breaking news" and "Hold it there while you scroll", the
-second directly under the first because it only modifies what the first
-promotes.
+second directly under the first because it only modified what the first
+promoted.
+
+#### Sticky was removed, and the reasoning is worth keeping
+
+The passage above is left as written because it is an accurate account of
+something that was built and then taken out. The hold is gone; the detection
+is not.
+
+What was wrong with it was the condition, not the intention:
+
+    val first = articles.firstOrNull() ?: return null
+    val isLead = clusters[first.id]?.leadId == first.id
+    if (isLead) first else null
+
+That is positional, not editorial. It held whatever was first in the list
+*currently on screen*, if that item led any cluster — so in a search it held
+the first result for whatever was typed, in a category the first of that
+category, and it would have done the same in the single-source view built
+since. None of those has anything to do with a story breaking, and a reader
+who had searched for something got a card stuck over their results.
+
+The paragraph above about "whatever the ordering already put first" is exactly
+the assumption that failed. It holds for the whole feed, where the ordering is
+the weighting, and stops holding the moment a filter decides what comes first
+instead.
+
+It also cost more than it looked. A `stickyHeader` draws over the list rather
+than in it, so every part of the card had to be opaque or it became a window
+onto the articles sliding underneath — fixed twice, and a held card with no
+image was see-through still. The read-dimming carried an exemption for it. It
+needed a Dismiss action, because being unavoidable was the one thing it was
+reliably good at.
+
+What it was for was already on the card and stayed there: `CoverageLine` draws
+a megaphone and the number of sources carrying the story, in the card's
+ordinary place. The clustering still sets emphasis, still explains itself in
+the weighting reasons, and a dismissal still gives back the promotion.
+
+**Two alternatives were considered and not taken.** Recorded because the first
+is cheap if the hold is ever wanted back, and the second is the honest version
+of the feature.
+
+- **Restrict it to the unfiltered feed.** Do not hold while searching or
+  filtered. The smallest possible change, and it fixes every symptom reported.
+  It leaves the trigger positional, so the hold still fires on whatever the
+  weighting happened to put first rather than on anything that has actually
+  broken.
+- **Make the trigger editorial.** Require a real threshold — *n* sources
+  carrying the story within *m* hours, rather than "leads a cluster and
+  happens to be top of this list" — so that "breaking" means something a
+  reader would recognise. This is the version worth building if a held card is
+  wanted at all, and it is a genuine piece of work rather than a condition
+  change: it needs a threshold chosen against real feeds, and it needs the
+  transparency the rest of the weighting has, so that a held story can say why
+  it was held.
+
+Either would need the opacity problem solved rather than worked around, since
+that is a property of `stickyHeader` and not of the condition.
 
 ### 7. Sync and backup (Milestone 6)
 
@@ -1747,6 +1804,53 @@ nothing about any of them.
 
 Still local, still no account, and still never one reader's list compared
 against another's.
+
+## Narrowing to one source — built, with two parts left
+
+Tapping the mark or the name under a headline shows only that source. A bar
+carrying a back arrow and an X says which, and the system back gesture clears
+it. Newest first inside a source, whatever the feed is sorted by: the
+weighting exists to choose between a hundred and nineteen sources, and within
+one there is nothing to weigh against.
+
+The idea arrived as "make it act like the search", and the chrome is exactly
+right — same bar, same two ways out. Reusing the search *itself* would not
+have been, and the reason is worth keeping because it is invisible until it
+bites. `matchesSearch` compares substrings across the headline, the feed title
+and the body, so "slate" also returns "tran**slate**", "**slate**d for
+release" and every article that merely mentions Slate; and a search
+deliberately widens the query from `FEED_WINDOW` to every article ever stored,
+which is the cost §19 spent a day removing from the feed. So the filter
+matches a source id, the window stays where it is, and the bar shows the
+source's own mark and name with nothing to type into.
+
+**Two parts were deliberately left.**
+
+- **The launcher panel does not have it.** Its back gesture belongs to the
+  launcher, so a filter opened there would have no way out — the reader would
+  be left on a narrowed feed with the only exit closing the panel entirely.
+  The capability is offered through a `CompositionLocal` that defaults to
+  null, so the panel simply is not given it; nothing needs removing if an
+  answer is found. The answer is probably an explicit control in the bar
+  rather than a gesture, which is a small piece of design rather than a small
+  piece of code.
+- **One publisher, several feeds.** Filtering is by the source that was
+  tapped, which is what the tap said. A reader taking "Slate - Culture" and
+  "Slate - News" separately will at some point tap one and wonder where the
+  other went. Grouping by registrable domain is the obvious alternative and is
+  wrong as a default — somebody who subscribed to two sections separately did
+  that on purpose — so this wants a second control ("everything from
+  slate.com") rather than a different rule. Not worth building until somebody
+  with several sections from one publisher says it is missing; the machinery
+  exists already, since `SourceListViewModel.groupLabel` works out registrable
+  domains for the duplicate finder.
+
+Two smaller things noticed while building it, neither yet done: the source
+page is the natural home for mute, edit, unsubscribe and "last updated 17m
+ago", all of which currently mean a trip to Data sources and a search; and the
+tap target is the mark and the name only, because that row sits directly under
+the headline and a wider one would take taps meant for the article. Whether
+that target is comfortable is a question only a device answers.
 
 ## Text size — asked for, not yet designed
 
