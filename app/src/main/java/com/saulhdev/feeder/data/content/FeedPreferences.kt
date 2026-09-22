@@ -64,6 +64,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
 import com.saulhdev.feeder.ui.icons.phosphor.PaintRoller
 import com.saulhdev.feeder.ui.icons.phosphor.SubtractSquare
 import com.saulhdev.feeder.ui.icons.phosphor.Swatches
+import com.saulhdev.feeder.ui.icons.phosphor.Power
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.Diagnostics
@@ -673,6 +674,35 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = true
     )
 
+    /**
+     * Scheduled syncs wait for the charger.
+     *
+     * A second switch rather than a third entry on one "when to sync" list,
+     * and the missing entry is why: a list of "Any time / On Wi-Fi / On Wi-Fi
+     * while charging" has nothing to offer the reader on unlimited data who
+     * does not want forty feeds fetched off the battery. The two conditions
+     * are independent and all four combinations are real, which is exactly
+     * when two switches beat a list. (Contrast [articleOpenMode], where two
+     * booleans encoded three modes and the fourth combination meant nothing.)
+     *
+     * Off by default. On, this is a stricter guard than the
+     * battery-not-low one the scheduled sync already carries: not-low holds
+     * most of the time, charging holds for a few hours a night and for some
+     * people not every night. A phone that is rarely plugged in can therefore
+     * open the panel to a feed a day and a half old — which is why the summary
+     * says what it costs and names pull-to-refresh as the way round it, and
+     * why the source list's never-updated and not-updating marks had to exist
+     * before this could ship. See MainActivity.configurePeriodicSync.
+     */
+    var syncOnlyWhenCharging = BooleanPref(
+        titleId = R.string.pref_sync_charging,
+        summaryId = R.string.pref_sync_charging_summary,
+        icon = Phosphor.Power,
+        key = SYNC_ONLY_CHARGING,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
     var syncFrequency = StringSelectionPref(
         titleId = R.string.pref_sync_frequency,
         icon = Phosphor.Clock,
@@ -1070,6 +1100,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")
+        val SYNC_ONLY_CHARGING = booleanPreferencesKey("pref_sync_only_charging")
         val SYNC_FREQUENCY = stringPreferencesKey("pref_sync_frequency")
         val SYNC_RANGE = stringPreferencesKey("pref_sync_range")
         val ITEMS_PER_FEED = stringPreferencesKey("pref_items_per_feed")

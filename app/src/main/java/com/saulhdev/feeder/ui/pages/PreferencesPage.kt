@@ -101,6 +101,7 @@ fun PreferencesPage(
         prefs.syncRange,
         prefs.itemsPerFeed,
         prefs.syncOnlyOnWifi,
+        prefs.syncOnlyWhenCharging,
         prefs.fullTextForAllFeeds,
     )
 

@@ -45,6 +45,8 @@ import com.saulhdev.feeder.utils.THEME_LIGHT
 import android.view.KeyEvent
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.saulhdev.feeder.utils.VolumeScroll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -147,7 +149,28 @@ class MainActivity : ComponentActivity() {
         // those are the first DataStore reads of the process — a file opened
         // from disk, blocking, inside onCreate, which is the worst moment in
         // the app's life to do it. Nothing on screen depends on the result.
-        lifecycleScope.launch(Dispatchers.IO) { configurePeriodicSync() }
+        //
+        // Collected rather than called once, which is a fix as much as a
+        // feature. The schedule was configured in onCreate and never again, so
+        // a constraint changed in Settings reached WorkManager only on the next
+        // cold start: turning "Sync on Wifi Only" on and watching it go on
+        // syncing over mobile data was the behaviour, not a bug report waiting
+        // to happen. The first emission is the cold-start configuration this
+        // line always did; the rest are the reader changing their mind.
+        //
+        // Re-enqueuing is cheap and keeps the period — the work is enqueued
+        // under one name with ExistingPeriodicWorkPolicy.UPDATE.
+        lifecycleScope.launch(Dispatchers.IO) {
+            combine(
+                prefs.syncFrequency.get(),
+                prefs.syncOnlyOnWifi.get(),
+                prefs.syncOnlyWhenCharging.get(),
+            ) { frequency, wifiOnly, chargingOnly ->
+                Triple(frequency, wifiOnly, chargingOnly)
+            }
+                .distinctUntilChanged()
+                .collect { configurePeriodicSync() }
+        }
         handleDeepLink(intent)
     }
 
@@ -221,6 +244,17 @@ class MainActivity : ComponentActivity() {
             // afford it. Pull-to-refresh is a different request and carries no
             // such constraint, because that one was asked for.
             constraints.setRequiresBatteryNotLow(true)
+
+            // Stricter than battery-not-low, and off unless asked for.
+            // Not-low is satisfied most of the time; charging is satisfied for
+            // a few hours a night, so WorkManager can hold this work for a
+            // long time with nothing on screen saying why. The source list's
+            // never-updated and not-updating marks are what make that legible,
+            // and pull-to-refresh, which carries no constraints at all, is
+            // what makes it recoverable. See prefs.syncOnlyWhenCharging.
+            if (prefs.syncOnlyWhenCharging.getValue()) {
+                constraints.setRequiresCharging(true)
+            }
 
             val timeInterval = (prefs.syncFrequency.getValue().toDouble() * 60).toLong()
 

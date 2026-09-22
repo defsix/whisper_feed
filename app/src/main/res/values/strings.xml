@@ -161,6 +161,8 @@
     <string name="diagnostics_saved">Saved to %1$s</string>
     <string name="diagnostics_failed">Could not write diagnostics</string>
     <string name="pref_sync_wifi">Sync on Wifi Only</string>
+    <string name="pref_sync_charging">Sync only while charging</string>
+    <string name="pref_sync_charging_summary">Scheduled syncs wait until the phone is plugged in. Pull to refresh still works any time.</string>
     <string name="pref_sync_frequency">Sync Frequency</string>
     <string name="pref_sync_range">Sync Range</string>
     <string name="pref_items_per_feed">Max items per feed</string>

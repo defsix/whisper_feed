@@ -836,11 +836,21 @@ any of this, and it should be built before the rest of it.
   success rather than failure, so WorkManager does not back off and retry
   something that needs the reader rather than another attempt.
 
-#### Sync only when charging — asked for, not yet built
+#### ~~Sync only when charging — asked for, not yet built~~ Built
 
 Settings has *Sync on Wifi Only*; the obvious sibling is *Sync only while
 charging*, for the reader who wants forty feeds fetched overnight and nothing
 touched on battery.
+
+Built as a second `BooleanPref`, off by default, applied in
+`configurePeriodicSync` and offered beside *Sync on Wifi Only*. One thing
+changed on the way in that was not in this plan: the schedule was configured
+once in `onCreate` and never again, so *both* switches only took effect on the
+next cold start — turning Wi-Fi-only on and watching the app go on syncing over
+mobile data was the existing behaviour. The schedule is re-enqueued whenever
+one of its inputs changes now. See `SyncConstraintsTest`.
+
+The record of the reasoning follows.
 
 **What the scheduled sync already carries** (`MainActivity.configurePeriodicSync`):
 `NetworkType.UNMETERED` or `CONNECTED` depending on the wifi switch, plus
