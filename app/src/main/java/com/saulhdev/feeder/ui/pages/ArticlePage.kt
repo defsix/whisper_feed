@@ -333,6 +333,9 @@ fun ArticlePage(
                                 // Drawn above already. Several publishers open
                                 // the body with it too; see stripRepeatedTitle.
                                 articleTitle = title,
+                                // The card's picture, put back when the body
+                                // arrived without one; see ensureLeadImage.
+                                leadImageUrl = state?.article?.imageUrl,
                             )
                         }
                     } else {
@@ -351,6 +354,9 @@ fun ArticlePage(
                                 // Drawn above already. Several publishers open
                                 // the body with it too; see stripRepeatedTitle.
                                 articleTitle = title,
+                                // The card's picture, put back when the body
+                                // arrived without one; see ensureLeadImage.
+                                leadImageUrl = state?.article?.imageUrl,
                             )
                         }
                     } else {

@@ -121,8 +121,28 @@ class ImageTrace private constructor() : EventListener {
      * needed to tell a refusal from a timeout from a bad address.
      */
     override fun onError(request: ImageRequest, result: ErrorResult) {
-        FeedTrace.imageFailed(reasonOf(result.throwable))
+        FeedTrace.imageFailed(reasonOf(result.throwable), surfaceOf(request))
     }
+
+    /**
+     * Which part of the app asked for a picture that did not arrive.
+     *
+     * "Some images are going missing" is two different bugs depending on the
+     * answer — the reader's own image pipeline, or the feed cards' — and a
+     * count that does not say which leaves the next report to settle it.
+     *
+     * Only the article body builds an explicit [ImageRequest]; the cards and
+     * the source marks hand [coil.compose.AsyncImage] a bare address and let
+     * it build one. So the reader's requests are tagged and everything else
+     * is [OTHER_SURFACE] by not being tagged, rather than by being labelled
+     * something this cannot actually check.
+     *
+     * A tag is not part of the memory cache key. `setParameter` would have
+     * been — it derives one from the value unless told not to — and tagging
+     * every article image would then have given each one its own cache entry.
+     */
+    private fun surfaceOf(request: ImageRequest): String =
+        request.tags.tag(ImageSurface::class.java)?.label ?: OTHER_SURFACE
 
     object Factory : EventListener.Factory {
         override fun create(request: ImageRequest): EventListener = ImageTrace()
@@ -205,3 +225,12 @@ internal fun DataSource.shortName(): String = when (this) {
     DataSource.DISK -> "disk"
     DataSource.NETWORK -> "net"
 }
+
+/** Where an image request came from. See ImageTrace.surfaceOf. */
+enum class ImageSurface(val label: String) {
+    /** The built-in reader's article body. */
+    Article("article"),
+}
+
+/** Anything that did not say. */
+const val OTHER_SURFACE = "other"

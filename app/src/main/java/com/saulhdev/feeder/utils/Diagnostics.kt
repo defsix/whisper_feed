@@ -93,6 +93,13 @@ object Diagnostics : KoinComponent {
             appendLine("Muted sources:       ${prefs.sourcesFilter.getValue()}")
         }.onFailure { appendLine("Preferences unavailable: $it") }
 
+        appendLine()
+        appendLine("== Images ==")
+        // Since this launch, not since the last five-second window, which is
+        // all the log below can show. A picture that failed to appear an hour
+        // into a session is still counted here. See FeedTrace.imageTally.
+        appendLine(FeedTrace.imageTally())
+
         // Worth reporting explicitly: an empty tag list is the ordinary reason the
         // category chip row renders nothing, and it is indistinguishable from a
         // failure without looking.

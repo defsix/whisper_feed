@@ -134,12 +134,61 @@ object FeedTrace {
         decodeMicros.getOrPut(format) { AtomicLong() }.addAndGet(micros)
     }
 
-    fun imageFailed(reason: String) {
+    fun imageFailed(reason: String, surface: String = OTHER_SURFACE) {
         failures.getOrPut(reason) { AtomicInteger() }.incrementAndGet()
+        attemptsSinceStart.incrementAndGet()
+        failuresSinceStart.getOrPut("$surface: $reason") { AtomicInteger() }.incrementAndGet()
     }
 
     fun imageServed(source: DataSource) {
         served.getOrPut(source.shortName()) { AtomicInteger() }.incrementAndGet()
+        attemptsSinceStart.incrementAndGet()
+    }
+
+    /**
+     * Every image failure since the process started, and how many were asked
+     * for altogether.
+     *
+     * The counters above are drained every five seconds, and the report
+     * carries the last two thousand log lines — so a failure reaches the
+     * developer only if it happened in roughly the last window before the
+     * reader pressed the button. "I thought some images were going missing but
+     * I wasn't able to catch it" is that gap described from the outside, and
+     * catching it was never the reader's job: the app was there when it
+     * happened and can simply keep count.
+     *
+     * Not drained by [reset], which clears the window. A tally that started
+     * again whenever tracing was switched on would be the window under another
+     * name, and these are counted whether tracing is on or not.
+     */
+    private val failuresSinceStart = ConcurrentHashMap<String, AtomicInteger>()
+
+    /** Images that reached a conclusion, either way. The denominator. */
+    private val attemptsSinceStart = AtomicInteger()
+
+    /**
+     * The tally, as a line for the diagnostics file.
+     *
+     * With the total beside it, always. Nine failures is a broken feature or a
+     * rounding error depending on whether thirty pictures were drawn or three
+     * thousand, and a bare count invites the wrong one of those.
+     */
+    fun imageTally(): String {
+        val attempts = attemptsSinceStart.get()
+        if (attempts == 0) return "no images requested yet"
+        val failed = failuresSinceStart.mapValues { it.value.get() }.filterValues { it > 0 }
+        val total = failed.values.sum()
+        if (total == 0) return "%d requested, none failed".format(attempts)
+        return buildString {
+            append(
+                "%d requested, %d failed (%.1f%%)".format(
+                    attempts, total, 100.0 * total / attempts,
+                )
+            )
+            failed.entries.sortedByDescending { it.value }.forEach {
+                append("\n  %-5d %s".format(it.value, it.key))
+            }
+        }
     }
 
     /**

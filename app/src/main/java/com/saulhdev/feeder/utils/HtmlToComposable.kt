@@ -143,11 +143,19 @@ fun LazyListScope.htmlFormattedText(
      * out. See [stripRepeatedTitle].
      */
     articleTitle: String? = null,
+    /**
+     * The article's own picture, the one its card in the feed shows.
+     *
+     * Given so a body that arrived without it can have it put back. See
+     * [ensureLeadImage].
+     */
+    leadImageUrl: String? = null,
 ) {
     Jsoup.parse(inputStream, null, baseUrl)
         .body()
         .let { body ->
             stripRepeatedTitle(body, articleTitle)
+            ensureLeadImage(body, leadImageUrl)
             formatBody(
                 element = body,
                 imagePlaceholder = imagePlaceholder,
@@ -181,6 +189,94 @@ internal fun stripRepeatedTitle(body: Element, articleTitle: String?) {
     if (normalizedHeading(first.text()) != wanted) return
     first.remove()
 }
+
+/**
+ * Puts the article's own picture back when the body arrived without it.
+ *
+ * The Verge's articles opened with no picture at all while the same story's
+ * card in the feed carried one. Fetching the page and reading it settles why:
+ * the lead image is a Next.js fill image, an `<img>` with no `src` and no
+ * `srcset`, whose real address is supplied by JavaScript after the page
+ * loads. There is no `<picture>`, no `data-src`, no `<noscript>` copy — in
+ * the HTML a fetcher receives, the address appears only in `og:image`. So it
+ * is not there to be found by looking harder at the body, and every reader
+ * that works from the page's markup loses it the same way.
+ *
+ * What makes this fixable is that the app already has the picture: it came
+ * with the feed entry, and the card has been showing it all along. Nothing
+ * needs fetching or guessing — the image the reader was looking at a moment
+ * ago is simply drawn again above the article, where the publisher put it.
+ *
+ * ## Only when it is genuinely missing
+ *
+ * Most publishers do put the lead image in the body, so this has to recognise
+ * it there or every article gains a duplicate. Matched on host and path with
+ * the query string dropped, because the same asset is routinely served at
+ * several sizes: `…/STK048.png?w=1200` in the page and `…/STK048.png?w=560`
+ * in the feed is one picture, and comparing whole addresses would call it two.
+ */
+internal fun ensureLeadImage(body: Element, leadImageUrl: String?) {
+    val lead = leadImageUrl?.trim().orEmpty()
+    if (lead.isEmpty()) return
+    val wanted = imageIdentity(lead)
+    if (wanted.isEmpty()) return
+
+    val images = body.select("img").filter { srcOf(it).isNotBlank() }
+    // The same address, so the same request and the same cache entry. Nothing
+    // to do; this is most publishers.
+    if (images.any { imageIdentity(srcOf(it)) == wanted }) return
+
+    val first = images.firstOrNull()
+    if (first != null && sameAsset(imageIdentity(srcOf(first)), wanted)) {
+        // The same photograph at a different address, which is the ordinary
+        // case and was costing a second download of a picture already on the
+        // phone. One Gear Patrol item offers the feed
+        // `...16x9-Lead-1.webp` and the body `...16x9-Lead-1.jpg?w=1920`: one
+        // asset, two addresses, two cache entries, and two separate chances to
+        // fail - which is how an article came to show a placeholder where its
+        // own card, a moment earlier, had shown the picture.
+        first.attr("src", lead)
+        return
+    }
+
+    body.prependChild(Element("img").attr("src", lead))
+}
+
+private fun srcOf(img: Element): String =
+    img.attr("abs:src").ifBlank { img.attr("src") }
+
+/**
+ * Whether two image addresses are the same photograph in different clothes.
+ *
+ * Identical but for the file extension. A CDN offering one picture as both
+ * webp and jpeg is naming a single asset twice, and treating those as two
+ * pictures is what makes the reader fetch what the feed already holds.
+ *
+ * Deliberately no looser than that. Sizes and crops live in the query string,
+ * which [imageIdentity] has already dropped; anything differing beyond the
+ * extension is a different file and may well be a different picture.
+ */
+private fun sameAsset(a: String, b: String): Boolean =
+    a.isNotEmpty() && b.isNotEmpty() && withoutExtension(a) == withoutExtension(b)
+
+private val IMAGE_EXTENSION = Regex("\\.[A-Za-z0-9]{1,5}$")
+
+private fun withoutExtension(identity: String): String =
+    identity.replace(IMAGE_EXTENSION, "")
+
+/**
+ * An image address reduced to the thing that identifies the picture.
+ *
+ * Host and path, lowercased, with the query string and the fragment dropped —
+ * those carry the size and the crop, which is exactly what differs between
+ * the copy in the feed and the copy in the page.
+ */
+internal fun imageIdentity(url: String): String =
+    url.substringBefore('#')
+        .substringBefore('?')
+        .substringAfter("://")
+        .trimEnd('/')
+        .lowercase()
 
 private val HEADING_TAGS = setOf("h1", "h2", "h3", "h4")
 
@@ -823,20 +919,28 @@ private fun TextComposer.handleImage(
                             // request builder — no fetch, no retry, just the error placeholder.
                             // Skipping the frame costs nothing: BoxWithConstraints recomposes
                             // with the real width and the picture arrives then.
-                            if (imageWidth > 0) {
+                            // `hasImage` above is a cheap pre-check on the
+                            // attributes, not a promise of an address: a srcset
+                            // whose candidates all carry descriptors this cannot
+                            // parse, next to an empty src, satisfies it and
+                            // resolves to nothing. Coil then reports
+                            // `IllegalArgumentException: Invalid URL ""`, which
+                            // is what the device report showed. The resolved
+                            // address is the thing worth testing, so it is.
+                            val src = imageCandidates.getBestImageForMaxSize(
+                                pixelDensity = pixelDensity(),
+                                maxWidth = imageWidth.coerceAtLeast(1),
+                            )
+                            if (imageWidth > 0 && src.isNotBlank()) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
-                                    .data(
-                                        imageCandidates.getBestImageForMaxSize(
-                                            pixelDensity = pixelDensity(),
-                                            maxWidth = imageWidth,
-                                        )
-                                    )
+                                    .data(src)
                                     .placeholder(imagePlaceholder)
                                     .error(imagePlaceholder)
                                     .scale(Scale.FIT)
                                     .size(imageWidth)
                                     .precision(Precision.INEXACT)
+                                    .tag(ImageSurface::class.java, ImageSurface.Article)
                                     .build(),
                                 contentScale = ContentScale.FillWidth,
                                 contentDescription = alt,
@@ -956,11 +1060,18 @@ private fun TextComposer.handleIFrame(
                             if (imageWidth > 0) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
+                                    // The video's own still. This request was
+                                    // built without any data at all, so every
+                                    // embedded video in every article drew the
+                                    // fallback mark and none of them ever tried
+                                    // to fetch the thumbnail they had.
+                                    .data(video.imageUrl)
                                     .placeholder(R.drawable.ic_youtube)
                                     .error(R.drawable.ic_youtube)
                                     .scale(Scale.FIT)
                                     .size(imageWidth)
                                     .precision(Precision.INEXACT)
+                                    .tag(ImageSurface::class.java, ImageSurface.Article)
                                     .build(),
                                 contentScale = ContentScale.FillWidth,
                                 contentDescription = stringResource(R.string.touch_to_play_video),
@@ -1023,6 +1134,7 @@ private fun TextComposer.handleVideo(
                                 .scale(Scale.FIT)
                                 .size(imageWidth)
                                 .precision(Precision.INEXACT)
+                                .tag(ImageSurface::class.java, ImageSurface.Article)
                                 .build(),
                             contentScale = ContentScale.FillWidth,
                             contentDescription = stringResource(R.string.touch_to_play_video),
