@@ -1748,6 +1748,52 @@ nothing about any of them.
 Still local, still no account, and still never one reader's list compared
 against another's.
 
+## Text size — asked for, not yet designed
+
+Raised from the device. Worth recording carefully, because the obvious version
+of it is already there and the part that is missing is not the part it sounds
+like.
+
+**What already works.** Every size in `Typography.kt` comes from Material's own
+scale and is expressed in `sp`, so Android's system font-size setting scales
+the whole app today, chrome and articles alike. Somebody who has made text
+larger system-wide already gets larger text here. The font *family* is a
+preference — the bundled Inter, or the system face — and `typographyFor` takes
+it as a parameter and rebuilds the scale around it.
+
+**What is missing** is an in-app control, and the case for one is specific: the
+system setting moves everything at once, and a reader who wants a bigger
+article body does not necessarily want bigger chips, bigger source names and a
+bigger header eating the screen. Every serious reader offers its own size
+control for that reason.
+
+**Where it goes.** `typographyFor(family)` is the seam and already has the right
+shape — it takes a parameter and returns a whole `Typography`. A scale factor
+alongside the family is a small change there and a small change at the two
+`MaterialTheme` entry points in `Theme.kt`.
+
+**What makes it more than that**, and the reason this is a roadmap entry rather
+than an afternoon:
+
+- The cards are laid out by measurement. The image ratios, the 96dp compact
+  thumbnail and the three emphasis sizes were tuned against a real screen, and
+  headlines are bounded by `maxLines`. Scaling the type without revisiting
+  those gives clipped headlines and cards whose text no longer fits the space
+  reserved for it — which is worse than small text.
+- The launcher panel is a fixed width that Lawnchair decides, not us. Whatever
+  the app does, that surface has less room and fewer options.
+- The reader and the feed may want separate answers. Article body size is the
+  thing people actually ask for; feed headline size is a different judgement
+  and arguably belongs to the layout choice instead.
+- It interacts with the system scale rather than replacing it, so the two
+  multiply. A reader at 130% system with 130% in-app gets 169%, which needs
+  deciding rather than discovering.
+
+**Smallest useful first version**, if it is wanted before the rest: article body
+only, three or four steps, applied in `HtmlToComposable` where the reader's
+text is composed, leaving the feed and the chrome alone. That avoids every
+layout problem above and covers the case people actually complain about.
+
 ## Debt worth clearing
 
 Small, and cheaper now than later.
