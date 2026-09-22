@@ -52,6 +52,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -98,6 +99,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import com.saulhdev.feeder.ui.pages.SortFilterSheet
 import com.saulhdev.feeder.ui.components.FeedSearchBar
+import com.saulhdev.feeder.ui.components.SourceFilterBar
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
 import com.saulhdev.feeder.ui.icons.phosphor.Filter
 import com.saulhdev.feeder.ui.icons.phosphor.Filtered
@@ -151,6 +153,10 @@ fun FeedScaffold(
     onSearchQueryChange: (String) -> Unit,
     isSearching: Boolean,
     onSearchingChange: (Boolean) -> Unit,
+    /** The one source the feed is narrowed to, or null for all of them. */
+    focusedSource: String? = null,
+    onFocusSource: (String) -> Unit = {},
+    onClearFocusedSource: () -> Unit = {},
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
     onArticleSeen: (FeedItem) -> Unit = {},
@@ -195,13 +201,36 @@ fun FeedScaffold(
         else onDismissHideSource()
     }
 
+    // Offered on this surface too, now that the panel is known to handle back
+    // for its own state — it already does for the filter sheet and for search.
+    // The earlier reasoning for withholding it, that the gesture belongs to
+    // the launcher, was simply wrong.
+    CompositionLocalProvider(LocalFocusSource provides onFocusSource) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (isSearching) {
+            if (focusedSource != null) {
+                // Ahead of the search bar, because the two cannot both be
+                // showing and this is the more specific state: a search can be
+                // started from inside a narrowed feed, and coming back out of
+                // it should land here rather than at the whole feed.
+                val focusedFeed = remember(focusedSource, articles) {
+                    articles.firstOrNull { it.sourceId == focusedSource }
+                }
+                SourceFilterBar(
+                    title = focusedFeed?.feedTitle.orEmpty(),
+                    iconUrl = focusedFeed?.feedIconUrl,
+                    onClear = onClearFocusedSource,
+                    // This window's own insets are not to be trusted; topInset
+                    // is measured by the overlay's listener. Same reasoning as
+                    // the search bar below.
+                    windowInsets = WindowInsets(0),
+                    modifier = Modifier.padding(top = topInset),
+                )
+            } else if (isSearching) {
                 FeedSearchBar(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
@@ -556,6 +585,7 @@ fun FeedScaffold(
                 Icon(Phosphor.CaretUp, stringResource(R.string.back_to_top))
             }
         }
+    }
     }
 }
 

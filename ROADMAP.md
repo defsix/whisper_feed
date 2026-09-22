@@ -1826,14 +1826,22 @@ source's own mark and name with nothing to type into.
 
 **Two parts were deliberately left.**
 
-- **The launcher panel does not have it.** Its back gesture belongs to the
-  launcher, so a filter opened there would have no way out — the reader would
-  be left on a narrowed feed with the only exit closing the panel entirely.
-  The capability is offered through a `CompositionLocal` that defaults to
-  null, so the panel simply is not given it; nothing needs removing if an
-  answer is found. The answer is probably an explicit control in the bar
-  rather than a gesture, which is a small piece of design rather than a small
-  piece of code.
+- ~~**The launcher panel does not have it.**~~ **Built.** It was withheld on
+  the reasoning that the panel's back gesture belongs to the launcher, so a
+  filter opened there would have no way out. That was simply wrong:
+  `OverlayView.onBackPressed` already intercepts back for the filter sheet and
+  for search, falling through to the launcher only when neither is open. A
+  third clause was three lines. The bar goes in the header slot the search bar
+  already uses, and the panel is handed the same `CompositionLocal` the app
+  gets.
+
+  The one thing worth confirming rather than assuming was whether the two
+  surfaces share a view model — the app resolves through `koinNeoViewModel`
+  and the panel through `KoinJavaComponent.inject`, both naming the same
+  `viewModelOf` binding. Shared, a filter set in the app would silently narrow
+  somebody's home screen. `ViewModelSharingTest` asks Koin directly rather
+  than reading the DSL, because the answer is a property of the Koin version
+  and would change without anything here changing with it. They are separate.
 - **One publisher, several feeds.** Filtering is by the source that was
   tapped, which is what the tap said. A reader taking "Slate - Culture" and
   "Slate - News" separately will at some point tap one and wonder where the

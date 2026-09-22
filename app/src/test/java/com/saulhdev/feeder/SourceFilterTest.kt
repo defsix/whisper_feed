@@ -131,18 +131,58 @@ class SourceFilterTest {
     }
 
     @Test
-    fun `a surface that cannot undo the filter is not offered it`() {
-        // The launcher panel's back gesture belongs to the launcher, so a
-        // filter opened there would have no way out.
+    fun `both surfaces offer it, and neither is offered it by default`() {
+        // Null by default, so a surface has to opt in. The launcher panel was
+        // withheld at first on the reasoning that its back gesture belongs to
+        // the launcher — which was wrong: OverlayView.onBackPressed already
+        // intercepts back for the filter sheet and for search.
         assertTrue(
             "the default is no longer 'cannot focus'",
             card.contains("compositionLocalOf<((String) -> Unit)?> { null }"),
         )
         assertTrue("the app no longer offers it", page.contains("LocalFocusSource provides"))
-        val scaffold = read("ui/overlay/FeedScaffold.kt")
         assertTrue(
-            "the launcher panel now offers a filter it cannot undo",
-            !scaffold.contains("LocalFocusSource"),
+            "the launcher panel no longer offers it",
+            read("ui/overlay/FeedScaffold.kt").contains("LocalFocusSource provides onFocusSource"),
+        )
+    }
+
+    @Test
+    fun `the launcher panel takes back before the launcher does`() {
+        val overlay = read("manager/service/OverlayView.kt")
+        val at = overlay.indexOf("override fun onBackPressed()")
+        assertTrue("the panel no longer handles back", at > 0)
+        val body = overlay.substring(at, overlay.indexOf("\n    }", at))
+
+        assertTrue(
+            "back no longer clears the narrowed feed",
+            body.contains("viewModel.clearFocusedSource()"),
+        )
+        // Above the fall-through, or the panel closes with the filter still on
+        // and the reader comes back to a feed missing most of itself.
+        assertTrue(
+            "the filter is cleared after back has already reached the launcher",
+            body.indexOf("clearFocusedSource") < body.indexOf("super.onBackPressed()"),
+        )
+        // Below the search clause: a search can be started from inside a
+        // narrowed feed, so leaving the search should land on the narrowed
+        // feed rather than skipping both at once.
+        assertTrue(
+            "leaving a search now skips past the narrowed feed",
+            body.indexOf("setSearchQuery") < body.indexOf("clearFocusedSource"),
+        )
+    }
+
+    @Test
+    fun `the two surfaces do not share a filter`() {
+        // They resolve separate ArticleListViewModel instances — see
+        // ViewModelSharingTest, which asks Koin rather than assuming. If that
+        // ever changes, a filter set in the app would silently narrow
+        // somebody's home screen.
+        val overlay = read("manager/service/OverlayView.kt")
+        assertTrue(
+            "the panel no longer follows its own view model's focused source",
+            overlay.contains("viewModel.focusedSource.collect"),
         )
     }
 

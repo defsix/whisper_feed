@@ -163,6 +163,16 @@ class OverlayView(val context: Context) :
     private val searching = mutableStateOf(false)
 
     /**
+     * The one source the panel is narrowed to, or null for all of them.
+     *
+     * The panel resolves its own ArticleListViewModel, so this is independent
+     * of whatever the app is showing — confirmed rather than assumed, since a
+     * shared one would let a filter set in the app quietly narrow somebody's
+     * home screen. See ViewModelSharingTest.
+     */
+    private val focusedSource = mutableStateOf<String?>(null)
+
+    /**
      * System bar insets, in pixels, as reported to the overlay's root view.
      *
      * Passed into Compose rather than read there via WindowInsets: this window
@@ -266,6 +276,9 @@ class OverlayView(val context: Context) :
             viewModel.searchQuery.collect { searchQuery.value = it }
         }
         syncScope.launch {
+            viewModel.focusedSource.collect { focusedSource.value = it }
+        }
+        syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
         }
         syncScope.launch {
@@ -322,6 +335,10 @@ class OverlayView(val context: Context) :
         if (searching.value) {
             searching.value = false
             viewModel.setSearchQuery("")
+            return
+        }
+        if (focusedSource.value != null) {
+            viewModel.clearFocusedSource()
             return
         }
         super.onBackPressed()
@@ -482,6 +499,9 @@ class OverlayView(val context: Context) :
                         searchQuery = searchQuery.value,
                         onSearchQueryChange = { viewModel.setSearchQuery(it) },
                         isSearching = searching.value,
+                        focusedSource = focusedSource.value,
+                        onFocusSource = viewModel::focusSource,
+                        onClearFocusedSource = viewModel::clearFocusedSource,
                         onSearchingChange = {
                             searching.value = it
                             if (!it) viewModel.setSearchQuery("")
