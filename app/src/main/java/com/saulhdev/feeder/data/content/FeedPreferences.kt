@@ -341,22 +341,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = false
     )
 
-    /**
-     * Keep a pinned or breaking article at the top until it is scrolled past.
-     *
-     * Off by default, and paired with the setting above rather than hidden
-     * elsewhere: it only does anything to an article something else has
-     * already promoted, so it reads as a modifier of that rather than a
-     * feature of its own.
-     */
-    var stickyTop = BooleanPref(
-        titleId = R.string.pref_sticky_top,
-        summaryId = R.string.pref_sticky_top_summary,
-        icon = Phosphor.Asterisk,
-        key = STICKY_TOP,
-        dataStore = dataStore,
-        defaultValue = false
-    )
 
     /**
      * Where backups are written, as a persisted tree Uri, or empty.
@@ -1074,7 +1058,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val FEED_LIBRARY = stringPreferencesKey("pref_feed_library")
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val DIM_SKIPPED = booleanPreferencesKey("pref_dim_skipped")
-        val STICKY_TOP = booleanPreferencesKey("pref_sticky_top")
 
         /**
          * Set once by the app so a preference row can reach the view model.

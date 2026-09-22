@@ -123,8 +123,7 @@ import com.saulhdev.feeder.ui.overlay.TrackReading
 import com.saulhdev.feeder.ui.overlay.rememberDimRead
 import com.saulhdev.feeder.ui.overlay.rememberSkippedSources
 import com.saulhdev.feeder.ui.theme.reducedMotion
-import com.saulhdev.feeder.ui.overlay.heldFeed
-import com.saulhdev.feeder.ui.overlay.rememberHeldArticle
+import com.saulhdev.feeder.ui.overlay.feedItems
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
 import com.saulhdev.feeder.ui.overlay.ActiveFilterBar
 import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
@@ -652,7 +651,6 @@ fun ArticleListPage(
                                             },
                                         )
                                     } else {
-                                        val held = rememberHeldArticle(state.articles, clusters)
                                         PullToRefreshLazyColumn(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
@@ -670,7 +668,7 @@ fun ArticleListPage(
                                             contentPadding = FEED_PADDING,
                                             content = {
                                                 item(key = FEED_HEADER_KEY) { header() }
-                                                heldFeed(state.articles, held, animate) { index, item ->
+                                                feedItems(state.articles, animate) { index, item ->
                                                     article(
                                                         index,
                                                         item,

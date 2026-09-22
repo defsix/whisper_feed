@@ -117,16 +117,12 @@ fun FeedArticleItem(
     // one, because two shades of faded on one screen is a distinction nobody
     // can read and everybody has to wonder about.
     //
-    // A held breaking story never fades either, and for the same reason
-    // reached by different machinery: a pin is held by the sort order, a
-    // cluster lead by a sticky header. Both are kept on screen by the app
-    // rather than by the reader, so "you have seen it" is not something the
-    // app learned — it is something it arranged. And a sticky header is drawn
-    // over the list, so fading one does not dim a card, it opens a window onto
-    // the five articles scrolling underneath.
+    // The held-breaking-story exemption that used to sit here is gone with the
+    // hold itself; see FeedItems. A pin still keeps its exemption, because a
+    // pin is still kept on screen by the app rather than by the reader.
     val faded = (dimRead && item.article.readAt != 0L) || dimSource
     val shapeModifier =
-        if (isCardFaded(faded, pinned = item.pinned, heldAtTop = LocalHeldAtTop.current)) {
+        if (isCardFaded(faded, pinned = item.pinned)) {
             modifier.alpha(READ_ALPHA)
         } else {
             modifier
@@ -900,10 +896,16 @@ private fun CoverageLine(
 /**
  * Whether a card is drawn faded.
  *
- * Pulled out of the composable so the two exemptions can be argued with in a
- * test. Both say the same thing: an article the app is keeping on screen by
- * itself cannot be dimmed for having been seen, because it was the app that
- * put it there and kept it there.
+ * Pulled out of the composable so the exemption can be argued with in a test:
+ * an article the app is keeping on screen by itself cannot be dimmed for
+ * having been seen, because it was the app that put it there and kept it
+ * there.
+ *
+ * There were two. The second was a clustered story held to the top by a
+ * sticky header, which needed the exemption for a mechanical reason as well —
+ * a sticky header is drawn over the list, so fading one did not dim a card,
+ * it opened a window onto the articles sliding underneath. The hold is gone;
+ * see FeedItems.
  */
-internal fun isCardFaded(faded: Boolean, pinned: Boolean, heldAtTop: Boolean): Boolean =
-    faded && !pinned && !heldAtTop
+internal fun isCardFaded(faded: Boolean, pinned: Boolean): Boolean =
+    faded && !pinned

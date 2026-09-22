@@ -349,7 +349,6 @@ fun FeedScaffold(
                 val dimRead = rememberDimRead()
                     val skipped = rememberSkippedSources()
                 val clusters = rememberStoryClusters(articles)
-                val held = rememberHeldArticle(articles, clusters)
                 TrackReading(
                     articles = articles,
                     isGrid = isGrid,
@@ -464,7 +463,7 @@ fun FeedScaffold(
                         contentPadding = padding,
                         content = {
                             item(key = FEED_HEADER_KEY) { header() }
-                            heldFeed(articles, held, animate, article)
+                            feedItems(articles, animate, article)
                         },
                     )
                 }

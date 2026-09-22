@@ -253,8 +253,6 @@
     <string name="why_breaking">Several sources are covering this story</string>
     <string name="pref_dim_skipped">Fade sources you skip</string>
     <string name="pref_dim_skipped_summary">Sources whose articles you scroll past without stopping are shown faded, so the ones you read stand out. Nothing is hidden, and you can see which sources this affects under What Whisper has learned.</string>
-    <string name="pref_sticky_top">Hold breaking news while you scroll</string>
-    <string name="pref_sticky_top_summary">A breaking story is held at the top of the screen until you have scrolled a few articles past it. Pinned articles always sit first in the feed, whether this is on or off.</string>
     <string name="empty_bookmarks">Nothing saved yet</string>
     <string name="empty_bookmarks_hint">Tap the save mark on any article and it is kept here, readable offline.</string>
     <string name="empty_no_sources">No sources yet</string>
