@@ -99,18 +99,34 @@ import kotlin.math.roundToInt
 /**
  * How a paragraph of an article is set.
  *
- * Justified, with hyphenation switched on — and the second is not optional
- * with the first. A justified column this narrow and unhyphenated opens
- * rivers: the spaces stretch to fill the line and the eye follows the gaps
- * down the page instead of the words across it. Hyphens let the line breaks
- * fall somewhere sensible so the stretching stays small.
+ * Ragged right, unhyphenated. This was justified with hyphenation switched
+ * on, on the reasoning that a narrow justified column opens rivers unless the
+ * breaks can fall mid-word — which is true, and is an argument against
+ * justifying a column this narrow rather than for hyphenating it.
+ *
+ * Justification needs a measure wide enough that the spaces have somewhere to
+ * go. A phone gives roughly forty characters, so every line was stretched to
+ * fit and no two lines were stretched the same amount; the word gaps changed
+ * size down the page. Android's automatic hyphenation then broke words
+ * wherever the line needed it — "automot-ive", "Activ-ision", "Actu-ally" —
+ * and a reader tracking a sentence had to reassemble words as well as follow
+ * shifting gaps. Reported as disorienting, which is exactly what it is.
+ *
+ * Ragged right gives every space the same width and every word one piece. The
+ * right-hand edge is uneven, and that is the trade: an edge nobody reads
+ * against gaps and breaks inside the words they do. It is what every reading
+ * app on a phone does, for this reason.
+ *
+ * [LineBreak.Paragraph] stays. It is the slower, whole-paragraph break
+ * strategy, and it is what keeps the ragged edge shallow rather than saw
+ * toothed — it has nothing to do with justification and was never the problem.
  */
 @Composable
 private fun bodyStyle() = MaterialTheme.typography.bodyLarge.merge(
     TextStyle(
         color = MaterialTheme.colorScheme.onBackground,
-        textAlign = TextAlign.Justify,
-        hyphens = Hyphens.Auto,
+        textAlign = TextAlign.Start,
+        hyphens = Hyphens.None,
         lineBreak = LineBreak.Paragraph,
     )
 )
