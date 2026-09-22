@@ -48,8 +48,21 @@ class ImageIdentityTest {
             "images ask for avif, which this device decodes in software at 3x the cost",
             !accept.contains("image/avif"),
         )
-        assertTrue("images no longer ask for webp", accept.contains("image/webp"))
         assertTrue("images no longer accept anything as a fallback", accept.contains("*/*"))
+
+        // Preference by measurement: across one scroll, webp averaged 45.8ms
+        // to decode against jpeg's 24.4ms and png's 8.4ms. Listing webp first
+        // — which this did — moved publishers onto the slower format, and the
+        // feeds served almost none before the header existed.
+        val jpeg = accept.indexOf("image/jpeg")
+        val webp = accept.indexOf("image/webp")
+        assertTrue("images no longer ask for jpeg", jpeg > 0)
+        assertTrue("images no longer accept webp at all", webp > 0)
+        assertTrue("webp is preferred over jpeg again, and decodes twice as slowly", jpeg < webp)
+        assertTrue(
+            "webp is no longer asked for at a lower quality value, so a CDN may still prefer it",
+            Regex("""image/webp;q=0\.[0-9]""").containsMatchIn(accept),
+        )
     }
 
     @Test

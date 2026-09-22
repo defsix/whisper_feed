@@ -77,16 +77,27 @@ object HttpIdentity {
      * that answers an unknown client with a 403, and hotlink protection is
      * usually implemented as precisely that check.
      *
-     * Deliberately does not advertise AVIF, and that is a measurement rather
-     * than a preference. A trace of a real scroll timed one AVIF image at
-     * 87.9ms against 29.1ms for the JPEGs beside it — Android decodes AVIF
-     * through a software AV1 codec, one MediaCodec instance at a time. A
-     * content-negotiating CDN sends the best format the client claims, so
-     * claiming AVIF asks for the expensive one. WebP is asked for, being
-     * smaller than JPEG and cheap to decode.
+     * The order is measured rather than assumed, and it has been wrong once
+     * already. This first listed WebP on the reasoning that it is smaller than
+     * JPEG and cheap to decode. The first half is true and the second is not,
+     * on this hardware: across one scroll, 49 WebP images averaged **45.8ms**
+     * to decode against 28 JPEGs at **24.4ms** and 17 PNGs at 8.4ms. Before
+     * that header existed the same feeds served almost no WebP at all — so
+     * asking for it moved publishers onto the slower format and made decoding
+     * the feed nearly twice as expensive.
+     *
+     * AVIF is worse again and is not advertised at all: 144.6ms for a single
+     * image in the same scroll, because Android decodes it through a software
+     * AV1 codec, one MediaCodec instance at a time.
+     *
+     * So JPEG and PNG are preferred outright, WebP is accepted at a lower
+     * quality value, and AVIF is left off. A content-negotiating CDN sends the
+     * best format the client claims to want, and what this app wants is the
+     * one that draws fastest — bytes over the wire are cheap next to a decode
+     * that competes with the scroll.
      */
     private const val IMAGE_ACCEPT =
-        "image/webp,image/png,image/jpeg,image/gif,*/*;q=0.8"
+        "image/jpeg,image/png,image/gif,image/webp;q=0.7,*/*;q=0.5"
 
     /** What a feed reader should ask for first, falling back to anything. */
     private const val FEED_ACCEPT =

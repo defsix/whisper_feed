@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
@@ -87,6 +88,11 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
                     minFeedAgeMinutes = minFeedAgeMinutes
                 )
             }
+        } catch (e: CancellationException) {
+            // Cancellation is the reader leaving, not a sync that went wrong.
+            // Reported as a failure it would retry on a backoff and log an
+            // error for something nobody did wrong. See RssLocalSync.
+            throw e
         } catch (e: Exception) {
             success = false
             Log.e(TAG, "Failure during sync", e)

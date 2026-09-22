@@ -45,6 +45,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.Mutex
@@ -199,6 +201,37 @@ internal suspend fun syncFeeds(
                                 // And forget any run of failures: whatever was
                                 // wrong is not wrong now.
                                 feedsRepo.clearFailures(feed.id)
+                            } catch (e: CancellationException) {
+                                // Not a failure, and this catch used to treat
+                                // it as one. `Throwable` includes
+                                // CancellationException, so closing the
+                                // launcher panel mid-sync recorded a failure
+                                // against every feed still in flight — three
+                                // of those and a publisher appears under
+                                // "Feeds that stopped working" for the crime
+                                // of the reader having swiped away. A device
+                                // log showed five sources newly failing with
+                                // "Job was cancelled" as the only reason.
+                                //
+                                // The clock is not stamped either: nothing was
+                                // fetched, so the feed is exactly as stale as
+                                // it was, and saying otherwise would hide a
+                                // sync that never happened.
+                                //
+                                // NonCancellable because this coroutine is
+                                // already cancelled and a suspending write
+                                // would be cancelled with it, leaving the feed
+                                // marked as syncing for ever — a spinner that
+                                // never stops.
+                                withContext(NonCancellable) {
+                                    feedsRepo.setCurrentlySyncingOn(
+                                        feedId = feed.id,
+                                        syncing = false,
+                                    )
+                                }
+                                // Rethrown, because swallowing it breaks the
+                                // structured concurrency that cancelled us.
+                                throw e
                             } catch (e: Throwable) {
                                 Log.e(TAG, "Failed to sync ${feed.title}: ${feed.url}", e)
                                 // Error, clear syncing flag but don't update lastSync
@@ -218,6 +251,10 @@ internal suspend fun syncFeeds(
                 result = feedsToFetch.isNotEmpty()
 
             }
+        } catch (e: CancellationException) {
+            // Leaving the feed is not an error to report; see the per-feed
+            // catch above.
+            throw e
         } catch (e: Throwable) {
             Log.e(TAG, "Outer error", e)
         } finally {

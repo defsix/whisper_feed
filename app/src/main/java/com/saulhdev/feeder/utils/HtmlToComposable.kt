@@ -742,6 +742,12 @@ private fun TextComposer.handleImage(
 //                                            }
                         ) {
                             val imageWidth = maxImageWidth()
+                            // Zero until the box has been measured, and Coil refuses a zero
+                            // dimension with an IllegalArgumentException thrown from inside the
+                            // request builder — no fetch, no retry, just the error placeholder.
+                            // Skipping the frame costs nothing: BoxWithConstraints recomposes
+                            // with the real width and the picture arrives then.
+                            if (imageWidth > 0) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
                                     .data(
@@ -761,6 +767,7 @@ private fun TextComposer.handleImage(
                                 modifier = Modifier
                                     .fillMaxWidth()
                             )
+                            }
                         }
                     }
 
@@ -865,6 +872,12 @@ private fun TextComposer.handleIFrame(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             val imageWidth = maxImageWidth()
+                            // Zero until the box has been measured, and Coil refuses a zero
+                            // dimension with an IllegalArgumentException thrown from inside the
+                            // request builder — no fetch, no retry, just the error placeholder.
+                            // Skipping the frame costs nothing: BoxWithConstraints recomposes
+                            // with the real width and the picture arrives then.
+                            if (imageWidth > 0) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
                                     .placeholder(R.drawable.ic_youtube)
@@ -881,6 +894,7 @@ private fun TextComposer.handleIFrame(
                                     }
                                     .fillMaxWidth()
                             )
+                            }
                         }
                     }
 
@@ -919,6 +933,12 @@ private fun TextComposer.handleVideo(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         val imageWidth = maxImageWidth()
+                        // Zero until the box has been measured, and Coil refuses a zero
+                        // dimension with an IllegalArgumentException thrown from inside the
+                        // request builder — no fetch, no retry, just the error placeholder.
+                        // Skipping the frame costs nothing: BoxWithConstraints recomposes
+                        // with the real width and the picture arrives then.
+                        if (imageWidth > 0) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(posterSrc.ifEmpty { R.drawable.ic_youtube })
@@ -936,6 +956,7 @@ private fun TextComposer.handleVideo(
                                 }
                                 .fillMaxWidth()
                         )
+                        }
 
                         // Play button overlay
                         Box(
@@ -1089,8 +1110,23 @@ private fun pixelDensity() = with(LocalDensity.current) {
 }
 
 @Composable
+/**
+ * How wide to decode an article's image, or zero if that is not known yet.
+ *
+ * Zero is a real answer and has to be handled by the caller. A
+ * `BoxWithConstraints` can be measured with no width — during a lazy list's
+ * first pass, or while a pane is collapsed — and `maxWidth.toPx()` is then 0.
+ *
+ * Coil refuses it: `Dimension.Pixels` carries `require(px > 0)` and throws
+ * `IllegalArgumentException("px must be > 0.")` from inside the request
+ * builder, before any fetch is attempted. The request never runs, the error
+ * placeholder is drawn, and nothing anywhere says why — which is how article
+ * images came to show Whisper's own placeholder while the same article in a
+ * browser showed the photograph. It took the image trace counting failures to
+ * see it at all.
+ */
 fun BoxWithConstraintsScope.maxImageWidth() = with(LocalDensity.current) {
-    maxWidth.toPx().roundToInt().coerceAtMost(2000)
+    maxWidth.toPx().roundToInt().coerceAtMost(2000).coerceAtLeast(0)
 }
 
 /**
