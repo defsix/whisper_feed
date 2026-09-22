@@ -17,6 +17,12 @@
  */
 package com.saulhdev.feeder.utils
 
+import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
+import androidx.work.WorkManager
+import androidx.work.NetworkType
+import android.os.BatteryManager
+import android.net.NetworkCapabilities
+import android.net.ConnectivityManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -97,6 +103,16 @@ object Diagnostics : KoinComponent {
         }.onFailure { appendLine("Preferences unavailable: $it") }
 
         appendLine()
+        appendLine("== Sync ==")
+        // What the scheduled sync is set to, what WorkManager actually holds,
+        // and what the phone is doing right now - the three things a "why has
+        // it not synced" question turns on, and none of which could be seen
+        // from the report before. The last-sync times further down say
+        // *whether* a sync ran; this says why one has not.
+        runCatching { withTimeout(SECTION_TIMEOUT_MS) { appendSync(context) } }
+            .onFailure { appendLine("Sync state unavailable: $it") }
+
+        appendLine()
         appendLine("== Images ==")
         // Since this launch, not since the last five-second window, which is
         // all the log below can show. A picture that failed to appear an hour
@@ -170,6 +186,91 @@ object Diagnostics : KoinComponent {
      * Reads this app's logcat. Since Android 4.1 a process only sees its own
      * entries, which is exactly the scope wanted and needs no permission.
      */
+    private suspend fun StringBuilder.appendSync(context: Context) {
+        val prefs = get<FeedPreferences>()
+        val hours = prefs.syncFrequency.getValue().toDoubleOrNull() ?: 0.0
+        val wifiOnly = prefs.syncOnlyOnWifi.getValue()
+        val chargingOnly = prefs.syncOnlyWhenCharging.getValue()
+        appendLine(
+            "Settings:     " +
+                (if (hours > 0) "every ${formatHours(hours)}" else "off") +
+                ", Wi-Fi only ${yesNo(wifiOnly)}, charging only ${yesNo(chargingOnly)}"
+        )
+
+        val onWifi = isUnmetered(context)
+        val charging = isCharging(context)
+        appendLine("Phone now:    ${if (onWifi) "unmetered (Wi-Fi)" else "metered or offline"}, charging ${yesNo(charging)}")
+
+        val work = WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkFlow(PERIODIC_SYNC_WORK)
+            .first()
+            .firstOrNull()
+        if (work == null) {
+            appendLine("Scheduled:    nothing - " + if (hours > 0) "expected a schedule and found none" else "off, as set")
+        } else {
+            val next = work.nextScheduleTimeMillis
+            val inMinutes = (next - System.currentTimeMillis()) / 60_000
+            val nextText = if (next == Long.MAX_VALUE || next <= 0L) "unknown"
+                else SimpleDateFormat("HH:mm", Locale.US).format(Date(next)) +
+                    if (inMinutes >= 0) " (in $inMinutes min)" else " (${-inMinutes} min overdue)"
+            appendLine("Scheduled:    ${work.state}, next $nextText, attempts ${work.runAttemptCount}")
+
+            val needs = work.constraints
+            val wantsUnmetered = needs.requiredNetworkType == NetworkType.UNMETERED
+            appendLine(
+                "Requires:     network ${needs.requiredNetworkType}, charging ${yesNo(needs.requiresCharging())}, " +
+                    "battery not low ${yesNo(needs.requiresBatteryNotLow())}"
+            )
+            // The line the switch test turns on: what the schedule is waiting
+            // for that the phone is not doing. The battery level is left out
+            // because nothing here can read it without a permission, so the
+            // verdict says only what it knows.
+            val unmet = buildList {
+                if (wantsUnmetered && !onWifi) add("Wi-Fi")
+                if (needs.requiresCharging() && !charging) add("a charger")
+            }
+            appendLine(
+                "Waiting for:  " + if (unmet.isEmpty()) "nothing it can see - due at its next slot" else unmet.joinToString(" and ")
+            )
+            // Settings that disagree with the schedule mean the schedule was
+            // not updated when the switch was changed - the bug the settings
+            // collector exists to prevent, and worth saying outright if it
+            // ever comes back.
+            if (wantsUnmetered != wifiOnly || needs.requiresCharging() != chargingOnly) {
+                appendLine("MISMATCH:     the schedule does not match the settings above")
+            }
+        }
+
+        val newest = get<SourcesRepository>().getAllSources()
+            .maxOfOrNull { it.lastSync.toEpochMilliseconds() } ?: 0L
+        if (newest > 0L) {
+            val ago = (System.currentTimeMillis() - newest) / 60_000
+            appendLine(
+                "Last sync:    " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date(newest)) +
+                    " ($ago min ago)"
+            )
+        } else {
+            appendLine("Last sync:    never")
+        }
+    }
+
+    private fun yesNo(value: Boolean) = if (value) "yes" else "no"
+
+    private fun formatHours(hours: Double): String =
+        if (hours < 1.0) "${(hours * 60).toInt()} min"
+        else if (hours % 1.0 == 0.0) "${hours.toInt()} h"
+        else "$hours h"
+
+    private fun isUnmetered(context: Context): Boolean = runCatching {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val caps = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+        caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
+    }.getOrDefault(false)
+
+    private fun isCharging(context: Context): Boolean = runCatching {
+        context.getSystemService(BatteryManager::class.java).isCharging
+    }.getOrDefault(false)
+
     /**
      * How long any one database section may take before the report goes on
      * without it. A section that times out says so and the rest still arrives:

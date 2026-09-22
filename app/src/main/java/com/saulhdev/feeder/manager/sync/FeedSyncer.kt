@@ -184,3 +184,13 @@ fun requestFeedSync(
         workRequest
     )
 }
+
+/**
+ * The name the scheduled sync is enqueued under.
+ *
+ * One constant rather than a string in two places: the diagnostics report
+ * asks WorkManager about the work by this name, and a report that looked
+ * under a name the scheduler had stopped using would say "not scheduled"
+ * about a sync that was running perfectly well.
+ */
+const val PERIODIC_SYNC_WORK = "feeder_periodic_3"

@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.viewmodels
 
+import com.saulhdev.feeder.utils.usableImageUrl
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.ArticleRepository
@@ -102,8 +103,8 @@ class LearnedViewModel(
             LearnedSource(
                 id = id,
                 title = feed.title,
-                iconUrl = feed.feedImage.toString()
-                    .takeIf { it.isNotBlank() && it != feed.url.toString() },
+                iconUrl = usableImageUrl(feed.feedImage.toString())
+                    ?.takeIf { it != feed.url.toString() },
                 affinity = score,
                 opened = row?.opened ?: 0,
                 seen = row?.seen ?: 0,

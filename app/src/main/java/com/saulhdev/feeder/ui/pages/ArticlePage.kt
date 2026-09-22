@@ -272,7 +272,7 @@ fun ArticlePage(
                     // text is something you have to read.
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SourceMark(
-                            iconUrl = state?.source?.feedImage?.toString(),
+                            iconUrl = usableImageUrl(state?.source?.feedImage?.toString()),
                             sourceName = feedTitle,
                         )
                         Spacer(modifier = Modifier.width(8.dp))

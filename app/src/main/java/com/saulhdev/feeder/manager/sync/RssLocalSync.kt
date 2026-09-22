@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.utils.usableImageUrl
 import android.content.Context
 import android.util.Log
 import com.saulhdev.feeder.data.content.FeedPreferences
@@ -347,11 +348,17 @@ private suspend fun syncFeed(
     // step is a network round trip, so it runs once per source rather than on
     // every sync: a feed that declares no icon and whose site offers none
     // keeps looking, but a feed that has one never asks again.
-    val storedIcon = syncedFeed.feedImage.toString()
+    //
+    // "Already stored" is asked of usableImageUrl rather than isNotBlank. A
+    // source with no icon stores `https:` - the default URL's fallback,
+    // see FeedItem.feedIconUrl - which is not blank, so this step read it as
+    // an icon already found and the site was never asked. Sources that
+    // declare no icon in their feed therefore kept a monogram for good.
+    val storedIcon = usableImageUrl(syncedFeed.feedImage.toString())
     val declaredIcon = feed.icon?.takeIf { it.isNotBlank() }
     val resolvedIcon = when {
         declaredIcon != null -> declaredIcon
-        storedIcon.isNotBlank() -> storedIcon
+        storedIcon != null -> storedIcon
         else -> feed.home_page_url
             ?.let { runCatching { sloppyLinkToStrictURL(it) }.getOrNull() }
             ?.let { feedParser.findSiteIcon(it) }

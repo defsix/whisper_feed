@@ -1,5 +1,6 @@
 package com.saulhdev.feeder
 
+import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -269,7 +270,7 @@ class MainActivity : ComponentActivity() {
                 .build()
 
             workManager.enqueueUniquePeriodicWork(
-                "feeder_periodic_3",
+                PERIODIC_SYNC_WORK,
                 when (replace) {
                     true  -> ExistingPeriodicWorkPolicy.UPDATE
                     false -> ExistingPeriodicWorkPolicy.KEEP
@@ -278,7 +279,7 @@ class MainActivity : ComponentActivity() {
             )
 
         } else {
-            workManager.cancelUniqueWork("feeder_periodic_3")
+            workManager.cancelUniqueWork(PERIODIC_SYNC_WORK)
         }
     }
 
