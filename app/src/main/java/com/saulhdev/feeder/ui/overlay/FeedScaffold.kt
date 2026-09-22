@@ -155,7 +155,17 @@ fun FeedScaffold(
     onSearchingChange: (Boolean) -> Unit,
     /** The one source the feed is narrowed to, or null for all of them. */
     focusedSource: String? = null,
-    onFocusSource: (String) -> Unit = {},
+    /**
+     * The narrowing [articles] was actually built under.
+     *
+     * Not the same as [focusedSource] for the moment between the tap and the
+     * query coming back, which is the moment that matters here. See
+     * [AnchorFeedOnFocusChange].
+     */
+    appliedFocus: String? = null,
+    /** The article a narrowing started from, to land on at both its edges. */
+    focusAnchor: String? = null,
+    onFocusSource: (String, String) -> Unit = { _, _ -> },
     onClearFocusedSource: () -> Unit = {},
     onBookmarksClick: () -> Unit,
     onSettings: () -> Unit,
@@ -183,6 +193,17 @@ fun FeedScaffold(
             else listState.firstVisibleItemIndex > 5
         }
     }
+
+    // Tapping a source narrows the feed to it, and backing out widens it
+    // again; both land on the article the tap came from. See FocusAnchor.
+    AnchorFeedOnFocusChange(
+        appliedFocus = appliedFocus,
+        anchorId = focusAnchor,
+        articles = articles,
+        isGrid = isGrid,
+        listState = listState,
+        gridState = gridState,
+    )
 
     // Hiding a source is one tap with no confirmation, so the way back is
     // offered here rather than left to the sources screen.

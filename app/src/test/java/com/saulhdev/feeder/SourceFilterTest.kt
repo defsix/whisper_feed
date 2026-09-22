@@ -138,7 +138,9 @@ class SourceFilterTest {
         // intercepts back for the filter sheet and for search.
         assertTrue(
             "the default is no longer 'cannot focus'",
-            card.contains("compositionLocalOf<((String) -> Unit)?> { null }"),
+            // Two arguments now: the source to narrow to, and the article to
+            // land on at both edges of the narrowing. See FocusAnchorTest.
+            card.contains("compositionLocalOf<((String, String) -> Unit)?> { null }"),
         )
         assertTrue("the app no longer offers it", page.contains("LocalFocusSource provides"))
         assertTrue(

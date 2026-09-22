@@ -329,7 +329,10 @@ fun ArticlePage(
                                 inputStream = it,
                                 baseUrl = state?.article?.link ?: "",
                                 imagePlaceholder = placeholder,
-                                onLinkClick = context::launchView
+                                onLinkClick = context::launchView,
+                                // Drawn above already. Several publishers open
+                                // the body with it too; see stripRepeatedTitle.
+                                articleTitle = title,
                             )
                         }
                     } else {
@@ -344,7 +347,10 @@ fun ArticlePage(
                                 inputStream = it,
                                 baseUrl = state?.article?.link ?: "",
                                 imagePlaceholder = placeholder,
-                                onLinkClick = context::launchView
+                                onLinkClick = context::launchView,
+                                // Drawn above already. Several publishers open
+                                // the body with it too; see stripRepeatedTitle.
+                                articleTitle = title,
                             )
                         }
                     } else {

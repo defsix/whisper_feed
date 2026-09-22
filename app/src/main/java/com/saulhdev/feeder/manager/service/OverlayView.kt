@@ -172,6 +172,12 @@ class OverlayView(val context: Context) :
      */
     private val focusedSource = mutableStateOf<String?>(null)
 
+    /** The narrowing the articles on screen were built under. See FocusAnchor. */
+    private val appliedFocus = mutableStateOf<String?>(null)
+
+    /** The article a narrowing started from, to land on at both its edges. */
+    private val focusAnchor = mutableStateOf<String?>(null)
+
     /**
      * System bar insets, in pixels, as reported to the overlay's root view.
      *
@@ -264,6 +270,9 @@ class OverlayView(val context: Context) :
                 articlesState.value = it.articles
                 isSyncingState.value = it.isSyncing
                 isFilterActive.value = it.isFilterModified
+                // Set from the same emission as the articles, never separately:
+                // the pairing is the whole point. See FocusAnchor.
+                appliedFocus.value = it.focusedSource
             }
         }
         syncScope.launch {
@@ -277,6 +286,9 @@ class OverlayView(val context: Context) :
         }
         syncScope.launch {
             viewModel.focusedSource.collect { focusedSource.value = it }
+        }
+        syncScope.launch {
+            viewModel.focusAnchor.collect { focusAnchor.value = it }
         }
         syncScope.launch {
             prefs.appFont.get().collect { overlayFont.value = it }
@@ -500,6 +512,8 @@ class OverlayView(val context: Context) :
                         onSearchQueryChange = { viewModel.setSearchQuery(it) },
                         isSearching = searching.value,
                         focusedSource = focusedSource.value,
+                        appliedFocus = appliedFocus.value,
+                        focusAnchor = focusAnchor.value,
                         onFocusSource = viewModel::focusSource,
                         onClearFocusedSource = viewModel::clearFocusedSource,
                         onSearchingChange = {

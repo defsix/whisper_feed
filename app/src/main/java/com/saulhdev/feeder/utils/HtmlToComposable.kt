@@ -120,10 +120,18 @@ fun LazyListScope.htmlFormattedText(
     baseUrl: String,
     @DrawableRes imagePlaceholder: Int,
     onLinkClick: (String) -> Unit,
+    /**
+     * The headline the screen has already drawn, if any.
+     *
+     * Given so a body that opens by repeating it can have that copy taken
+     * out. See [stripRepeatedTitle].
+     */
+    articleTitle: String? = null,
 ) {
     Jsoup.parse(inputStream, null, baseUrl)
         .body()
         .let { body ->
+            stripRepeatedTitle(body, articleTitle)
             formatBody(
                 element = body,
                 imagePlaceholder = imagePlaceholder,
@@ -132,6 +140,58 @@ fun LazyListScope.htmlFormattedText(
             )
         }
 }
+
+/**
+ * Takes out a body's opening heading when it only repeats the article's title.
+ *
+ * The reader draws the headline itself, from the feed, above the source and
+ * the byline. Plenty of publishers also open the article body with the same
+ * words in an `h1`, and Readability keeps it — so the story arrived with its
+ * title twice, once in the reader's own type and again in the body's, set
+ * differently and reading like a mistake because it is one.
+ *
+ * Only the *first* text-bearing block is considered, and only when it is a
+ * heading. A later heading with the same words is a real section of the
+ * article — a list piece whose first entry repeats the title, say — and
+ * removing that would take away content rather than a duplicate.
+ */
+internal fun stripRepeatedTitle(body: Element, articleTitle: String?) {
+    val wanted = normalizedHeading(articleTitle.orEmpty())
+    if (wanted.isEmpty()) return
+    val first = body.select("h1, h2, h3, h4, p, li, blockquote, pre, td")
+        .firstOrNull { it.text().isNotBlank() }
+        ?: return
+    if (first.tagName() !in HEADING_TAGS) return
+    if (normalizedHeading(first.text()) != wanted) return
+    first.remove()
+}
+
+private val HEADING_TAGS = setOf("h1", "h2", "h3", "h4")
+
+private val WHITESPACE_RUN = Regex("\\s+")
+
+/**
+ * Two headings compared the way a reader would compare them.
+ *
+ * The feed's title and the page's own rarely match byte for byte: one has
+ * curly quotes where the other has straight ones, an em dash against a hyphen,
+ * a non-breaking space, a trailing full stop. None of those is a different
+ * headline, and a comparison that says they are would leave the duplicate on
+ * screen for most of the publishers this exists for.
+ */
+internal fun normalizedHeading(text: String): String =
+    text.replace('\u2018', '\'')
+        .replace('\u2019', '\'')
+        .replace('\u201C', '"')
+        .replace('\u201D', '"')
+        .replace('\u2013', '-')
+        .replace('\u2014', '-')
+        .replace('\u00A0', ' ')
+        .lowercase()
+        .replace(WHITESPACE_RUN, " ")
+        .trim()
+        .trim('.', ',', ':', ';', '-', '|', '\u2026')
+        .trim()
 
 private fun LazyListScope.formatBody(
     element: Element,

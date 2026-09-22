@@ -126,6 +126,7 @@ import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.feedItems
 import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
 import com.saulhdev.feeder.ui.overlay.ActiveFilterBar
+import com.saulhdev.feeder.ui.overlay.AnchorFeedOnFocusChange
 import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
 import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.BrowserReadTimer
@@ -183,6 +184,7 @@ fun ArticleListPage(
     val layout by prefs.feedLayout.get().collectAsState(initial = LAYOUT_CARDS)
     val searchQuery by viewModel.searchQuery.collectAsState()
     val focusedSource by viewModel.focusedSource.collectAsState()
+    val focusAnchor by viewModel.focusAnchor.collectAsState()
     // Resolved from the articles on screen rather than fetched: the feed is
     // already filtered to this source, so its first card carries the name and
     // the icon the bar needs, and a second query for what is already in hand
@@ -259,6 +261,17 @@ fun ArticleListPage(
             else listState.animateScrollBy(distance)
         }
     }
+
+    // Tapping a source narrows the feed to it, and backing out widens it
+    // again; both land on the article the tap came from. See FocusAnchor.
+    AnchorFeedOnFocusChange(
+        appliedFocus = state.focusedSource,
+        anchorId = focusAnchor,
+        articles = state.articles,
+        isGrid = isGridLayout,
+        listState = listState,
+        gridState = gridState,
+    )
 
     BackHandler(scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
         scope.launch {

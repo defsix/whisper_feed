@@ -141,3 +141,14 @@ fun feedLayoutIsGrid(layout: String): Boolean = layout == LAYOUT_MOSAIC
  * scroll identically, and two private constants is how they stop.
  */
 const val FEED_HEADER_KEY = "feed-header"
+
+/**
+ * How many items stand before the first article in every feed list.
+ *
+ * One: the header. Both surfaces, both containers. Named because it is the
+ * offset between an article's position in the list of articles and its
+ * position in the LazyList that draws them, and anything scrolling to a
+ * particular article needs that offset and would otherwise carry its own
+ * guess at it. See FocusAnchor.
+ */
+const val FEED_ARTICLES_START = 1

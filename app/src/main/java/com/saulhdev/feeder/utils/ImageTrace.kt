@@ -147,8 +147,45 @@ class ImageTrace private constructor() : EventListener {
             if (t == null) return "unknown"
             val status = Regex("""\b([45][0-9]{2})\b""").find(t.message.orEmpty())
             if (status != null) return "http ${status.groupValues[1]}"
-            return t.javaClass.simpleName.ifBlank { "unknown" }
+            val kind = t.javaClass.simpleName.ifBlank { "unknown" }
+            val detail = safeMessage(t.message)
+            return if (detail.isEmpty()) kind else "$kind: $detail"
         }
+
+        /** Anything that could be an address, and everything long. */
+        private val ADDRESSISH = Regex("""\S*([:/@]|\.[A-Za-z]{2,})\S*""")
+
+        /**
+         * The part of a failure's message that is safe to write down.
+         *
+         * A class name alone was not enough to act on. Two reports running,
+         * "IllegalArgumentException" was the most common image failure in the
+         * app and named nothing whatsoever: the class is thrown by a zero
+         * decode size, by a malformed address and by a handful of things
+         * inside Coil, and picking between them meant guessing at the source
+         * and shipping the guess. The message says which — "px must be > 0."
+         * is the whole answer to one of those.
+         *
+         * But these go into a file the reader sends to a stranger, and a
+         * message is the one place a URL turns up uninvited. So every token
+         * that could be an address — anything carrying a colon, a slash, an
+         * at-sign, or a dot followed by letters — is dropped rather than
+         * trimmed, and what is left is capped. A message that was nothing but
+         * an address comes back empty and the class name stands alone, which
+         * is where this started.
+         */
+        internal fun safeMessage(message: String?): String {
+            if (message.isNullOrBlank()) return ""
+            val cleaned = message
+                .replace(ADDRESSISH, "")
+                .replace(Regex("""\s+"""), " ")
+                .trim()
+            return if (cleaned.length <= MAX_REASON_DETAIL) cleaned
+            else cleaned.take(MAX_REASON_DETAIL).trimEnd() + "\u2026"
+        }
+
+        /** Long enough for a sentence, short enough to stay a label. */
+        private const val MAX_REASON_DETAIL = 60
 
         internal fun shortFormat(mimeType: String?): String = when {
             mimeType.isNullOrBlank() -> "unknown"

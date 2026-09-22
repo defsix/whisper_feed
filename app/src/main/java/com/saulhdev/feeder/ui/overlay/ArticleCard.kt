@@ -265,6 +265,7 @@ fun ArticleHeroCard(
                     ArticleMeta(
                         source = item.feedTitle,
                         sourceId = item.sourceId,
+                        articleId = item.id,
                         age = item.relativeAge(context),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.85f),
@@ -382,6 +383,7 @@ fun ArticleCard(
                 ArticleMeta(
                     source = item.feedTitle,
                     sourceId = item.sourceId,
+                    articleId = item.id,
                     age = item.relativeAge(context),
                     // A size down. It is a byline, not a heading, and at
                     // labelLarge it competed with the summary above it.
@@ -457,6 +459,7 @@ fun ArticleCompactRow(
                 ArticleMeta(
                     source = item.feedTitle,
                     sourceId = item.sourceId,
+                    articleId = item.id,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -550,6 +553,7 @@ fun ArticleTextRow(
                 ArticleMeta(
                     source = item.feedTitle,
                     sourceId = item.sourceId,
+                    articleId = item.id,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -714,6 +718,7 @@ fun ArticleMosaicTile(
                 ArticleMeta(
                     source = item.feedTitle,
                     sourceId = item.sourceId,
+                    articleId = item.id,
                     age = item.relativeAge(context),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -748,11 +753,12 @@ fun ArticleMosaicTile(
 /**
  * Narrows the feed to one source, where that is possible.
  *
- * Null by default, which is the launcher panel's answer: its back gesture
- * belongs to the launcher, so a filter opened there would have no way out.
- * The app provides it.
+ * Takes the article the tap came from as well as the source, because the
+ * filtered feed is a shorter list and the scroll index kept across the change
+ * lands on a different story. Both surfaces provide it — the panel intercepts
+ * back for the filter the same way it already does for search.
  */
-val LocalFocusSource = compositionLocalOf<((String) -> Unit)?> { null }
+val LocalFocusSource = compositionLocalOf<((String, String) -> Unit)?> { null }
 
 @Composable
 private fun ArticleMeta(
@@ -762,11 +768,11 @@ private fun ArticleMeta(
     color: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
     sourceId: String? = null,
+    articleId: String? = null,
     iconUrl: String? = null,
     onImage: Boolean = false,
 ) {
-    // Null on a surface that cannot narrow the feed — the launcher panel has
-    // no way back from one, since its back gesture belongs to the launcher.
+    // Null on a surface that cannot narrow the feed.
     // A CompositionLocal rather than another parameter because this row is
     // reached through five card shapes, and threading an optional callback
     // through all of them to be ignored by one surface is how the two feeds
@@ -778,8 +784,8 @@ private fun ArticleMeta(
         // beside them and the buttons beyond that; a target that swallowed
         // the whole row would take taps meant for the article, since this row
         // sits directly under the headline.
-        val identity = if (focusSource != null && sourceId != null) {
-            Modifier.clickable { focusSource(sourceId) }
+        val identity = if (focusSource != null && sourceId != null && articleId != null) {
+            Modifier.clickable { focusSource(sourceId, articleId) }
         } else {
             Modifier
         }

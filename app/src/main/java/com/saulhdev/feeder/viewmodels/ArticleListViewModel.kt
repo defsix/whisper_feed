@@ -85,7 +85,25 @@ class ArticleListViewModel(
     private val _focusedSource = MutableStateFlow<String?>(null)
     val focusedSource: StateFlow<String?> = _focusedSource.asStateFlow()
 
-    fun focusSource(sourceId: String) {
+    /**
+     * The article the narrowing started from, so both edges can land on it.
+     *
+     * A filtered feed is a different list of a different length, and the
+     * scroll position is an index into whichever list is on screen. Keeping
+     * it across the change therefore points at a different story — tap a
+     * source on one article and the filtered feed opens somewhere else
+     * entirely, which is precisely what it looked like. The article id is the
+     * one thing both lists agree on.
+     *
+     * Kept when the narrowing is cleared rather than reset with it: the way
+     * out has the same problem as the way in, and it is the same article that
+     * answers it.
+     */
+    private val _focusAnchor = MutableStateFlow<String?>(null)
+    val focusAnchor: StateFlow<String?> = _focusAnchor.asStateFlow()
+
+    fun focusSource(sourceId: String, anchorArticleId: String? = null) {
+        _focusAnchor.value = anchorArticleId
         _focusedSource.value = sourceId
     }
 
@@ -196,7 +214,7 @@ class ArticleListViewModel(
      * content, and combining the two meant every toggle re-sorted the whole
      * list for a result that was identical to the one before it.
      */
-    private val processedArticles: Flow<List<FeedItem>> = combine(
+    private val processedArticles: Flow<ProcessedFeed> = combine(
         categoryArticles,
         filterState,
         prefs.removeDuplicates.get(),
@@ -216,7 +234,7 @@ class ArticleListViewModel(
         // compiling rather than crashing on somebody's phone.
     ) { articles, filter, removeDuplicate, query, readVisibility ->
         val started = System.nanoTime()
-        processArticles(
+        val processed = processArticles(
             articles = articles,
             sfm = filter.sort,
             removeDuplicate = removeDuplicate,
@@ -224,17 +242,24 @@ class ArticleListViewModel(
             hideRead = readVisibility == READ_HIDE,
             focusedSource = filter.focusedSource,
         ).also { FeedTrace.processed((System.nanoTime() - started) / 1_000) }
+        // The narrowing travels with the list it produced rather than being
+        // combined in beside it. Read separately, the screen can be handed a
+        // fresh focus with the previous list still attached — and the scroll
+        // that lands on the anchor article would then measure the list being
+        // left rather than the one arriving.
+        ProcessedFeed(processed, filter.focusedSource)
     }.flowOn(Dispatchers.Default)
 
     val articleListState: StateFlow<ArticleListState> = combine(
         processedArticles,
         sortFilterState,
         feedsRepo.isSyncing
-    ) { articles, sfm, isSyncing ->
+    ) { feed, sfm, isSyncing ->
         ArticleListState(
-            articles = articles,
+            articles = feed.articles,
             isFilterModified = sfm != SortFilterModel(),
-            isSyncing = isSyncing
+            isSyncing = isSyncing,
+            focusedSource = feed.focusedSource,
         )
     }.stateIn(
         ioScope,
@@ -586,10 +611,23 @@ private const val INVALIDATION_DEBOUNCE_MS = 300L
 /** How long to let typing settle before rebuilding the list for a search. */
 private const val SEARCH_DEBOUNCE_MS = 250L
 
+/** A processed feed and the narrowing it was processed under. */
+private data class ProcessedFeed(
+    val articles: List<FeedItem>,
+    val focusedSource: String?,
+)
+
 data class ArticleListState(
     val articles: List<FeedItem> = emptyList(),
     val isFilterModified: Boolean = false,
     val isSyncing: Boolean = false,
+    /**
+     * The one source these articles were narrowed to, or null for all of them.
+     *
+     * Carried here so the screen can tell a list built *for* the current
+     * narrowing from the previous list still on its way out. See focusAnchor.
+     */
+    val focusedSource: String? = null,
 )
 
 data class BookmarksState(
