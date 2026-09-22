@@ -475,7 +475,7 @@ fun articleWeight(
     clusters: Map<String, StoryCluster> = emptyMap(),
     pace: Map<Long, Float> = emptyMap(),
 ): Float {
-    if (item.article.imageUrl.isNullOrBlank()) return ArticleWeight.NO_IMAGE
+    if (item.imageUrl.isNullOrBlank()) return ArticleWeight.NO_IMAGE
 
     var weight = ArticleWeight.BASE
 
@@ -640,7 +640,7 @@ private fun rescueQuietSources(
             // that produced an empty grey rectangle would help nobody.
             wellRead &&
                     ageHours >= ArticleWeight.QUIET_AFTER_HOURS &&
-                    !items[index].article.imageUrl.isNullOrBlank() &&
+                    !items[index].imageUrl.isNullOrBlank() &&
                     sizes[index] != FeedEmphasis.Large
         }
         // Most-read source first, so a cap of two spends itself on the sources
@@ -928,7 +928,7 @@ fun weightReasons(
     clusters: Map<String, StoryCluster> = emptyMap(),
     pace: Map<Long, Float> = emptyMap(),
 ): List<WeightReason> {
-    if (item.article.imageUrl.isNullOrBlank()) {
+    if (item.imageUrl.isNullOrBlank()) {
         return listOf(WeightReason(R.string.why_no_image, 0f))
     }
 

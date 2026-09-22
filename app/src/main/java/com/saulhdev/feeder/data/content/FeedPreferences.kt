@@ -784,8 +784,10 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = REPORT_PROBLEM,
         dataStore = dataStore,
         onClick = {
+            if (!Diagnostics.begin(context)) return@StringPref
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching { Diagnostics.share(context, note = "") }
+                    .also { Diagnostics.end() }
                     .onFailure {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
@@ -806,8 +808,13 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         key = EXPORT_DIAGNOSTICS,
         dataStore = dataStore,
         onClick = {
+            if (!Diagnostics.begin(context)) return@StringPref
             CoroutineScope(Dispatchers.IO).launch {
-                val location = Diagnostics.export(context)
+                val location = try {
+                    Diagnostics.export(context)
+                } finally {
+                    Diagnostics.end()
+                }
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         context,

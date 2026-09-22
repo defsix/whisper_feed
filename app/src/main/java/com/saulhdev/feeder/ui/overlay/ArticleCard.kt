@@ -102,7 +102,7 @@ fun FeedArticleItem(
     /** Gives back a breaking story's promotion. See `Article.dismissedAt`. */
     onDismissStory: () -> Unit = {},
 ) {
-    val hasImage = !item.article.imageUrl.isNullOrBlank()
+    val hasImage = !item.imageUrl.isNullOrBlank()
     // One place rather than five: every shape below takes this modifier, so a
     // read article fades whichever way the feed happens to be drawing it.
     //
@@ -202,7 +202,7 @@ fun ArticleHeroCard(
                 .aspectRatio(4f / 3f)
         ) {
             AsyncImage(
-                model = item.article.imageUrl,
+                model = item.imageUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 placeholder = painterResource(articlePlaceholder()),
@@ -318,7 +318,7 @@ fun ArticleCard(
             .fillMaxWidth()
             .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
     ) {
-        val image = item.article.imageUrl
+        val image = item.imageUrl
         // Edge to edge, square corners, outside the text's margin — the way the
         // launcher's own feed does it. A photograph inset by sixteen points and
         // rounded reads as a component on a page; the same photograph running
@@ -467,7 +467,7 @@ fun ArticleCompactRow(
                 )
             }
 
-            val image = item.article.imageUrl
+            val image = item.imageUrl
             if (!image.isNullOrBlank()) {
                 Spacer(Modifier.width(12.dp))
                 AsyncImage(
@@ -600,7 +600,7 @@ fun ArticleMosaicTile(
     // out can be opened at all.
     val openLabel = stringResource(R.string.action_open_article)
     val large = size == FeedEmphasis.Large
-    val image = item.article.imageUrl
+    val image = item.imageUrl
     // A URL is a promise, not a picture. Until it resolves — and if it 404s,
     // for ever — there is nothing there, and the tile was still drawing the
     // scrim and the two buttons over the nothing: a grey band and a gap above

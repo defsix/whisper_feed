@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.utils
 
+
 /**
  * What scheme an address names, decided without `android.net.Uri`.
  *
@@ -73,3 +74,41 @@ fun isViewable(url: String): Boolean = schemeOf(url) in VIEWABLE_SCHEMES
  * one of ours.
  */
 fun isBrowsable(url: String): Boolean = schemeOf(url).let { it == "http" || it == "https" }
+
+/**
+ * The address, if it is one an image can actually be fetched from; else null.
+ *
+ * `java.net.URL` is lenient in a way OkHttp is not. It accepts
+ * `https:/wp-content/x.jpg` — one slash, so the path is read as the whole
+ * address and the host is empty — and `https:///x.jpg`, and hands either back
+ * as a perfectly good URL. A feed that writes its image paths like that got
+ * them stored as the article's picture, and OkHttp then refused each one with
+ * `Invalid URL host: ""` every time the card scrolled into view. One broken
+ * address per article, and a scroll through a feed full of them, was sixty-six
+ * failures in one device report.
+ *
+ * Anything that fails is no picture at all, which the card already knows how
+ * to draw — the compact shape rather than an image box that is never filled.
+ *
+ * ## A character test, not a parse
+ *
+ * The feed's weighting reads every article's picture on every list build, so
+ * this runs thousands of times a second while a list is changing, on an app
+ * whose collector is already the bottleneck. Parsing each address into an
+ * `HttpUrl` to ask for its host would allocate for every one of them. The two
+ * shapes that break are both visible in the first characters — the scheme,
+ * then something other than a slash where the host should begin — so that is
+ * all that is read, and nothing is allocated.
+ */
+fun usableImageUrl(url: String?): String? = url?.takeIf(::isFetchableImageUrl)
+
+internal fun isFetchableImageUrl(url: String): Boolean {
+    val hostStart = when {
+        url.startsWith("https://", ignoreCase = true) -> 8
+        url.startsWith("http://", ignoreCase = true) -> 7
+        else -> return false
+    }
+    if (url.length <= hostStart) return false
+    val first = url[hostStart]
+    return first != '/' && !first.isWhitespace()
+}

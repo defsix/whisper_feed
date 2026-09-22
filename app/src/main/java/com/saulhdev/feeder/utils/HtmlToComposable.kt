@@ -44,6 +44,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -156,6 +160,7 @@ fun LazyListScope.htmlFormattedText(
         .let { body ->
             stripRepeatedTitle(body, articleTitle)
             ensureLeadImage(body, leadImageUrl)
+            dropRepeatedImages(body)
             formatBody(
                 element = body,
                 imagePlaceholder = imagePlaceholder,
@@ -236,10 +241,45 @@ internal fun ensureLeadImage(body: Element, leadImageUrl: String?) {
         // fail - which is how an article came to show a placeholder where its
         // own card, a moment earlier, had shown the picture.
         first.attr("src", lead)
+        // And the srcset with it, or the swap does nothing. The reader picks
+        // from srcset first and only falls back to src, so a body image that
+        // carries both went on requesting its own copy while this line
+        // appeared to have changed it - which is how the Gear Patrol picture
+        // stayed a placeholder after the first version of this fix.
+        first.removeAttr("srcset")
+        first.removeAttr("sizes")
         return
     }
 
     body.prependChild(Element("img").attr("src", lead))
+}
+
+/**
+ * Keeps the first of several images that are the same picture.
+ *
+ * The Verge's byline card carries its author's photograph twice - once as a
+ * fill image and once as a small avatar, one asset at two sizes - and
+ * Readability keeps the card, so the reader showed the same face twice in a
+ * row. Compared the way [ensureLeadImage] compares, host and path with the
+ * sizing query dropped, so two sizes of one file count as one.
+ *
+ * Every later copy goes, not only an adjacent one: a photograph repeated
+ * further down is still a photograph already shown.
+ */
+internal fun dropRepeatedImages(body: Element) {
+    val seen = HashSet<String>()
+    body.select("img").forEach { img ->
+        // The srcset's first candidate when there is no src: The Verge's
+        // avatar has only a srcset, and an image this cannot name cannot be
+        // recognised as a repeat either.
+        val src = srcOf(img).ifBlank {
+            img.attr("srcset").substringBefore(',').trim().substringBefore(' ')
+        }
+        if (src.isBlank()) return@forEach
+        val identity = imageIdentity(src)
+        if (identity.isEmpty()) return@forEach
+        if (!seen.add(identity)) img.remove()
+    }
 }
 
 private fun srcOf(img: Element): String =
@@ -931,6 +971,10 @@ private fun TextComposer.handleImage(
                                 pixelDensity = pixelDensity(),
                                 maxWidth = imageWidth.coerceAtLeast(1),
                             )
+                            // The width the picture decoded at, once it has. Coil
+                            // decodes no larger than the source at INEXACT, so for a
+                            // small image this is the image's own size.
+                            var decodedWidth by remember(src) { mutableIntStateOf(0) }
                             if (imageWidth > 0 && src.isNotBlank()) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
@@ -944,8 +988,11 @@ private fun TextComposer.handleImage(
                                     .build(),
                                 contentScale = ContentScale.FillWidth,
                                 contentDescription = alt,
-                                modifier = Modifier
-                                    .fillMaxWidth()
+                                onSuccess = { state ->
+                                    decodedWidth = state.painter.intrinsicSize.width
+                                        .takeIf { it.isFinite() }?.roundToInt() ?: 0
+                                },
+                                modifier = articleImageWidth(decodedWidth, imageWidth)
                             )
                             }
                         }
@@ -1316,6 +1363,33 @@ private fun pixelDensity() = with(LocalDensity.current) {
 fun BoxWithConstraintsScope.maxImageWidth() = with(LocalDensity.current) {
     maxWidth.toPx().roundToInt().coerceAtMost(2000).coerceAtLeast(0)
 }
+
+/**
+ * How wide to draw an article image: the column, unless that would stretch it.
+ *
+ * Every image filled the column whatever its size, so a byline's avatar -
+ * The Verge's and How-To Geek's are both around a hundred pixels - was blown
+ * up to the full width of the phone, blurred, and read as the article's
+ * photograph. No picture gains anything from being drawn at more than twice
+ * the pixels it has, so past that it is drawn at its own size instead.
+ *
+ * Full width until the decode says otherwise, so a photograph never starts
+ * small and grows; only an image that turns out to be small shrinks, once.
+ */
+@Composable
+private fun articleImageWidth(decodedPx: Int, columnPx: Int): Modifier =
+    if (isTooSmallToStretch(decodedPx, columnPx)) {
+        with(LocalDensity.current) { Modifier.width(decodedPx.toDp()) }
+    } else {
+        Modifier.fillMaxWidth()
+    }
+
+/** Whether filling [columnPx] would stretch a [decodedPx]-wide image past [MAX_IMAGE_UPSCALE]x. */
+internal fun isTooSmallToStretch(decodedPx: Int, columnPx: Int): Boolean =
+    decodedPx > 0 && columnPx > 0 && decodedPx * MAX_IMAGE_UPSCALE < columnPx
+
+/** The most an article image is ever enlarged to fill the column. */
+internal const val MAX_IMAGE_UPSCALE = 2
 
 /**
  * Gets the url to the image in the <img> tag - could be from srcset or from src

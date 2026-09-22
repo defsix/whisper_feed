@@ -1,5 +1,6 @@
 package com.saulhdev.feeder.data.db.models
 
+import com.saulhdev.feeder.utils.usableImageUrl
 import android.graphics.Color
 import androidx.room.Embedded
 import androidx.room.Relation
@@ -34,6 +35,17 @@ data class FeedItem(
 
     val id: String
         get() = article.uuid
+
+    /**
+     * The article's picture if it can be fetched, or null.
+     *
+     * Read this rather than `article.imageUrl` anywhere the answer decides a
+     * layout or starts a request: the column also holds whatever a feed wrote
+     * before the check existed, and an address with no host is a picture that
+     * fails every single time it is asked for. See usableImageUrl.
+     */
+    val imageUrl: String?
+        get() = usableImageUrl(article.imageUrl)
 
     val link: String
         get() = article.link ?: ""

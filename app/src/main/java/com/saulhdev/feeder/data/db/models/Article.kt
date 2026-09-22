@@ -19,6 +19,7 @@
 
 package com.saulhdev.feeder.data.db.models
 
+import com.saulhdev.feeder.utils.usableImageUrl
 import androidx.room.ColumnInfo
 import androidx.room.DatabaseView
 import androidx.room.Entity
@@ -272,7 +273,9 @@ data class Article constructor(
             title = plainTitle,
             plainSnippet = summary,
             description = description.ifEmpty { this.description },
-            imageUrl = absoluteImage,
+            // Checked on the way in, so a feed that writes its image paths
+            // with one slash stops storing pictures that can never load.
+            imageUrl = usableImageUrl(absoluteImage),
             enclosureLink = entry.attachments?.firstOrNull()?.url,
             author = entry.author?.name ?: feed.author?.name,
             link = entry.url,

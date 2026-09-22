@@ -1,6 +1,7 @@
 package com.saulhdev.feeder.ui.pages
 
 
+import com.saulhdev.feeder.utils.usableImageUrl
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -335,7 +336,7 @@ fun ArticlePage(
                                 articleTitle = title,
                                 // The card's picture, put back when the body
                                 // arrived without one; see ensureLeadImage.
-                                leadImageUrl = state?.article?.imageUrl,
+                                leadImageUrl = usableImageUrl(state?.article?.imageUrl),
                             )
                         }
                     } else {
@@ -356,7 +357,7 @@ fun ArticlePage(
                                 articleTitle = title,
                                 // The card's picture, put back when the body
                                 // arrived without one; see ensureLeadImage.
-                                leadImageUrl = state?.article?.imageUrl,
+                                leadImageUrl = usableImageUrl(state?.article?.imageUrl),
                             )
                         }
                     } else {

@@ -172,8 +172,17 @@ class ImageTrace private constructor() : EventListener {
             return if (detail.isEmpty()) kind else "$kind: $detail"
         }
 
-        /** Anything that could be an address, and everything long. */
-        private val ADDRESSISH = Regex("""\S*([:/@]|\.[A-Za-z]{2,})\S*""")
+        /**
+         * Anything that could be an address.
+         *
+         * `://` rather than any colon. A bare colon is punctuation far more
+         * often than it is a scheme, and treating it as an address cost the
+         * one word that mattered: OkHttp's `Invalid URL host: ""` lost `host:`
+         * and reached the report as `Invalid URL ""`, which reads as an empty
+         * address when the address was there and only its host was missing.
+         * That sent the first look at it after the wrong thing.
+         */
+        private val ADDRESSISH = Regex("""\S*(://|[/@]|\.[A-Za-z]{2,})\S*""")
 
         /**
          * The part of a failure's message that is safe to write down.

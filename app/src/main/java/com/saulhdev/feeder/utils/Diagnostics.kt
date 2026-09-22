@@ -25,6 +25,7 @@ import androidx.annotation.RequiresApi
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.saulhdev.feeder.BuildConfig
 import com.saulhdev.feeder.R
@@ -32,12 +33,14 @@ import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Self-service diagnostics, so a problem can be reported from the device alone.
@@ -103,11 +106,11 @@ object Diagnostics : KoinComponent {
         // Worth reporting explicitly: an empty tag list is the ordinary reason the
         // category chip row renders nothing, and it is indistinguishable from a
         // failure without looking.
-        runCatching {
+        runCatching { withTimeout(SECTION_TIMEOUT_MS) {
             val tags = get<SourcesRepository>().getAllTagsFlow().first()
             appendLine("Source tags:       ${tags.filter { it.isNotBlank() }}")
             appendLine("Untagged sources:  ${tags.any { it.isBlank() }}")
-        }.onFailure { appendLine("Sources unavailable: $it") }
+        } }.onFailure { appendLine("Sources unavailable: $it") }
         appendLine()
 
         // The counts, which are what an empty feed actually turns on. Without
@@ -115,7 +118,7 @@ object Diagnostics : KoinComponent {
         // database from a full one being filtered to nothing, and those have
         // nothing in common but the symptom.
         appendLine("== Counts ==")
-        runCatching {
+        runCatching { withTimeout(SECTION_TIMEOUT_MS) {
             val sources = get<SourcesRepository>().getAllSources()
             appendLine("Sources:           ${sources.size}")
             appendLine("Enabled:           ${sources.count { it.isEnabled }}")
@@ -149,14 +152,14 @@ object Diagnostics : KoinComponent {
             if (sources.size > MAX_SOURCES_LISTED) {
                 appendLine("  … and ${sources.size - MAX_SOURCES_LISTED} more")
             }
-        }.onFailure { appendLine("Source counts unavailable: $it") }
+        } }.onFailure { appendLine("Source counts unavailable: $it") }
 
-        runCatching {
+        runCatching { withTimeout(SECTION_TIMEOUT_MS) {
             val repo = get<ArticleRepository>()
             appendLine("Articles stored:   ${repo.countAll()}")
             appendLine("Unread:            ${repo.countUnread().first()}")
             appendLine("Bookmarked:        ${repo.getBookmarkedFeedItems().first().size}")
-        }.onFailure { appendLine("Article counts unavailable: $it") }
+        } }.onFailure { appendLine("Article counts unavailable: $it") }
         appendLine()
 
         appendLine("== Log (last $LOG_LINE_LIMIT lines, this app only) ==")
@@ -167,6 +170,14 @@ object Diagnostics : KoinComponent {
      * Reads this app's logcat. Since Android 4.1 a process only sees its own
      * entries, which is exactly the scope wanted and needs no permission.
      */
+    /**
+     * How long any one database section may take before the report goes on
+     * without it. A section that times out says so and the rest still arrives:
+     * a report that is missing its counts is still a report, and one that
+     * never finishes is nothing at all.
+     */
+    private const val SECTION_TIMEOUT_MS = 4_000L
+
     private fun readOwnLogcat(): String = runCatching {
         val process = Runtime.getRuntime().exec(
             // "*:V" explicitly, rather than relying on the default filter:
@@ -177,6 +188,32 @@ object Diagnostics : KoinComponent {
         process.inputStream.bufferedReader().use { it.readText() }
             .ifBlank { "(no log entries)" }
     }.getOrElse { "Could not read logcat: $it" }
+
+    /**
+     * Whether a report is being put together right now.
+     *
+     * Both buttons said nothing until the report was finished, and finishing
+     * waits on the database - which, during a sync, is the busiest thing in
+     * the app. So a tap looked like nothing at all, a second tap started a
+     * second report behind the first, and the whole thing read as a button
+     * that did not work. The one moment a diagnostics report is most wanted,
+     * the app misbehaving, is the moment it was slowest to arrive.
+     */
+    private val collecting = AtomicBoolean(false)
+
+    /**
+     * Says the report has started, or refuses a second one. False when one is
+     * already on its way, so the caller does nothing rather than queue another.
+     */
+    fun begin(context: Context): Boolean {
+        if (!collecting.compareAndSet(false, true)) return false
+        Toast.makeText(context, R.string.diagnostics_collecting, Toast.LENGTH_SHORT).show()
+        return true
+    }
+
+    fun end() {
+        collecting.set(false)
+    }
 
     /**
      * Writes the report to Downloads and returns a human-readable location, or
