@@ -20,7 +20,7 @@ package com.saulhdev.feeder.data
 import android.content.Context
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.manager.models.xmlSafe
+import com.saulhdev.feeder.manager.models.escapingBareAmpersands
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,13 +99,40 @@ object FeedLibrary {
      * alternative is two parsers with different tolerances, and the one that
      * gets exercised least is the one that breaks quietly.
      */
+    /**
+     * A SAX parser that will not go and fetch anything.
+     *
+     * The default one resolves external entities and honours a DOCTYPE, which
+     * is how an XML parse turns into a file read or an outbound request. These
+     * packs ship inside the APK, so nothing hostile can be in them and this
+     * changes nothing today — it is here because the alternative is a parser
+     * built with defaults, one import away from being pointed at a file
+     * somebody sent.
+     *
+     * The companion to that is the name of the ampersand repair: it used to be
+     * called `xmlSafe`, which read as though this had already been done.
+     *
+     * Each feature is set on its own, because a parser that refuses one
+     * unknown feature must not lose the others with it.
+     */
+    private fun hardenedSaxParser() = SAXParserFactory.newInstance().apply {
+        listOf(
+            "http://apache.org/xml/features/disallow-doctype-decl" to true,
+            "http://xml.org/sax/features/external-general-entities" to false,
+            "http://xml.org/sax/features/external-parameter-entities" to false,
+        ).forEach { (feature, value) ->
+            runCatching { setFeature(feature, value) }
+        }
+        isXIncludeAware = false
+    }.newSAXParser()
+
     suspend fun feeds(context: Context, pack: LibraryPack): List<LibraryFeed> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val handler = PackHandler()
                 context.assets.open("$DIR/${pack.slug}.opml").use { stream ->
-                    SAXParserFactory.newInstance().newSAXParser()
-                        .parse(InputSource(xmlSafe(stream)), handler)
+                    hardenedSaxParser()
+                        .parse(InputSource(escapingBareAmpersands(stream)), handler)
                 }
                 handler.feeds
             }.getOrDefault(emptyList())

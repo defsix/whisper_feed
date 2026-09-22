@@ -17,17 +17,17 @@
  */
 package com.saulhdev.feeder
 
-import com.saulhdev.feeder.manager.models.xmlSafe
+import com.saulhdev.feeder.manager.models.escapingBareAmpersands
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import javax.xml.parsers.SAXParserFactory
 
-private fun fix(s: String) = xmlSafe(s.byteInputStream()).bufferedReader().readText()
+private fun fix(s: String) = escapingBareAmpersands(s.byteInputStream()).bufferedReader().readText()
 
 /** Whether a strict parser will actually accept it, which is the real question. */
 private fun parses(xml: String): Boolean = runCatching {
     SAXParserFactory.newInstance().newSAXParser()
-        .parse(xmlSafe(xml.byteInputStream()), org.xml.sax.helpers.DefaultHandler())
+        .parse(escapingBareAmpersands(xml.byteInputStream()), org.xml.sax.helpers.DefaultHandler())
 }.isSuccess
 
 /**

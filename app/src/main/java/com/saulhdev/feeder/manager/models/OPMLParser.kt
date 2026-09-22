@@ -33,7 +33,7 @@ class OPMLParser(private val opmlToDb: ParserToDatabase<Feed>) : ContentHandler 
         isFeedTag = false
         ignoring = 0
 
-        parser.parse(InputSource(xmlSafe(inputStream)))
+        parser.parse(InputSource(escapingBareAmpersands(inputStream)))
 
         for (feed in feeds) {
             opmlToDb.saveItem(feed)
@@ -113,26 +113,26 @@ class OPMLParser(private val opmlToDb: ParserToDatabase<Feed>) : ContentHandler 
 }
 
 /**
- * A bare `&` is not XML, and real OPML files are full of them.
+ * Escapes an `&` that is not already starting an entity.
  *
- * Of twenty-four country files in one widely-used public feed directory,
- * thirteen fail to parse — "Breaking news, showbiz & celebrity photos" in a
- * title attribute, "World & Nation", and four hundred and seventy-nine more
- * across the set. Anything that writes OPML by string concatenation produces
- * this, which is most things that write OPML.
+ * Exports in the wild carry raw ampersands in titles and query strings — "AT&T",
+ * `?a=1&b=2` — which are not well-formed XML, and a strict parser stops at the
+ * first one. The file is otherwise fine and the reader has no way to know what
+ * went wrong, so the character is repaired rather than the import refused.
  *
- * SAX is strict and correct to be: one of those rejects the whole document,
- * so a single unescaped ampersand two hundred feeds in cost the reader all
- * two hundred. Nothing was half-imported — the parse throws before anything
- * is saved — but "Failed to import OPML" was the entire explanation for a
- * file that any other reader would have opened.
+ * **This is an encoding repair, not a security measure.** It was called
+ * `xmlSafe`, which read as though it hardened the parse and did no such thing:
+ * it does nothing about external entities, nothing about a DOCTYPE, and
+ * nothing about expansion. A name that claims safety is worse than no guard at
+ * all, because the next person to add a parser reaches for it and stops
+ * looking. Where hardening is actually needed, it is on the parser — see
+ * `FeedLibrary`.
  *
- * So ampersands that do not begin an entity are escaped before parsing. Only
- * that: no attempt to repair unclosed tags or stray angle brackets, because
- * those are ambiguous and this is not, and guessing at somebody's
- * subscription list is worse than declining it.
+ * Whole file in memory rather than streamed: an OPML of a thousand feeds is a
+ * couple of hundred kilobytes, and a streaming fixer would have to buffer
+ * across chunk boundaries to recognise an entity anyway.
  */
-internal fun xmlSafe(input: InputStream): InputStream {
+internal fun escapingBareAmpersands(input: InputStream): InputStream {
     // Whole file in memory rather than streamed: an OPML of a thousand feeds
     // is a couple of hundred kilobytes, and a streaming fixer would have to
     // buffer across chunk boundaries to recognise an entity anyway.
