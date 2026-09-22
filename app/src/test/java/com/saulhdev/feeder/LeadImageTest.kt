@@ -71,13 +71,24 @@ class LeadImageTest {
         assertEquals("and the one the card already fetched", lead, out[0])
     }
 
+    /**
+     * A different opening picture is the publisher's own lead, and is left as
+     * the only one.
+     *
+     * This used to add the feed's picture above it, on the reasoning that a
+     * different file might be an author's headshot. Six real articles said
+     * otherwise: on BGR, Engadget and SlashGear the feed offers
+     * `l-intro-123.jpg` and the body opens with `intro-123.jpg`, a different
+     * file and the same photograph, so the old rule gave every one of them two
+     * lead images. Headshots are now removed before extraction instead; see
+     * stripPageChrome.
+     */
     @Test
-    fun `a genuinely different first picture does not get rewritten`() {
-        val lead = "https://cdn.example.com/hero.jpg"
-        val out = sources("<img src=\"https://cdn.example.com/author-headshot.jpg\"><p>x</p>", lead)
-        assertEquals("the lead is added, not substituted", 2, out.size)
-        assertEquals(lead, out[0])
-        assertEquals("https://cdn.example.com/author-headshot.jpg", out[1])
+    fun `a different opening picture is taken as the lead and not rewritten`() {
+        val lead = "https://cdn.example.com/l-intro-123.jpg"
+        val out = sources("<img src=\"https://cdn.example.com/intro-123.jpg\"><p>x</p>", lead)
+        assertEquals("nothing added", 1, out.size)
+        assertEquals("and nothing substituted", "https://cdn.example.com/intro-123.jpg", out[0])
     }
 
     @Test

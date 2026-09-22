@@ -191,7 +191,8 @@ internal fun stripRepeatedTitle(body: Element, articleTitle: String?) {
         .firstOrNull { it.text().isNotBlank() }
         ?: return
     if (first.tagName() !in HEADING_TAGS) return
-    if (normalizedHeading(first.text()) != wanted) return
+    val heading = normalizedHeading(first.text())
+    if (heading != wanted && heading != withoutSiteName(wanted) && withoutSiteName(heading) != wanted) return
     first.remove()
 }
 
@@ -251,8 +252,57 @@ internal fun ensureLeadImage(body: Element, leadImageUrl: String?) {
         return
     }
 
+    // Put back only when the body has no opening picture of its own. BGR,
+    // Engadget and SlashGear offer the feed `l-intro-123.jpg` and open the
+    // body with `intro-123.jpg` - two files, one photograph - and adding the
+    // feed's copy above theirs was the reader's own duplicate, introduced by
+    // the first version of this function. An opening picture, whatever its
+    // name, means the publisher put the lead where it belongs already.
+    if (opensWithImage(body)) return
     body.prependChild(Element("img").attr("src", lead))
 }
+
+/**
+ * Whether a picture comes before the article really starts.
+ *
+ * "Really starts" is the second paragraph of any substance, not the first. A
+ * dek sits between headline and photograph on a great many sites - Engadget's
+ * "It will offer several privacy-focused options for users..." comes before
+ * its lead image - and counting it as the start made this answer no for
+ * exactly the articles that had a lead image, which put the feed's copy above
+ * theirs. Short lines such as a kicker or a lone "TL;DR" do not count at all.
+ *
+ * An image that says it is small - both dimensions under [SMALL_IMAGE_PX], an
+ * avatar or an icon - is not a lead image however early it comes; How-To
+ * Geek's byline avatar is 90 by 90 and sits right at the top.
+ */
+internal fun opensWithImage(body: Element): Boolean {
+    var paragraphs = 0
+    for (e in body.select("img, p, li, blockquote, h2, h3")) {
+        if (e.tagName() == "img") {
+            if (srcOf(e).isBlank() && e.attr("srcset").isBlank()) continue
+            if (isDeclaredSmall(e)) continue
+            return true
+        }
+        if (e.text().trim().length >= OPENING_PARAGRAPH_CHARS) {
+            paragraphs++
+            if (paragraphs >= OPENING_PARAGRAPHS_ALLOWED + 1) return false
+        }
+    }
+    return false
+}
+
+/** Paragraphs allowed above the lead image before it stops being the lead: the dek. */
+private const val OPENING_PARAGRAPHS_ALLOWED = 1
+
+private fun isDeclaredSmall(img: Element): Boolean {
+    val w = img.attr("width").toIntOrNull() ?: return false
+    val h = img.attr("height").toIntOrNull() ?: return false
+    return w in 1 until SMALL_IMAGE_PX && h in 1 until SMALL_IMAGE_PX
+}
+
+private const val OPENING_PARAGRAPH_CHARS = 40
+private const val SMALL_IMAGE_PX = 150
 
 /**
  * Keeps the first of several images that are the same picture.
@@ -319,6 +369,19 @@ internal fun imageIdentity(url: String): String =
         .lowercase()
 
 private val HEADING_TAGS = setOf("h1", "h2", "h3", "h4")
+
+/**
+ * A title with a trailing site name taken off: "... - BGR", "... | SlashGear".
+ *
+ * Page titles carry one far more often than feed titles, and the same
+ * headline with and without it is still the same headline. Only the last
+ * segment goes, and only after a spaced separator, so a hyphenated word or a
+ * title that is itself a list of phrases keeps everything but its tail.
+ */
+private fun withoutSiteName(title: String): String {
+    val cut = maxOf(title.lastIndexOf(" - "), title.lastIndexOf(" | "))
+    return if (cut > 0) title.substring(0, cut).trim() else title
+}
 
 private val WHITESPACE_RUN = Regex("\\s+")
 
@@ -568,6 +631,26 @@ private fun TextComposer.appendTextChildren(
                         withParagraph {
                             withComposableStyle(
                                 style = { MaterialTheme.typography.headlineSmall.toSpanStyle() }
+                            ) {
+                                element.appendCorrectlyNormalizedWhiteSpaceRecursively(
+                                    this,
+                                    stripLeading = endsWithWhitespace
+                                )
+                            }
+                        }
+                    }
+
+                    // A caption, set as one: small and quiet, directly under
+                    // its picture. It fell through to the default branch and
+                    // was set as body text, so "Credit: Tim Brookes / How-To
+                    // Geek" read like the first sentence of the article.
+                    "figcaption"             -> {
+                        withParagraph {
+                            withComposableStyle(
+                                style = {
+                                    MaterialTheme.typography.labelMedium.toSpanStyle()
+                                        .copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             ) {
                                 element.appendCorrectlyNormalizedWhiteSpaceRecursively(
                                     this,
@@ -998,15 +1081,16 @@ private fun TextComposer.handleImage(
                         }
                     }
 
-                    if (alt.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            alt,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    // No caption from the alt text. Alt is the picture described
+                    // for someone who cannot see it - it is the contentDescription
+                    // above, which is where TalkBack reads it - and no browser
+                    // draws it under an image that loaded. Drawn here it
+                    // described the photograph in words directly beneath the
+                    // photograph ("Two jackets shown close-up: one is orange and
+                    // brown with a visible BEAMS logo...") and then the page's
+                    // real caption or credit followed it, so most images carried
+                    // two. The page's <figcaption> is the caption; see the
+                    // "figcaption" branch.
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
