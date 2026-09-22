@@ -836,6 +836,46 @@ any of this, and it should be built before the rest of it.
   success rather than failure, so WorkManager does not back off and retry
   something that needs the reader rather than another attempt.
 
+#### Sync only when charging — asked for, not yet built
+
+Settings has *Sync on Wifi Only*; the obvious sibling is *Sync only while
+charging*, for the reader who wants forty feeds fetched overnight and nothing
+touched on battery.
+
+**What the scheduled sync already carries** (`MainActivity.configurePeriodicSync`):
+`NetworkType.UNMETERED` or `CONNECTED` depending on the wifi switch, plus
+`setRequiresBatteryNotLow(true)`, which is already a battery guard — it just
+means "not nearly flat" rather than "plugged in". Adding this is one line,
+`constraints.setRequiresCharging(true)`, behind a `BooleanPref`.
+
+**Why it is not one line.** Battery-not-low is satisfied most of the time;
+charging is satisfied for a few hours a night, and for some people not every
+night. Turning this on can mean a phone that opens the panel to a feed a day
+and a half old, with nothing on screen saying why — WorkManager holds the work
+silently until the constraint is met, and a periodic request that never meets
+its constraints simply never runs. That is the whole design problem, and the
+switch is worth nothing without an answer to it:
+
+- The summary has to say what it costs, not just what it does. Something like
+  "Scheduled syncs wait until the phone is plugged in. Pull to refresh still
+  works any time" — the second sentence being the part that keeps it from
+  feeling broken.
+- The never-synced and stale-feed marks (§ "Make a never-synced feed
+  distinguishable") are what make the delay legible rather than mysterious.
+  This switch should not ship before them.
+- Pull-to-refresh carries no constraints and must not grow one, for the same
+  reason it carries no battery guard today: that sync was asked for.
+
+**Decide before building:** whether it is a third state of one "when to sync"
+choice rather than a second independent switch. Three switches (frequency,
+wifi, charging) recreate exactly the boolean-pair muddle that
+`articleOpenMode` was built to replace — a single list ("Any time", "On Wi-Fi",
+"On Wi-Fi while charging") says the same thing and cannot be set to a
+combination nobody wants.
+
+`DiscoveryWorker` sets its own constraints and would want the same treatment,
+or an explicit note saying why it is exempt.
+
 ### 8. Ship it
 
 - **The Lawnchair whitelist PR** — see below. Worth doing, and no longer the
