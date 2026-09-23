@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.manager.models
 
+import com.saulhdev.feeder.utils.SyncLog
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -81,7 +82,7 @@ suspend fun ContentResolver.importOpml(uri: Uri) = withContext(Dispatchers.IO) {
                     parser.parseInputStream(stream)
                 }
             }
-            requestFeedSync()
+            requestFeedSync(origin = SyncLog.ORIGIN_IMPORT)
         }
         Log.d("OPML", "Imported OPML in $time ms")
     } catch (e: Throwable) {

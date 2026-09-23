@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.data.repository
 
+import com.saulhdev.feeder.utils.SyncLog
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.saulhdev.feeder.data.db.ID_ALL
@@ -88,7 +89,7 @@ class SourcesRepository(db: NeoFeedDb) {
         val removed = feedsDao.findRemovedByUrl(source.url)
         if (removed != null) {
             feedsDao.restoreRemoved(removed.id)
-            requestFeedSync(removed.id)
+            requestFeedSync(removed.id, origin = SyncLog.ORIGIN_SOURCE_CHANGE)
             return@withContext removed.id
         }
 
@@ -203,7 +204,7 @@ class SourcesRepository(db: NeoFeedDb) {
             if (it is SQLiteConstraintException) return@withContext false else throw it
         }
         if (written > 0) {
-            if (resync) requestFeedSync(feed.id)
+            if (resync) requestFeedSync(feed.id, origin = SyncLog.ORIGIN_SOURCE_CHANGE)
             if (feed.fullTextByDefault) scheduleFullTextParse()
         }
         true
@@ -362,10 +363,10 @@ class SourcesRepository(db: NeoFeedDb) {
             _recentlyDeleted.value = null
             if (feedsDao.existsById(feed.id)) {
                 feedsDao.restoreRemoved(feed.id)
-                requestFeedSync(feed.id)
+                requestFeedSync(feed.id, origin = SyncLog.ORIGIN_SOURCE_CHANGE)
             } else {
                 val id = feedsDao.insert(feed.copy(id = ID_UNSET))
-                requestFeedSync(id)
+                requestFeedSync(id, origin = SyncLog.ORIGIN_SOURCE_CHANGE)
             }
         }
     }
@@ -486,7 +487,7 @@ class SourcesRepository(db: NeoFeedDb) {
             val feeds = _recentlyDeletedMany.value
             _recentlyDeletedMany.value = emptyList()
             feeds.forEach { feedsDao.insert(it.copy(id = ID_UNSET)) }
-            if (feeds.isNotEmpty()) requestFeedSync(ID_ALL)
+            if (feeds.isNotEmpty()) requestFeedSync(ID_ALL, origin = SyncLog.ORIGIN_SOURCE_CHANGE)
         }
     }
 

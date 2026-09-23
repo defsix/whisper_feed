@@ -165,12 +165,23 @@ class ImageTrace private constructor() : EventListener {
          */
         internal fun reasonOf(t: Throwable?): String {
             if (t == null) return "unknown"
-            val status = Regex("""\b([45][0-9]{2})\b""").find(t.message.orEmpty())
+            val status = HTTP_STATUS.find(t.message.orEmpty())
             if (status != null) return "http ${status.groupValues[1]}"
             val kind = t.javaClass.simpleName.ifBlank { "unknown" }
             val detail = safeMessage(t.message)
             return if (detail.isEmpty()) kind else "$kind: $detail"
         }
+
+        /**
+         * A status code, only where the message says it is one.
+         *
+         * Any three digits starting 4 or 5 used to count, so "failed to
+         * connect to host:443" reached the report as "http 443" - a port read
+         * as a status - and a real redirect such as "HTTP 301" did not count
+         * at all. Coil writes `HTTP 404: Not Found`; OkHttp writes
+         * `code=403`. Those two, any status.
+         */
+        private val HTTP_STATUS = Regex("""(?:\bHTTP\s+|\bcode=)([1-5][0-9]{2})\b""", RegexOption.IGNORE_CASE)
 
         /**
          * Anything that could be an address.

@@ -74,10 +74,16 @@ class SyncCancellationTest {
             val text = read(path)
             val at = text.indexOf(log)
             assertTrue("$path stopped logging \"$log\"", at > 0)
-            val before = text.substring(maxOf(0, at - 700), at)
+            // The catch just before the failure handler must be the
+            // cancellation one. Asked of the structure, not of a distance: a
+            // character window broke the first time that block grew a comment.
+            val before = text.substring(0, at)
+            val failureCatch = before.lastIndexOf("catch (")
+            val previousCatch = before.lastIndexOf("catch (", failureCatch - 1)
             assertTrue(
                 "$path reports cancellation as a sync failure",
-                before.contains("catch (e: CancellationException)"),
+                previousCatch >= 0 &&
+                    before.startsWith("catch (e: CancellationException)", previousCatch),
             )
         }
     }

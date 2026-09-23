@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.manager.backup
 
+import com.saulhdev.feeder.utils.SyncLog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -162,7 +163,7 @@ class BackupStore(
             } ?: return@withContext Result.Failed(null)
 
             val after = sources.getAllSources().size
-            requestFeedSync()
+            requestFeedSync(origin = SyncLog.ORIGIN_RESTORE)
             Result.Restored(after - before)
         } catch (t: Throwable) {
             Log.e(TAG, "Restore failed", t)

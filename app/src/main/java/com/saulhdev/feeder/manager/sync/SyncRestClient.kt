@@ -18,14 +18,15 @@
 
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.data.db.ID_ALL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class SyncRestClient() {
     /** A sync somebody asked for - pull to refresh. It ignores the sync switches. */
-    suspend fun syncAllFeeds() = withContext(Dispatchers.IO) {
-        requestFeedSync(feedId = ID_ALL, forceNetwork = true)
+    suspend fun syncAllFeeds(origin: String = SyncLog.ORIGIN_PULL) = withContext(Dispatchers.IO) {
+        requestFeedSync(feedId = ID_ALL, forceNetwork = true, origin = origin)
     }
 
     /**

@@ -117,6 +117,22 @@ object Diagnostics : KoinComponent {
             .onFailure { appendLine("Sync state unavailable: $it") }
 
         appendLine()
+        appendLine("== Sync history (newest first) ==")
+        // What started each of the last syncs, and what the phone was doing
+        // at the time. The sync section says what is waiting; this says what
+        // actually ran, and on whose say-so. See SyncLog.
+        val history = SyncLog.entries(context)
+        if (history.isEmpty()) appendLine("  none recorded yet")
+        val stamp = SimpleDateFormat("dd HH:mm:ss", Locale.US)
+        history.forEach {
+            val took = if (it.end > 0L) "${(it.end - it.start) / 1000}s" else "-"
+            appendLine(
+                "  ${stamp.format(Date(it.start))}  ${it.origin.padEnd(15)} " +
+                    "${it.outcome.padEnd(10)} ${took.padStart(5)}  ${it.phone}"
+            )
+        }
+
+        appendLine()
         appendLine("== Images ==")
         // Since this launch, not since the last five-second window, which is
         // all the log below can show. A picture that failed to appear an hour
@@ -287,87 +303,13 @@ object Diagnostics : KoinComponent {
 
     private fun yesNo(value: Boolean) = if (value) "yes" else "no"
 
-    private fun stopReasonName(reason: Int): String = when (reason) {
-        WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"
-        WorkInfo.STOP_REASON_PREEMPT -> "pre-empted by other work"
-        WorkInfo.STOP_REASON_TIMEOUT -> "ran out of time"
-        WorkInfo.STOP_REASON_DEVICE_STATE -> "device state changed"
-        WorkInfo.STOP_REASON_CONSTRAINT_BATTERY_NOT_LOW -> "battery went low"
-        WorkInfo.STOP_REASON_CONSTRAINT_CHARGING -> "came off the charger"
-        WorkInfo.STOP_REASON_CONSTRAINT_CONNECTIVITY -> "network changed or dropped"
-        WorkInfo.STOP_REASON_CONSTRAINT_DEVICE_IDLE -> "device stopped being idle"
-        WorkInfo.STOP_REASON_CONSTRAINT_STORAGE_NOT_LOW -> "storage ran low"
-        WorkInfo.STOP_REASON_QUOTA -> "out of background quota"
-        WorkInfo.STOP_REASON_BACKGROUND_RESTRICTION -> "background use restricted"
-        WorkInfo.STOP_REASON_APP_STANDBY -> "app put in standby"
-        WorkInfo.STOP_REASON_USER -> "stopped by the user"
-        WorkInfo.STOP_REASON_SYSTEM_PROCESSING -> "system busy"
-        else -> "reason code $reason"
-    }
 
     private fun formatHours(hours: Double): String =
         if (hours < 1.0) "${(hours * 60).toInt()} min"
         else if (hours % 1.0 == 0.0) "${hours.toInt()} h"
         else "$hours h"
 
-    private fun isUnmetered(context: Context): Boolean = runCatching {
-        val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        val caps = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
-        caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
-    }.getOrDefault(false)
 
-    /**
-     * Plugged in or not, charging or held, and the level.
-     *
-     * Read from the sticky battery broadcast, which needs no permission and
-     * no receiver - it hands back the last state the system announced.
-     */
-    private class PowerState(
-        val pluggedIn: Boolean,
-        val source: String,
-        val status: Int,
-        val percent: Int,
-    ) {
-        /** Roughly the system's own "battery low": under 15% and on battery. */
-        val low: Boolean get() = !pluggedIn && percent in 0 until LOW_BATTERY_PERCENT
-
-        fun describe(): String {
-            val level = if (percent >= 0) "battery $percent%" else "battery unknown"
-            if (!pluggedIn) return "on battery, $level"
-            val state = when (status) {
-                BatteryManager.BATTERY_STATUS_CHARGING -> "charging"
-                BatteryManager.BATTERY_STATUS_FULL -> "full"
-                // Plugged in and not taking charge: adaptive charging or a
-                // charge limit holding it. Named, because it reads as
-                // "unplugged" to anything that only asks whether it is charging.
-                else -> "plugged in but held, not charging"
-            }
-            return "plugged in ($source), $state, $level"
-        }
-    }
-
-    private fun powerState(context: Context): PowerState = runCatching {
-        val battery = ContextCompat.registerReceiver(
-            context,
-            null,
-            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
-        val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-        val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        PowerState(
-            pluggedIn = plugged != 0,
-            source = when (plugged) {
-                BatteryManager.BATTERY_PLUGGED_AC -> "mains"
-                BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-                BatteryManager.BATTERY_PLUGGED_WIRELESS -> "wireless"
-                else -> "other"
-            },
-            status = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1,
-            percent = if (level >= 0 && scale > 0) level * 100 / scale else -1,
-        )
-    }.getOrDefault(PowerState(pluggedIn = false, source = "unknown", status = -1, percent = -1))
 
     /**
      * How long any one database section may take before the report goes on
@@ -377,8 +319,6 @@ object Diagnostics : KoinComponent {
      */
     private const val SECTION_TIMEOUT_MS = 4_000L
 
-    /** Where Android calls the battery low, near enough; the exact line is the device's. */
-    private const val LOW_BATTERY_PERCENT = 15
 
     private fun readOwnLogcat(): String = runCatching {
         val process = Runtime.getRuntime().exec(

@@ -126,15 +126,17 @@ class SyncConstraintsTest {
     @Test
     fun `the report judges the charger by plugged in, not by charging`() {
         val diagnostics = File("src/main/java/com/saulhdev/feeder/utils/Diagnostics.kt").readText()
+        // The reading itself is shared with the sync record now; see DeviceState.
+        val device = File("src/main/java/com/saulhdev/feeder/utils/DeviceState.kt").readText()
         assertTrue(diagnostics.contains("needs.requiresCharging() && !power.pluggedIn"))
         assertTrue(
             "a held charge is named, not reported as unplugged",
-            diagnostics.contains("plugged in but held, not charging"),
+            device.contains("plugged in but held, not charging"),
         )
-        assertTrue("and the level is read", diagnostics.contains("BatteryManager.EXTRA_LEVEL"))
+        assertTrue("and the level is read", device.contains("BatteryManager.EXTRA_LEVEL"))
         assertTrue(
             "the old test is gone",
-            !diagnostics.contains("BatteryManager::class.java).isCharging"),
+            !(diagnostics + device).contains("BatteryManager::class.java).isCharging"),
         )
     }
 

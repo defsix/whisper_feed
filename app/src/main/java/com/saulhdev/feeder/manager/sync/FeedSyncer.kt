@@ -1,5 +1,7 @@
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.utils.stopReasonName
+import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.data.db.ID_ALL
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -44,6 +46,10 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
 
     override suspend fun doWork(): Result {
         var success: Boolean
+        // Written before anything else can fail, so even a run that dies
+        // immediately leaves a line saying it started. See SyncLog.
+        val origin = inputData.getString(SyncLog.ORIGIN_KEY) ?: "unlabelled"
+        val run = SyncLog.started(applicationContext, origin)
 
         try {
             val feedId = inputData.getLong("feed_id", ID_UNSET)
@@ -93,12 +99,25 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             // Cancellation is the reader leaving, not a sync that went wrong.
             // Reported as a failure it would retry on a backoff and log an
             // error for something nobody did wrong. See RssLocalSync.
+            //
+            // WorkManager stops a worker by cancelling it, so this is also
+            // where a run cut off by a lost constraint ends - and its reason
+            // is the thing "attempts 2" could not explain.
+            // The worker can only ask why from Android 12; before that,
+            // WorkManager's own record in the report is the only answer.
+            val why = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                stopReasonName(stopReason)
+            } else {
+                "no reason given"
+            }
+            SyncLog.finished(applicationContext, run, "stopped: $why")
             throw e
         } catch (e: Exception) {
             success = false
             Log.e(TAG, "Failure during sync", e)
         }
 
+        SyncLog.finished(applicationContext, run, if (success) "ok" else "failed")
         return when (success) {
             true  -> Result.success()
             false -> Result.failure()
@@ -154,6 +173,8 @@ fun requestFeedSync(
     feedId: Long = ID_UNSET,
     feedTag: String = "",
     forceNetwork: Boolean = false,
+    /** What asked for it, for the sync record. See SyncLog. */
+    origin: String,
 ) {
     val workManager: WorkManager by inject(WorkManager::class.java)
     val prefs: FeedPreferences by inject(FeedPreferences::class.java)
@@ -162,6 +183,7 @@ fun requestFeedSync(
         "feed_id" to feedId,
         "feed_tag" to feedTag,
         "force_network" to forceNetwork,
+        SyncLog.ORIGIN_KEY to origin,
     )
     Log.d(TAG, "requestFeedSync: $data")
     val constraints = Constraints.Builder()
@@ -214,6 +236,7 @@ fun requestAutomaticFeedSync() {
                 "feed_id" to ID_ALL,
                 "feed_tag" to "",
                 "force_network" to false,
+                SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_PANEL,
             )
         )
         .build()

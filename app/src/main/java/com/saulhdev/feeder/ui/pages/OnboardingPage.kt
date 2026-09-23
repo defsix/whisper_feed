@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.ui.pages
 
+import com.saulhdev.feeder.utils.SyncLog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -304,7 +305,7 @@ private fun StarterSourcesStep(
         // them either way.
         scope.launch(Dispatchers.IO) {
             StarterSources.subscribe(sourcesRepo, picked) { context.getString(it) }
-            syncClient.syncAllFeeds()
+            syncClient.syncAllFeeds(origin = SyncLog.ORIGIN_ONBOARDING)
         }
         onDone()
     }

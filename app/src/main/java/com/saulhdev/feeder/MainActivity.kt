@@ -1,5 +1,7 @@
 package com.saulhdev.feeder
 
+import androidx.work.workDataOf
+import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
 import android.app.Activity
@@ -272,6 +274,7 @@ class MainActivity : ComponentActivity() {
             val syncWork = workRequestBuilder
                 .setConstraints(constraints.build())
                 .addTag("PeriodicFeedSyncer")
+                .setInputData(workDataOf(SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_SCHEDULED))
                 .build()
 
             workManager.enqueueUniquePeriodicWork(
