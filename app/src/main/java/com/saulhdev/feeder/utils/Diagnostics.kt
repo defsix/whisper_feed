@@ -17,6 +17,8 @@
  */
 package com.saulhdev.feeder.utils
 
+import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
+import androidx.work.WorkInfo
 import androidx.core.content.ContextCompat
 import android.content.IntentFilter
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
@@ -216,6 +218,12 @@ object Diagnostics : KoinComponent {
                 else SimpleDateFormat("HH:mm", Locale.US).format(Date(next)) +
                     if (inMinutes >= 0) " (in $inMinutes min)" else " (${-inMinutes} min overdue)"
             appendLine("Scheduled:    ${work.state}, next $nextText, attempts ${work.runAttemptCount}")
+            // Why the last attempt did not finish, in WorkManager's own words.
+            // "Attempts 2" with the slot still overdue said two runs had been
+            // started and stopped, and nothing in the report could say by what.
+            if (work.stopReason != WorkInfo.STOP_REASON_NOT_STOPPED) {
+                appendLine("Last stopped: ${stopReasonName(work.stopReason)}")
+            }
 
             val needs = work.constraints
             val wantsUnmetered = needs.requiredNetworkType == NetworkType.UNMETERED
@@ -251,6 +259,19 @@ object Diagnostics : KoinComponent {
             }
         }
 
+        // The panel's own sync, which waits for the same conditions as the
+        // scheduled one. Before it did, it was the sync that ran against the
+        // switches, so it is reported beside them.
+        val automatic = WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkFlow(AUTOMATIC_SYNC_WORK)
+            .first()
+            .firstOrNull()
+        appendLine(
+            "Panel sync:   " + if (automatic == null) "none queued"
+            else "${automatic.state}, requires charging ${yesNo(automatic.constraints.requiresCharging())}, " +
+                "network ${automatic.constraints.requiredNetworkType}"
+        )
+
         val newest = get<SourcesRepository>().getAllSources()
             .maxOfOrNull { it.lastSync.toEpochMilliseconds() } ?: 0L
         if (newest > 0L) {
@@ -265,6 +286,24 @@ object Diagnostics : KoinComponent {
     }
 
     private fun yesNo(value: Boolean) = if (value) "yes" else "no"
+
+    private fun stopReasonName(reason: Int): String = when (reason) {
+        WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"
+        WorkInfo.STOP_REASON_PREEMPT -> "pre-empted by other work"
+        WorkInfo.STOP_REASON_TIMEOUT -> "ran out of time"
+        WorkInfo.STOP_REASON_DEVICE_STATE -> "device state changed"
+        WorkInfo.STOP_REASON_CONSTRAINT_BATTERY_NOT_LOW -> "battery went low"
+        WorkInfo.STOP_REASON_CONSTRAINT_CHARGING -> "came off the charger"
+        WorkInfo.STOP_REASON_CONSTRAINT_CONNECTIVITY -> "network changed or dropped"
+        WorkInfo.STOP_REASON_CONSTRAINT_DEVICE_IDLE -> "device stopped being idle"
+        WorkInfo.STOP_REASON_CONSTRAINT_STORAGE_NOT_LOW -> "storage ran low"
+        WorkInfo.STOP_REASON_QUOTA -> "out of background quota"
+        WorkInfo.STOP_REASON_BACKGROUND_RESTRICTION -> "background use restricted"
+        WorkInfo.STOP_REASON_APP_STANDBY -> "app put in standby"
+        WorkInfo.STOP_REASON_USER -> "stopped by the user"
+        WorkInfo.STOP_REASON_SYSTEM_PROCESSING -> "system busy"
+        else -> "reason code $reason"
+    }
 
     private fun formatHours(hours: Double): String =
         if (hours < 1.0) "${(hours * 60).toInt()} min"

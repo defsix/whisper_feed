@@ -1,5 +1,6 @@
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.data.db.ID_ALL
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -184,6 +185,44 @@ fun requestFeedSync(
         workRequest
     )
 }
+
+/**
+ * A whole-feed sync that waits for the scheduled sync's conditions.
+ *
+ * Its own unique name, and KEEP rather than REPLACE, for two reasons. REPLACE
+ * under the one-time name would cancel a pull-to-refresh already running the
+ * moment the launcher recreated the panel. And a request that is waiting for a
+ * charger needs no second copy queued behind it every time the panel opens.
+ */
+fun requestAutomaticFeedSync() {
+    val workManager: WorkManager by inject(WorkManager::class.java)
+    val prefs: FeedPreferences by inject(FeedPreferences::class.java)
+
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(
+            if (prefs.syncOnlyOnWifi.getValue()) NetworkType.UNMETERED else NetworkType.CONNECTED
+        )
+        .setRequiresCharging(prefs.syncOnlyWhenCharging.getValue())
+        .setRequiresBatteryNotLow(true)
+        .build()
+
+    val workRequest = OneTimeWorkRequestBuilder<FeedSyncer>()
+        .addTag("FeedSyncer")
+        .setConstraints(constraints)
+        .setInputData(
+            workDataOf(
+                "feed_id" to ID_ALL,
+                "feed_tag" to "",
+                "force_network" to false,
+            )
+        )
+        .build()
+
+    workManager.enqueueUniqueWork(AUTOMATIC_SYNC_WORK, ExistingWorkPolicy.KEEP, workRequest)
+}
+
+/** The name the panel's automatic sync is enqueued under. See requestAutomaticFeedSync. */
+const val AUTOMATIC_SYNC_WORK = "feeder_sync_automatic"
 
 /**
  * The name the scheduled sync is enqueued under.

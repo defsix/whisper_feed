@@ -1,5 +1,6 @@
 package com.saulhdev.feeder
 
+import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
 import android.app.Activity
 import android.content.Context
@@ -229,6 +230,10 @@ class MainActivity : ComponentActivity() {
 
     private fun configurePeriodicSync() {
         val workManager = WorkManager.getInstance(this)
+        // A panel sync already waiting was queued under the old switches, and
+        // KEEP means the next panel open will not replace it. Cleared here so
+        // the next one is queued under the settings the reader has now.
+        workManager.cancelUniqueWork(AUTOMATIC_SYNC_WORK)
         val shouldSync = (prefs.syncFrequency.getValue().toDouble()) > 0
         val replace = true
         if (shouldSync) {

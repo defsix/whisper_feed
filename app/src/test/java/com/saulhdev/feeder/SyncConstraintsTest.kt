@@ -1,5 +1,6 @@
 package com.saulhdev.feeder
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -135,5 +136,52 @@ class SyncConstraintsTest {
             "the old test is gone",
             !diagnostics.contains("BatteryManager::class.java).isCharging"),
         )
+    }
+
+    /**
+     * The panel's automatic sync obeys the switches.
+     *
+     * The launcher panel started a full sync whenever it was created, through
+     * the same call as pull to refresh, so it ignored both switches. The
+     * morning test caught it: the scheduled sync sat correctly at its slot
+     * waiting for a charger while the panel synced at 08:07 over mobile data,
+     * after the phone had come off the car charger.
+     */
+    @Test
+    fun `the panel's automatic sync waits for what the schedule waits for`() {
+        val overlay = source("manager/service/OverlayView.kt")
+        val onCreate = overlay.substringAfter("rootView.doOnAttach").substringBefore("\n    }")
+        assertTrue("created: waits", onCreate.contains("syncWhenAllowed()"))
+        assertTrue("pull to refresh: goes now", overlay.contains("onRefresh = { syncNow() }"))
+        assertEquals(
+            "and nothing else in the panel may take the path that ignores the switches",
+            1,
+            Regex("""(?<!fun )syncNow\(\)""").findAll(overlay).count(),
+        )
+        assertTrue(
+            "the automatic path uses the switch-respecting request",
+            overlay.substringAfter("private fun syncWhenAllowed()").substringBefore("}\n")
+                .contains("syncAllFeedsWhenAllowed()"),
+        )
+
+        val syncer = source("manager/sync/FeedSyncer.kt")
+        val automatic = syncer.substringAfter("fun requestAutomaticFeedSync()").substringBefore("\n}\n")
+        assertTrue(automatic.contains("setRequiresCharging(prefs.syncOnlyWhenCharging.getValue())"))
+        assertTrue(automatic.contains("prefs.syncOnlyOnWifi.getValue()"))
+        assertTrue(
+            "its own name and KEEP, so it can never cancel a refresh the reader started",
+            automatic.contains("enqueueUniqueWork(AUTOMATIC_SYNC_WORK, ExistingWorkPolicy.KEEP"),
+        )
+        assertTrue(
+            "a switch change clears one queued under the old settings",
+            activity.contains("cancelUniqueWork(AUTOMATIC_SYNC_WORK)"),
+        )
+    }
+
+    @Test
+    fun `the report says why the scheduled sync stopped`() {
+        val diagnostics = source("utils/Diagnostics.kt")
+        assertTrue(diagnostics.contains("work.stopReason != WorkInfo.STOP_REASON_NOT_STOPPED"))
+        assertTrue(diagnostics.contains("getWorkInfosForUniqueWorkFlow(AUTOMATIC_SYNC_WORK)"))
     }
 }

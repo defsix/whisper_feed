@@ -263,7 +263,9 @@ class OverlayView(val context: Context) :
         // the insertion out of the attach traversal, where mutating the hierarchy
         // is unsafe.
         rootView.doOnAttach { it.post { initFeed() } }
-        refreshNotifications()
+        // Automatic, so it waits for what the scheduled sync waits for; see
+        // SyncRestClient.syncAllFeedsWhenAllowed.
+        syncWhenAllowed()
 
         syncScope.launch {
             viewModel.articleListState.collect {
@@ -486,7 +488,8 @@ class OverlayView(val context: Context) :
                         // setValue blocks on the datastore write, so keep it off the
                         // main thread; the feed updates through the existing flow.
                         onCategoriesChange = { syncScope.launch { prefs.categoryFilter.setValue(it) } },
-                        onRefresh = { refreshNotifications() },
+                        // Asked for, so it goes now whatever the switches say.
+                        onRefresh = { syncNow() },
                         onArticleClick = { openArticle(it) },
                         onBookmark = { item, on -> viewModel.bookmarkArticle(item.id, on) },
                         onShare = {
@@ -640,10 +643,18 @@ class OverlayView(val context: Context) :
         // so it belongs with those rather than as a lone boolean. The callback
         // stays wired and refreshes; the density itself does nothing until the
         // layout modes land. It is not currently reachable from settings.
-        refreshNotifications()
+        // A launcher callback, not a request from the reader.
+        syncWhenAllowed()
     }
 
-    private fun refreshNotifications() {
+    private fun syncWhenAllowed() {
+        syncScope.launch {
+            articles.syncAllFeedsWhenAllowed()
+        }
+    }
+
+    /** Pull to refresh: asked for, so it runs whatever the sync switches say. */
+    private fun syncNow() {
         syncScope.launch {
             articles.syncAllFeeds()
         }
