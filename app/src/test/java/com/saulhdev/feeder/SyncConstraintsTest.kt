@@ -186,4 +186,20 @@ class SyncConstraintsTest {
         assertTrue(diagnostics.contains("work.stopReason != WorkInfo.STOP_REASON_NOT_STOPPED"))
         assertTrue(diagnostics.contains("getWorkInfosForUniqueWorkFlow(AUTOMATIC_SYNC_WORK)"))
     }
+
+    /**
+     * The report counts every subscription, not only the ones that sync.
+     *
+     * "Sources" came from the sync's own query - enabled and not removed - so
+     * it could never differ from "Enabled", and switched-off or hidden feeds
+     * were missing. The reader counted 140-odd; the report said 120.
+     */
+    @Test
+    fun `the report counts switched-off sources too`() {
+        val counts = source("utils/Diagnostics.kt").substringAfter("appendLine(\"== Counts ==\")")
+            .substringBefore("Articles stored")
+        assertTrue(counts.contains("getAllSourcesFlow().first()"))
+        assertTrue("not the sync's enabled-only list", !counts.contains("getAllSources()"))
+        assertTrue(counts.contains("Switched off:"))
+    }
 }

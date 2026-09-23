@@ -162,9 +162,16 @@ object Diagnostics : KoinComponent {
         // nothing in common but the symptom.
         appendLine("== Counts ==")
         runCatching { withTimeout(SECTION_TIMEOUT_MS) {
-            val sources = get<SourcesRepository>().getAllSources()
+            // Every subscription, switched on or not. This used to ask
+            // getAllSources, which is the sync's question - enabled and not
+            // removed - so "Enabled" matched "Sources" by construction and a
+            // feed that had been switched off or hidden (hiding switches a
+            // source off) could not appear in the report at all. A reader
+            // subscribed to 140-odd saw 120 and was right to query it.
+            val sources = get<SourcesRepository>().getAllSourcesFlow().first()
             appendLine("Sources:           ${sources.size}")
             appendLine("Enabled:           ${sources.count { it.isEnabled }}")
+            appendLine("Switched off:      ${sources.count { !it.isEnabled }} (hidden sources count here)")
 
             // Counted over all of them, not just the ones printed below. A
             // sample of twenty is how the last round of this was noticed at
