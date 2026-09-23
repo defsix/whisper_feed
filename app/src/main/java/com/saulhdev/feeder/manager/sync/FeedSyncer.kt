@@ -1,5 +1,6 @@
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.utils.isPowerSaveMode
 import com.saulhdev.feeder.utils.stopReasonName
 import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.data.db.ID_ALL
@@ -50,6 +51,22 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         // immediately leaves a line saying it started. See SyncLog.
         val origin = inputData.getString(SyncLog.ORIGIN_KEY) ?: "unlabelled"
         val run = SyncLog.started(applicationContext, origin)
+
+        // Battery Saver pauses the syncs nobody asked for at this moment -
+        // the schedule and the panel's - and nothing else. It is the reader
+        // saying "use as little battery as you can", and a background fetch
+        // of every feed is precisely what that is meant to stop. There is no
+        // WorkManager constraint for it, so it is asked here.
+        //
+        // Success rather than retry: the scheduled sync comes round again at
+        // its next slot, and a retry would back off and try again while the
+        // saver was still on. Plugging in turns Battery Saver off by itself,
+        // so this can never hold a sync that "Sync only while charging" is
+        // waiting to run. Pull to refresh and the rest go through.
+        if (origin in SyncLog.AUTOMATIC_ORIGINS && isPowerSaveMode(applicationContext)) {
+            SyncLog.finished(applicationContext, run, "skipped: Battery Saver")
+            return Result.success()
+        }
 
         try {
             val feedId = inputData.getLong("feed_id", ID_UNSET)

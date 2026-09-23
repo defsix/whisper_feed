@@ -128,8 +128,15 @@ object Diagnostics : KoinComponent {
             val took = if (it.end > 0L) "${(it.end - it.start) / 1000}s" else "-"
             appendLine(
                 "  ${stamp.format(Date(it.start))}  ${it.origin.padEnd(15)} " +
-                    "${it.outcome.padEnd(10)} ${took.padStart(5)}  ${it.phone}"
+                    "${it.outcome.padEnd(10)} ${took.padStart(5)}"
             )
+            // Both readings, on their own lines so neither is cut short. The
+            // end is shown only when it differs: an unchanged phone is the
+            // ordinary case and a second identical line would bury the rest.
+            appendLine("      start: ${it.phone}")
+            if (it.phoneAtEnd.isNotBlank() && it.phoneAtEnd != it.phone) {
+                appendLine("      end:   ${it.phoneAtEnd}")
+            }
         }
 
         appendLine()
@@ -219,7 +226,12 @@ object Diagnostics : KoinComponent {
 
         val onWifi = isUnmetered(context)
         val power = powerState(context)
-        appendLine("Phone now:    ${if (onWifi) "unmetered (Wi-Fi)" else "metered or offline"}, ${power.describe()}")
+        val saver = isPowerSaveMode(context)
+        appendLine("Phone now:    ${networkState(context).short()}, ${power.describe()}")
+        appendLine(
+            "              Battery Saver ${if (saver) "on" else "off"}, " +
+                "dozing ${yesNo(isDeviceIdle(context))}"
+        )
 
         val work = WorkManager.getInstance(context)
             .getWorkInfosForUniqueWorkFlow(PERIODIC_SYNC_WORK)
@@ -262,6 +274,10 @@ object Diagnostics : KoinComponent {
                 if (wantsUnmetered && !onWifi) add("Wi-Fi")
                 if (needs.requiresCharging() && !power.pluggedIn) add("a charger")
                 if (needs.requiresBatteryNotLow() && power.low) add("more battery")
+                // Not a WorkManager constraint, so WorkManager will start the
+                // run - and the worker will skip it. Said here so a skipped
+                // run in the history is not a mystery.
+                if (saver) add("Battery Saver to be off")
             }
             appendLine(
                 "Waiting for:  " + if (unmet.isEmpty()) "nothing it can see - due at its next slot" else unmet.joinToString(" and ")

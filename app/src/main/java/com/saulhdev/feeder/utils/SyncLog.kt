@@ -49,6 +49,12 @@ object SyncLog {
     /** Adding back, editing or undoing the removal of a source. */
     const val ORIGIN_SOURCE_CHANGE = "source change"
 
+    /**
+     * The syncs nobody asked for at that moment. Battery Saver pauses these
+     * and only these; see FeedSyncer.
+     */
+    val AUTOMATIC_ORIGINS = setOf(ORIGIN_SCHEDULED, ORIGIN_PANEL)
+
     private const val FILE = "sync_log"
     private const val KEY = "entries"
     private val lock = Any()
@@ -56,13 +62,14 @@ object SyncLog {
     /** Records a sync starting. Returns the id to pass to [finished]. */
     fun started(context: Context, origin: String): Long {
         val now = System.currentTimeMillis()
-        val phone = "${powerState(context).short()}, ${networkKind(context)}"
+        val phone = deviceSnapshot(context)
         update(context) { SyncHistory.start(it, SyncEntry(now, 0L, origin, "running", phone)) }
         return now
     }
 
     fun finished(context: Context, id: Long, outcome: String) {
-        update(context) { SyncHistory.finish(it, id, System.currentTimeMillis(), outcome) }
+        val phone = deviceSnapshot(context)
+        update(context) { SyncHistory.finish(it, id, System.currentTimeMillis(), outcome, phone) }
     }
 
     fun entries(context: Context): List<SyncEntry> = runCatching {
@@ -87,13 +94,20 @@ object SyncLog {
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 }
 
-/** One sync. [end] is zero while it is still running. */
+/**
+ * One sync. [end] is zero while it is still running.
+ *
+ * [phone] is the phone as the run began; [phoneAtEnd] as it finished, empty
+ * until then. Two readings rather than one because the interesting runs are
+ * the ones where something changed in between.
+ */
 data class SyncEntry(
     val start: Long,
     val end: Long,
     val origin: String,
     val outcome: String,
     val phone: String,
+    val phoneAtEnd: String = "",
 )
 
 /**
@@ -112,20 +126,29 @@ internal object SyncHistory {
      * Fills in the end of the run that started at [id]. A run that has
      * already been trimmed away is simply not found; nothing is invented.
      */
-    fun finish(entries: List<SyncEntry>, id: Long, end: Long, outcome: String): List<SyncEntry> =
-        entries.map { if (it.start == id && it.end == 0L) it.copy(end = end, outcome = outcome) else it }
+    fun finish(
+        entries: List<SyncEntry>,
+        id: Long,
+        end: Long,
+        outcome: String,
+        phoneAtEnd: String = "",
+    ): List<SyncEntry> = entries.map {
+        if (it.start == id && it.end == 0L) it.copy(end = end, outcome = outcome, phoneAtEnd = phoneAtEnd) else it
+    }
 
     fun encode(entries: List<SyncEntry>): String = entries.joinToString("\n") {
-        listOf(it.start, it.end, clean(it.origin), clean(it.outcome), clean(it.phone)).joinToString(FIELD.toString())
+        listOf(it.start, it.end, clean(it.origin), clean(it.outcome), clean(it.phone), clean(it.phoneAtEnd))
+            .joinToString(FIELD.toString())
     }
 
     fun decode(text: String): List<SyncEntry> = text.lineSequence()
         .mapNotNull { line ->
             val f = line.split(FIELD)
-            if (f.size != 5) return@mapNotNull null
+            // Five fields is a line written before the end reading existed.
+            if (f.size != 5 && f.size != 6) return@mapNotNull null
             val start = f[0].toLongOrNull() ?: return@mapNotNull null
             val end = f[1].toLongOrNull() ?: return@mapNotNull null
-            SyncEntry(start, end, f[2], f[3], f[4])
+            SyncEntry(start, end, f[2], f[3], f[4], f.getOrElse(5) { "" })
         }
         .toList()
 

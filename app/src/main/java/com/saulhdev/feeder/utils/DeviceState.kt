@@ -23,6 +23,7 @@ import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
+import android.os.PowerManager
 import androidx.core.content.ContextCompat
 import androidx.work.WorkInfo
 
@@ -63,8 +64,17 @@ internal class PowerState(
         return "plugged in ($source), $state, $level"
     }
 
-    /** The two words the sync record keeps. */
-    fun short(): String = if (pluggedIn) "plugged in" else "on battery"
+    /** The sync record's version: "USB charging 64%", "battery 41%", "USB held 80%". */
+    fun short(): String {
+        val level = if (percent >= 0) "$percent%" else "?%"
+        if (!pluggedIn) return "battery $level"
+        val state = when (status) {
+            BatteryManager.BATTERY_STATUS_CHARGING -> "charging"
+            BatteryManager.BATTERY_STATUS_FULL -> "full"
+            else -> "held"
+        }
+        return "$source $state $level"
+    }
 }
 
 /** Where Android calls the battery low, near enough; the exact line is the device's. */
@@ -99,17 +109,6 @@ internal fun isUnmetered(context: Context): Boolean = runCatching {
     caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
 }.getOrDefault(false)
 
-/** "Wi-Fi", "mobile data" or "offline", as the sync record puts it. */
-internal fun networkKind(context: Context): String = runCatching {
-    val connectivity = context.getSystemService(ConnectivityManager::class.java)
-    val caps = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
-        ?: return@runCatching "offline"
-    when {
-        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) -> "Wi-Fi"
-        else -> "mobile data"
-    }
-}.getOrDefault("unknown")
-
 /** WorkManager's stop reason, in words. */
 internal fun stopReasonName(reason: Int): String = when (reason) {
     WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"
@@ -128,4 +127,63 @@ internal fun stopReasonName(reason: Int): String = when (reason) {
     WorkInfo.STOP_REASON_SYSTEM_PROCESSING -> "system busy"
     WorkInfo.STOP_REASON_UNKNOWN -> "no reason given"
     else -> "reason code $reason"
+}
+
+/**
+ * Which network the phone is on, and whether it is metered.
+ *
+ * Both, because WorkManager's "unmetered" is not the same question as "Wi-Fi":
+ * a metered hotspot is Wi-Fi, and an unlimited mobile plan can report itself
+ * unmetered. The sync switch is about the second, the reader thinks in terms
+ * of the first, and the record keeps them apart so neither is mistaken for
+ * the other.
+ */
+internal class NetworkState(val kind: String, val metered: Boolean?) {
+    fun short(): String = when (metered) {
+        null -> kind
+        true -> "$kind (metered)"
+        false -> "$kind (unmetered)"
+    }
+}
+
+internal fun networkState(context: Context): NetworkState = runCatching {
+    val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    val caps = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+        ?: return@runCatching NetworkState("offline", null)
+    val kind = when {
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "mobile"
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "ethernet"
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> "VPN"
+        else -> "other network"
+    }
+    NetworkState(kind, !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
+}.getOrDefault(NetworkState("unknown", null))
+
+/** Whether Battery Saver is on. See FeedSyncer for what it pauses. */
+internal fun isPowerSaveMode(context: Context): Boolean = runCatching {
+    context.getSystemService(PowerManager::class.java).isPowerSaveMode
+}.getOrDefault(false)
+
+/** Whether the phone is dozing: screen off, still, and deferring background work. */
+internal fun isDeviceIdle(context: Context): Boolean = runCatching {
+    context.getSystemService(PowerManager::class.java).isDeviceIdleMode
+}.getOrDefault(false)
+
+/**
+ * Everything a sync's conditions depend on, read at one moment.
+ *
+ * The record keeps one of these at the start of every sync and another at
+ * its end, so a run that began on the charger and on Wi-Fi and ended on
+ * battery and mobile data says so - which is the combination that shows
+ * whether a constraint was honoured or merely true when the run began.
+ */
+internal fun deviceSnapshot(context: Context): String {
+    val power = powerState(context)
+    val flags = buildList {
+        if (isPowerSaveMode(context)) add("Battery Saver")
+        if (isDeviceIdle(context)) add("dozing")
+    }
+    return "${networkState(context).short()}, ${power.short()}" +
+        if (flags.isEmpty()) "" else ", " + flags.joinToString(", ")
 }
