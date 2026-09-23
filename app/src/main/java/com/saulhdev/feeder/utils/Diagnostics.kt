@@ -230,7 +230,8 @@ object Diagnostics : KoinComponent {
         appendLine("Phone now:    ${networkState(context).short()}, ${power.describe()}")
         appendLine(
             "              Battery Saver ${if (saver) "on" else "off"}, " +
-                "dozing ${yesNo(isDeviceIdle(context))}"
+                "dozing ${yesNo(isDeviceIdle(context))}, ${dataSaverState(context)}, " +
+                "battery setting ${if (isBackgroundRestricted(context)) "Restricted" else "not restricted"}"
         )
 
         val work = WorkManager.getInstance(context)
@@ -278,6 +279,13 @@ object Diagnostics : KoinComponent {
                 // run - and the worker will skip it. Said here so a skipped
                 // run in the history is not a mystery.
                 if (saver) add("Battery Saver to be off")
+                // Data Saver keeps a backgrounded app off mobile data, and a
+                // scheduled sync always runs in the background - so on mobile
+                // data with Data Saver on it can never start, whatever the
+                // switches say. Named, because nothing else would explain it.
+                if (!onWifi && dataSaverState(context) == "Data Saver on") {
+                    add("Wi-Fi (Data Saver keeps background syncs off mobile data)")
+                }
             }
             appendLine(
                 "Waiting for:  " + if (unmet.isEmpty()) "nothing it can see - due at its next slot" else unmet.joinToString(" and ")

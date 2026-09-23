@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.utils
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -149,7 +150,10 @@ internal class NetworkState(val kind: String, val metered: Boolean?) {
 internal fun networkState(context: Context): NetworkState = runCatching {
     val connectivity = context.getSystemService(ConnectivityManager::class.java)
     val caps = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
-        ?: return@runCatching NetworkState("offline", null)
+        ?: return@runCatching NetworkState(
+            if (anyNetworkUp(connectivity)) "blocked for Whisper" else "offline",
+            null,
+        )
     val kind = when {
         caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
         caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "mobile"
@@ -159,6 +163,57 @@ internal fun networkState(context: Context): NetworkState = runCatching {
     }
     NetworkState(kind, !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
 }.getOrDefault(NetworkState("unknown", null))
+
+/**
+ * Whether the phone has a working network that Whisper is being kept off.
+ *
+ * `activeNetwork` is null in two very different cases: no network at all, and
+ * a network Android will not let this app use - Data Saver, or background data
+ * switched off for the app, both cut a backgrounded app off from mobile data
+ * while leaving it working for everything in the foreground. Every sync one
+ * afternoon started on mobile data and ended "offline" within half a minute,
+ * which is the second case wearing the first one's name. Asking whether any
+ * network with internet exists tells them apart.
+ */
+@Suppress("DEPRECATION") // allNetworks: the one call that sees past the block.
+private fun anyNetworkUp(connectivity: ConnectivityManager): Boolean =
+    connectivity.allNetworks.any { network ->
+        connectivity.getNetworkCapabilities(network)
+            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+
+/**
+ * Data Saver, as it applies to Whisper: off, on, or on with Whisper exempted.
+ */
+internal fun dataSaverState(context: Context): String = runCatching {
+    when (context.getSystemService(ConnectivityManager::class.java).restrictBackgroundStatus) {
+        ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED -> "Data Saver on"
+        ConnectivityManager.RESTRICT_BACKGROUND_STATUS_WHITELISTED -> "Data Saver on, Whisper exempt"
+        else -> "Data Saver off"
+    }
+}.getOrDefault("Data Saver unknown")
+
+/**
+ * Whether Whisper is on screen, running something the reader can see, or in
+ * the background - which is what decides whether Data Saver lets it use
+ * mobile data at that moment.
+ */
+internal fun appVisibility(): String = runCatching {
+    val info = ActivityManager.RunningAppProcessInfo()
+    ActivityManager.getMyMemoryState(info)
+    when {
+        info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> "on screen"
+        info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "visible"
+        info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_SERVICE -> "background, working"
+        else -> "background"
+    }
+}.getOrDefault("unknown")
+
+/** The battery setting "Restricted" for Whisper, which holds background work back. */
+internal fun isBackgroundRestricted(context: Context): Boolean = runCatching {
+    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P &&
+        context.getSystemService(ActivityManager::class.java).isBackgroundRestricted
+}.getOrDefault(false)
 
 /** Whether Battery Saver is on. See FeedSyncer for what it pauses. */
 internal fun isPowerSaveMode(context: Context): Boolean = runCatching {
@@ -183,7 +238,11 @@ internal fun deviceSnapshot(context: Context): String {
     val flags = buildList {
         if (isPowerSaveMode(context)) add("Battery Saver")
         if (isDeviceIdle(context)) add("dozing")
+        // Only when on: the ordinary case is off, and a word on every line
+        // would bury the one line where it matters.
+        dataSaverState(context).takeIf { it == "Data Saver on" }?.let(::add)
+        if (isBackgroundRestricted(context)) add("battery Restricted")
     }
-    return "${networkState(context).short()}, ${power.short()}" +
+    return "${networkState(context).short()}, ${power.short()}, ${appVisibility()}" +
         if (flags.isEmpty()) "" else ", " + flags.joinToString(", ")
 }

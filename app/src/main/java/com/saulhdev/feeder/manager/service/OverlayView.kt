@@ -1,5 +1,6 @@
 package com.saulhdev.feeder.manager.service
 
+import com.saulhdev.feeder.utils.SyncLog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -656,7 +657,7 @@ class OverlayView(val context: Context) :
     /** Pull to refresh: asked for, so it runs whatever the sync switches say. */
     private fun syncNow() {
         syncScope.launch {
-            articles.syncAllFeeds()
+            articles.syncAllFeeds(origin = SyncLog.ORIGIN_PULL_PANEL)
         }
     }
 

@@ -72,4 +72,36 @@ class SyncConditionsRecordTest {
         assertTrue("and before anything is fetched", check < worker.indexOf("syncFeeds("))
         assertTrue("recorded as skipped", worker.contains("\"skipped: Battery Saver\""))
     }
+
+    /**
+     * "Offline" and "blocked for Whisper" are told apart.
+     *
+     * Every sync one afternoon started on mobile data and ended "offline"
+     * within half a minute. activeNetwork is null both when there is no
+     * network and when Android is keeping this app off one - Data Saver, or
+     * background data switched off - and the record said the first when the
+     * pattern said the second.
+     */
+    @Test
+    fun `a network Whisper is kept off is not reported as no network`() {
+        val device = source("utils/DeviceState.kt")
+        assertTrue(device.contains("if (anyNetworkUp(connectivity)) \"blocked for Whisper\" else \"offline\""))
+        val snapshot = device.substringAfter("internal fun deviceSnapshot(")
+        assertTrue("Data Saver is recorded", snapshot.contains("dataSaverState(context)"))
+        assertTrue("and whether Whisper was on screen", snapshot.contains("appVisibility()"))
+        assertTrue("and the Restricted battery setting", snapshot.contains("isBackgroundRestricted(context)"))
+        val report = source("utils/Diagnostics.kt")
+        assertTrue(
+            "the verdict names Data Saver when it is the reason",
+            report.contains("Wi-Fi (Data Saver keeps background syncs off mobile data)"),
+        )
+    }
+
+    @Test
+    fun `a pull on the panel is told from a pull in the app`() {
+        assertTrue(SyncLog.ORIGIN_PULL != SyncLog.ORIGIN_PULL_PANEL)
+        val overlay = source("manager/service/OverlayView.kt")
+        assertTrue(overlay.contains("syncAllFeeds(origin = SyncLog.ORIGIN_PULL_PANEL)"))
+        assertFalse("the panel never takes the app's label", Regex("""syncAllFeeds\(\)""").containsMatchIn(overlay))
+    }
 }

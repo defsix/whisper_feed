@@ -42,7 +42,15 @@ object SyncLog {
 
     const val ORIGIN_SCHEDULED = "scheduled"
     const val ORIGIN_PANEL = "panel"
-    const val ORIGIN_PULL = "pull to refresh"
+    /**
+     * Pull to refresh, by where it was pulled. Told apart because on the
+     * launcher panel a downward swipe at the top of the list - the gesture
+     * for pulling down notifications everywhere else - reaches Whisper first,
+     * and six "pulls" in four minutes one afternoon looked more like that
+     * than like six refreshes anybody meant.
+     */
+    const val ORIGIN_PULL = "pull (app)"
+    const val ORIGIN_PULL_PANEL = "pull (panel)"
     const val ORIGIN_ONBOARDING = "onboarding"
     const val ORIGIN_IMPORT = "OPML import"
     const val ORIGIN_RESTORE = "restore"
