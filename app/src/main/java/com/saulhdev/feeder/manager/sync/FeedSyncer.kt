@@ -30,6 +30,7 @@ import androidx.work.workDataOf
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.ID_UNSET
+import com.saulhdev.feeder.data.repository.SourcesRepository
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
 
@@ -38,6 +39,8 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
 
     private val TAG = "FeedSyncer"
     private val dispatcher: RssServiceDispatcher by inject(RssServiceDispatcher::class.java)
+    private val sources: SourcesRepository by inject(SourcesRepository::class.java)
+    private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
     private val notificationManager: NotificationManagerCompat =
         NotificationManagerCompat.from(context)
 
@@ -181,6 +184,17 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             run,
             (if (success) "ok" else "failed") + if (notes.isEmpty()) "" else " (${notes.joinToString(", ")})",
         )
+        // A notice that syncing had stopped is taken back by the sync that
+        // proves it has started again.
+        if (success) {
+            try {
+                SyncWatchdog.clearIfCurrent(applicationContext, sources, prefs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not clear the stuck-sync notice", e)
+            }
+        }
         return when (success) {
             true  -> Result.success()
             false -> Result.failure()

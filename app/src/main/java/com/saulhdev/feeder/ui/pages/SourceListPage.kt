@@ -60,6 +60,7 @@ import com.saulhdev.feeder.manager.models.exportBookmarks
 import com.saulhdev.feeder.manager.models.exportOpml
 import com.saulhdev.feeder.manager.models.importBookmarks
 import com.saulhdev.feeder.manager.models.importOpml
+import com.saulhdev.feeder.ui.components.STALE_AFTER_MS
 import com.saulhdev.feeder.ui.components.OverflowMenu
 import com.saulhdev.feeder.ui.components.PreferenceGroupHeading
 import com.saulhdev.feeder.ui.components.SourceItem
@@ -821,9 +822,6 @@ fun SourceListPage(
         }
     )
 }
-
-/** How long a source can go without a successful sync before it is flagged. */
-private const val STALE_AFTER_MS = 3L * 24 * 60 * 60 * 1000
 
 /** Which of the three tag operations a dialog is open for. */
 enum class TagAction(val labelId: Int) {

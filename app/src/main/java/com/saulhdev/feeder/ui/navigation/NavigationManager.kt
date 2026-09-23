@@ -116,7 +116,11 @@ fun NavigationManager(
                 deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.SETTINGS}" })
             ) { PreferencesPage() }
             composable<NavRoute.GlanceLocation> { GlanceLocationPage() }
-            composable<NavRoute.Sources> { SourceListPage() }
+            // Deep-linked for the "sources have stopped updating"
+            // notification, which should open the list that marks them.
+            composable<NavRoute.Sources>(
+                deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.SOURCES}" })
+            ) { SourceListPage() }
             composable<NavRoute.About> { AboutPage() }
             composable<NavRoute.License> { LicensePage() }
             composable<NavRoute.Changelog> { ChangelogPage() }
@@ -156,6 +160,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val WEB_VIEW = "web_view"
     const val ARTICLE_VIEW = "article_page"
+    const val SOURCES = "sources"
 }
 
 sealed class NavItem(

@@ -374,6 +374,9 @@ fun FeedScaffold(
                         // on; this says which, and lets it be undone here.
                         ActiveFilterBar()
                     }
+                    // Outside the search check: how current the feed is does
+                    // not change with what is being looked for.
+                    SyncFreshnessLine()
                 }
             }
 

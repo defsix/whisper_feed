@@ -133,6 +133,7 @@ import com.saulhdev.feeder.utils.BrowserReadTimer
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
+import com.saulhdev.feeder.ui.overlay.SyncFreshnessLine
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
 import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
@@ -495,6 +496,7 @@ fun ArticleListPage(
                                     // feed is rather than inside the sheet
                                     // that set it.
                                     ActiveFilterBar()
+                                    SyncFreshnessLine()
                                 }
                             }
 

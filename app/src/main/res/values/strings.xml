@@ -91,6 +91,27 @@
     <string name="age_weeks">%1$dw</string>
     <string name="age_months">%1$dmo</string>
     <string name="age_years">%1$dy</string>
+    <!-- The line under the feed's header saying how current it is. %1$s is a compact age: "12m", "3h". -->
+    <string name="freshness_updated">Updated %1$s ago</string>
+    <string name="freshness_just_now">Updated just now</string>
+    <string name="freshness_updating">Updating…</string>
+    <string name="freshness_never">Not updated yet · pull down to update</string>
+    <string name="freshness_overdue">Updated %1$s ago · pull down to update</string>
+    <!-- Notifications sent only when syncing has stopped working. %1$s is a compact age: "26h", "2d". -->
+    <string name="sync_problems_channel">Sync problems</string>
+    <string name="sync_problems_channel_description">When feeds have stopped updating. Syncing itself is never announced.</string>
+    <string name="sync_stuck_title">Feeds last updated %1$s ago</string>
+    <string name="sync_stuck_charger">Waiting for a charger.</string>
+    <string name="sync_stuck_wifi">Waiting for Wi-Fi.</string>
+    <string name="sync_stuck_battery_saver">Battery Saver is holding it back.</string>
+    <string name="sync_stuck_more_battery">Waiting for more battery.</string>
+    <string name="sync_stuck_unknown">Android has not run it yet.</string>
+    <string name="sync_stuck_hint">Pull down on the feed to update now.</string>
+    <plurals name="sources_stuck_title">
+        <item quantity="one">%1$d source has stopped updating</item>
+        <item quantity="other">%1$d sources have stopped updating</item>
+    </plurals>
+    <string name="sources_stuck_text">Tap to see which.</string>
     <string name="date_at">at</string>
     <string name="today">today</string>
     <string name="tomorrow">tomorrow</string>

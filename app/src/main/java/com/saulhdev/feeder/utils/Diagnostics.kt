@@ -22,6 +22,7 @@ import androidx.work.WorkInfo
 import androidx.core.content.ContextCompat
 import android.content.IntentFilter
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
+import com.saulhdev.feeder.manager.sync.SyncWatchdog
 import androidx.work.WorkManager
 import androidx.work.NetworkType
 import android.os.BatteryManager
@@ -330,6 +331,7 @@ object Diagnostics : KoinComponent {
         } else {
             appendLine("Last sync:    never")
         }
+        appendLine("Problems:     " + SyncWatchdog.describe(context))
     }
 
     private fun yesNo(value: Boolean) = if (value) "yes" else "no"

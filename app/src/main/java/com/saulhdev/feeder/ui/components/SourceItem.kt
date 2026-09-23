@@ -225,6 +225,14 @@ fun SourceItem(
 enum class SourceHealth { Fine, NeverUpdated, NotUpdating }
 
 /**
+ * How long a source can go without a successful sync before it is flagged.
+ *
+ * Shared by the source list and the stuck-sync check, so the notification and
+ * the screen it opens count the same sources.
+ */
+const val STALE_AFTER_MS = 3L * 24 * 60 * 60 * 1000
+
+/**
  * Whether a source is fetching, and if not, which kind of not.
  *
  * The two cases read the same on screen and are not the same problem. "Not

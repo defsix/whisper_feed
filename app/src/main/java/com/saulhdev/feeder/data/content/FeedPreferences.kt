@@ -484,6 +484,21 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /**
+     * Whether Whisper has asked, once, to be allowed notifications.
+     *
+     * Asked after the welcome and the tour rather than on first launch, and
+     * never again: a refusal is an answer. Nothing but the sync-problems
+     * notice and the silent "Syncing" line ever uses it.
+     */
+    var notificationPermissionAsked = BooleanPref(
+        titleId = R.string.pref_show_tour,
+        icon = Phosphor.Info,
+        key = NOTIFICATION_PERMISSION_ASKED,
+        dataStore = dataStore,
+        defaultValue = false,
+    )
+
+    /**
      * The feeds the reader has subscribed to.
      *
      * It used to be reachable only from a dropdown behind the feed's overflow
@@ -1083,6 +1098,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val ONBOARDING_SEEN = booleanPreferencesKey("pref_onboarding_seen")
         val FULL_TEXT_PURGED = booleanPreferencesKey("pref_full_text_purged")
         val TOUR_SEEN = booleanPreferencesKey("pref_tour_seen")
+        val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("pref_notification_permission_asked")
         val SHOW_TOUR = stringPreferencesKey("pref_show_tour")
         val LAUNCHER_SETUP = stringPreferencesKey("pref_launcher_setup")
         val SOURCES_ROUTE = stringPreferencesKey("pref_sources_route")

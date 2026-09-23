@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -281,6 +282,16 @@ class SourcesRepository(db: NeoFeedDb) {
                 SharingStarted.Lazily,
                 false
             )
+
+    /**
+     * When the feed was last brought up to date: the newest successful fetch
+     * among enabled sources. See [com.saulhdev.feeder.utils.syncFreshness].
+     *
+     * Feeds is written twice per source during a sync, so this re-queries
+     * often; the value only moves when a fetch lands, and nothing downstream
+     * hears the rest.
+     */
+    val newestSync: Flow<Long?> = feedsDao.getNewestSync().distinctUntilChanged()
 
     fun setCurrentlySyncingOn(feedId: Long, syncing: Boolean) {
         scope.launch {

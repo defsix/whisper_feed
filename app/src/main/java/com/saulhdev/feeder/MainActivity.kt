@@ -4,7 +4,15 @@ import androidx.work.workDataOf
 import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.withResumed
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -32,6 +40,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.manager.sync.FeedSyncer
+import com.saulhdev.feeder.manager.sync.SyncWatchdog
 import com.saulhdev.feeder.ui.navigation.NAV_BASE
 import com.saulhdev.feeder.ui.navigation.NavigationManager
 import androidx.compose.runtime.collectAsState
@@ -71,6 +80,10 @@ class MainActivity : ComponentActivity() {
      */
     @Volatile
     private var volumeKeyScroll = false
+
+    /** Nothing to do with the answer: a refusal simply means no notices. */
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate, or the window splash never installs.
@@ -175,6 +188,11 @@ class MainActivity : ComponentActivity() {
                 .distinctUntilChanged()
                 .collect { configurePeriodicSync() }
         }
+        // The check that speaks up when syncing has stopped working. Kept
+        // apart from the schedule above because it must run when the
+        // schedule cannot; see SyncWatchdog.
+        SyncWatchdog.schedule(WorkManager.getInstance(applicationContext))
+        askForNotificationsOnce()
         handleDeepLink(intent)
     }
 
@@ -197,6 +215,33 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+    }
+
+    /**
+     * Asks to be allowed notifications, once, when there is a reason to.
+     *
+     * Android 13 onwards starts every app with notifications off, so without
+     * this the stuck-sync notice could never be seen. Asked only once the
+     * welcome and the tour are done, never over them, and never again after
+     * the first answer.
+     */
+    private fun askForNotificationsOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        lifecycleScope.launch {
+            combine(
+                prefs.onboardingSeen.get(),
+                prefs.tourSeen.get(),
+                prefs.notificationPermissionAsked.get(),
+            ) { welcomed, toured, asked -> welcomed && toured && !asked }
+                .first { it }
+            lifecycle.withResumed {
+                val granted = ContextCompat.checkSelfPermission(
+                    this@MainActivity, Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+                if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            withContext(Dispatchers.IO) { prefs.notificationPermissionAsked.setValue(true) }
+        }
     }
 
     private fun handleDeepLink(intent: Intent?) {

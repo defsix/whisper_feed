@@ -69,6 +69,14 @@ interface FeedSourceDao {
     @Query("SELECT id FROM Feeds WHERE isEnabled IS 1 AND removedAt = 0")
     suspend fun loadFeedIds(): List<Long>
 
+    /**
+     * The newest successful fetch among enabled sources, in epoch millis.
+     *
+     * Null when there are no enabled sources; zero when none has been fetched.
+     */
+    @Query("SELECT MAX(lastSync) FROM Feeds WHERE isEnabled IS 1 AND removedAt = 0")
+    fun getNewestSync(): Flow<Long?>
+
     @Query("SELECT * FROM Feeds WHERE removedAt = 0")
     fun getAllFeeds(): Flow<List<Feed>>
 
