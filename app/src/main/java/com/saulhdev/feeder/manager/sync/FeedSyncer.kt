@@ -68,10 +68,48 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             return Result.success()
         }
 
+        // A sync the reader asked for keeps its network when they leave.
+        //
+        // Every pull to refresh in one day's reports was cut off the moment
+        // Whisper left the screen - "stopped: network changed or dropped",
+        // ending "blocked for Whisper" even on Wi-Fi - while the scheduled and
+        // panel syncs, which Android starts itself, ran to the end in the
+        // background. A foreground task is how Android lets work the reader
+        // started go on after they have looked away; it has to show a
+        // notification, which is the silent "Syncing" line in the shade, and
+        // Android holds that back for the first ten seconds so a quick pull
+        // never shows it at all. Asked while the app is still on screen,
+        // which is when a pull starts; if Android refuses, the sync simply
+        // runs as it did before.
+        val foreground = origin == SyncLog.ORIGIN_PULL || origin == SyncLog.ORIGIN_PULL_PANEL
+        var inForeground = false
+        if (foreground) {
+            try {
+                setForeground(getForegroundInfo())
+                inForeground = true
+            } catch (e: CancellationException) {
+                SyncLog.finished(applicationContext, run, "stopped: before starting")
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not run the sync in the foreground", e)
+            }
+        }
+        // Whether another sync holds the lock, so a run that spent its first
+        // minutes waiting is not mistaken for a slow one.
+        val queued = syncMutex.isLocked
+
         try {
             val feedId = inputData.getLong("feed_id", ID_UNSET)
             val feedTag = inputData.getString("feed_tag") ?: ""
-            val forceNetwork = inputData.getBoolean("force_network", true)
+            // False unless the request says so. This defaulted to true, and the
+            // scheduled sync's request carries no such key - so every
+            // scheduled sync forced a fetch of every feed however recently it
+            // had been fetched. The report caught it: plugging in released
+            // the panel's sync and the scheduled one together, the lock let
+            // the panel's go first, and the scheduled one then waited three
+            // minutes and downloaded all 120 feeds again. Only a sync the
+            // reader asked for should skip the freshness check.
+            val forceNetwork = inputData.getBoolean("force_network", false)
             val minFeedAgeMinutes = inputData.getInt("min_feed_age_minutes", 5)
 
             // A whole-feed refresh goes through whichever service is in
@@ -134,7 +172,15 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             Log.e(TAG, "Failure during sync", e)
         }
 
-        SyncLog.finished(applicationContext, run, if (success) "ok" else "failed")
+        val notes = listOfNotNull(
+            if (queued) "queued" else null,
+            if (inForeground) "foreground" else null,
+        )
+        SyncLog.finished(
+            applicationContext,
+            run,
+            (if (success) "ok" else "failed") + if (notes.isEmpty()) "" else " (${notes.joinToString(", ")})",
+        )
         return when (success) {
             true  -> Result.success()
             false -> Result.failure()
@@ -175,6 +221,9 @@ fun createForegroundInfo(
             .setGroup(syncNotificationGroup)
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
+            // A status line, not an alert: no sound, no vibration, no pop-up.
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
             .build()
 
     return ForegroundInfo(

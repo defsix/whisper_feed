@@ -232,64 +232,74 @@ class MainActivity : ComponentActivity() {
 
     private fun configurePeriodicSync() {
         val workManager = WorkManager.getInstance(this)
+        val shouldSync = (prefs.syncFrequency.getValue().toDouble()) > 0
+        if (!shouldSync) {
+            workManager.cancelUniqueWork(PERIODIC_SYNC_WORK)
+            workManager.cancelUniqueWork(AUTOMATIC_SYNC_WORK)
+            return
+        }
+
+        val constraints = Constraints.Builder()
+        if (prefs.syncOnlyOnWifi.getValue()) {
+            constraints.setRequiredNetworkType(NetworkType.UNMETERED)
+        } else {
+            constraints.setRequiredNetworkType(NetworkType.CONNECTED)
+        }
+        // Nobody with a phone at four percent wants it fetching forty
+        // feeds. This is the scheduled sync, which nobody asked for at
+        // this particular moment — it waits, and runs when the phone can
+        // afford it. Pull-to-refresh is a different request and carries no
+        // such constraint, because that one was asked for.
+        constraints.setRequiresBatteryNotLow(true)
+
+        // Stricter than battery-not-low, and off unless asked for.
+        // Not-low is satisfied most of the time; charging is satisfied for
+        // a few hours a night, so WorkManager can hold this work for a
+        // long time with nothing on screen saying why. The source list's
+        // never-updated and not-updating marks are what make that legible,
+        // and pull-to-refresh, which carries no constraints at all, is
+        // what makes it recoverable. See prefs.syncOnlyWhenCharging.
+        if (prefs.syncOnlyWhenCharging.getValue()) {
+            constraints.setRequiresCharging(true)
+        }
+        val wanted = constraints.build()
+        val timeInterval = (prefs.syncFrequency.getValue().toDouble() * 60).toLong()
+
+        // Nothing to do when the schedule already says this. The collector
+        // above calls here on every cold start as well as on every change,
+        // and re-enqueuing with UPDATE is not free: the report caught it
+        // cancelling a scheduled sync that had just started ("stopped:
+        // cancelled by the app", 0s) - and the panel sync cleared below would
+        // have gone with it, running or not. So only a real change to the
+        // settings touches WorkManager at all.
+        if (scheduleMatches(workManager, wanted, TimeUnit.MINUTES.toMillis(timeInterval))) return
+
         // A panel sync already waiting was queued under the old switches, and
         // KEEP means the next panel open will not replace it. Cleared here so
         // the next one is queued under the settings the reader has now.
         workManager.cancelUniqueWork(AUTOMATIC_SYNC_WORK)
-        val shouldSync = (prefs.syncFrequency.getValue().toDouble()) > 0
-        val replace = true
-        if (shouldSync) {
-            val constraints = Constraints.Builder()
 
-            if (prefs.syncOnlyOnWifi.getValue()) {
-                constraints.setRequiredNetworkType(NetworkType.UNMETERED)
-            } else {
-                constraints.setRequiredNetworkType(NetworkType.CONNECTED)
-            }
-            // Nobody with a phone at four percent wants it fetching forty
-            // feeds. This is the scheduled sync, which nobody asked for at
-            // this particular moment — it waits, and runs when the phone can
-            // afford it. Pull-to-refresh is a different request and carries no
-            // such constraint, because that one was asked for.
-            constraints.setRequiresBatteryNotLow(true)
+        val syncWork = PeriodicWorkRequestBuilder<FeedSyncer>(timeInterval, TimeUnit.MINUTES)
+            .setConstraints(wanted)
+            .addTag("PeriodicFeedSyncer")
+            .setInputData(workDataOf(SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_SCHEDULED))
+            .build()
 
-            // Stricter than battery-not-low, and off unless asked for.
-            // Not-low is satisfied most of the time; charging is satisfied for
-            // a few hours a night, so WorkManager can hold this work for a
-            // long time with nothing on screen saying why. The source list's
-            // never-updated and not-updating marks are what make that legible,
-            // and pull-to-refresh, which carries no constraints at all, is
-            // what makes it recoverable. See prefs.syncOnlyWhenCharging.
-            if (prefs.syncOnlyWhenCharging.getValue()) {
-                constraints.setRequiresCharging(true)
-            }
-
-            val timeInterval = (prefs.syncFrequency.getValue().toDouble() * 60).toLong()
-
-            val workRequestBuilder = PeriodicWorkRequestBuilder<FeedSyncer>(
-                timeInterval,
-                TimeUnit.MINUTES,
-            )
-
-            val syncWork = workRequestBuilder
-                .setConstraints(constraints.build())
-                .addTag("PeriodicFeedSyncer")
-                .setInputData(workDataOf(SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_SCHEDULED))
-                .build()
-
-            workManager.enqueueUniquePeriodicWork(
-                PERIODIC_SYNC_WORK,
-                when (replace) {
-                    true  -> ExistingPeriodicWorkPolicy.UPDATE
-                    false -> ExistingPeriodicWorkPolicy.KEEP
-                },
-                syncWork
-            )
-
-        } else {
-            workManager.cancelUniqueWork(PERIODIC_SYNC_WORK)
-        }
+        workManager.enqueueUniquePeriodicWork(
+            PERIODIC_SYNC_WORK,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            syncWork
+        )
     }
+
+    /** Whether the scheduled sync is already waiting with exactly these conditions. */
+    private fun scheduleMatches(workManager: WorkManager, wanted: Constraints, intervalMs: Long): Boolean =
+        runCatching {
+            val existing = workManager.getWorkInfosForUniqueWork(PERIODIC_SYNC_WORK).get()
+                .firstOrNull { !it.state.isFinished } ?: return@runCatching false
+            existing.constraints == wanted &&
+                existing.periodicityInfo?.repeatIntervalMillis == intervalMs
+        }.getOrDefault(false)
 
     /**
      * Volume keys page the feed, when the reader has asked for it.

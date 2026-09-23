@@ -98,7 +98,12 @@ suspend fun syncFeeds(
     forceNetwork: Boolean = false,
     minFeedAgeMinutes: Int = 5
 ): Boolean {
+    // When this was asked for, before any wait for the lock. A forced sync
+    // that had to queue behind another only needs what that one did not
+    // fetch after this moment; see freshSince below.
+    val requestedAt = Clock.System.now().toEpochMilliseconds()
     return syncMutex.withLock {
+        val waited = Clock.System.now().toEpochMilliseconds() - requestedAt > QUEUED_AFTER_MS
         withContext(singleThreadedSync) {
             syncFeeds(
                 context = context,
@@ -106,11 +111,15 @@ suspend fun syncFeeds(
                 feedTag = feedTag,
                 maxFeedItemCount = prefs.itemsPerFeed.getValue().toInt(),
                 forceNetwork = forceNetwork,
-                minFeedAgeMinutes = minFeedAgeMinutes
+                minFeedAgeMinutes = minFeedAgeMinutes,
+                freshSince = if (forceNetwork && waited) requestedAt else null,
             )
         }
     }
 }
+
+/** Longer than this for the lock means another sync was running. */
+private const val QUEUED_AFTER_MS = 1_000L
 
 internal suspend fun syncFeeds(
     context: Context,
@@ -118,7 +127,19 @@ internal suspend fun syncFeeds(
     feedTag: String = "",
     maxFeedItemCount: Int = 100,
     forceNetwork: Boolean = false,
-    minFeedAgeMinutes: Int = 5
+    minFeedAgeMinutes: Int = 5,
+    /**
+     * For a forced sync that queued behind another: a feed fetched after this
+     * moment already counts as fetched for it.
+     *
+     * A pull to refresh means "everything, now", and it forces a fetch of
+     * every feed however recent. Behind a sync that was already running, that
+     * meant downloading everything twice in a row - the reader asked at
+     * 16:15, the running sync fetched every feed by 16:18, and the pull then
+     * fetched them all again. Anything fetched after the pull was asked for
+     * is exactly as fresh as the pull wanted.
+     */
+    freshSince: Long? = null,
 ): Boolean {
     var result = false
     val feedsRepo: SourcesRepository by inject(SourcesRepository::class.java)
@@ -142,10 +163,10 @@ internal suspend fun syncFeeds(
         try {
             supervisorScope {
                 val sRepository: SourcesRepository by inject(SourcesRepository::class.java)
-                val staleTime: Long = if (forceNetwork) {
-                    Clock.System.now().toEpochMilliseconds()
-                } else {
-                    Clock.System.now().minus(minFeedAgeMinutes.toLong(), DateTimeUnit.MINUTE)
+                val staleTime: Long = when {
+                    freshSince != null -> freshSince
+                    forceNetwork -> Clock.System.now().toEpochMilliseconds()
+                    else -> Clock.System.now().minus(minFeedAgeMinutes.toLong(), DateTimeUnit.MINUTE)
                         .toEpochMilliseconds()
                 }
 
@@ -159,7 +180,9 @@ internal suspend fun syncFeeds(
                     feedId = feedId,
                     tag = feedTag,
                     staleTime = staleTime,
-                    forceNetwork = forceNetwork
+                    // Selection only: a queued forced sync picks by staleness
+                    // like any other. The fetch itself is still forced.
+                    forceNetwork = forceNetwork && freshSince == null
                 )
 
                 Log.d(TAG, "Feeds to sync: ${feedsToFetch.size}")

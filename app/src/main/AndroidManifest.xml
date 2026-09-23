@@ -4,6 +4,15 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      A pull to refresh runs as a foreground task so it keeps its network
+      after the reader leaves the app; see FeedSyncer. Android 14 refuses a
+      data-sync foreground task without the second of these, and Android 13
+      shows its "Syncing" line in the shade only with the third.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
         SYSTEM_ALERT_WINDOW, for a reason no line of code states.
