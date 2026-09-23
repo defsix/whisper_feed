@@ -113,4 +113,27 @@ class SyncConstraintsTest {
         assertTrue(fetching.contains("prefs.syncOnlyOnWifi"))
         assertTrue("and in the same group", fetching.contains("prefs.syncOnlyWhenCharging"))
     }
+
+    /**
+     * The report's verdict asks whether the phone is plugged in.
+     *
+     * The first version asked whether it was charging, and a Pixel on its
+     * charger overnight is often not: adaptive charging holds it at 80% until
+     * near the alarm. So the first overnight report said a phone sitting on
+     * its charger was "waiting for a charger".
+     */
+    @Test
+    fun `the report judges the charger by plugged in, not by charging`() {
+        val diagnostics = File("src/main/java/com/saulhdev/feeder/utils/Diagnostics.kt").readText()
+        assertTrue(diagnostics.contains("needs.requiresCharging() && !power.pluggedIn"))
+        assertTrue(
+            "a held charge is named, not reported as unplugged",
+            diagnostics.contains("plugged in but held, not charging"),
+        )
+        assertTrue("and the level is read", diagnostics.contains("BatteryManager.EXTRA_LEVEL"))
+        assertTrue(
+            "the old test is gone",
+            !diagnostics.contains("BatteryManager::class.java).isCharging"),
+        )
+    }
 }

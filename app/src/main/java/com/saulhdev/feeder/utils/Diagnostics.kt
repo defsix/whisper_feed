@@ -17,6 +17,8 @@
  */
 package com.saulhdev.feeder.utils
 
+import androidx.core.content.ContextCompat
+import android.content.IntentFilter
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
 import androidx.work.WorkManager
 import androidx.work.NetworkType
@@ -198,8 +200,8 @@ object Diagnostics : KoinComponent {
         )
 
         val onWifi = isUnmetered(context)
-        val charging = isCharging(context)
-        appendLine("Phone now:    ${if (onWifi) "unmetered (Wi-Fi)" else "metered or offline"}, charging ${yesNo(charging)}")
+        val power = powerState(context)
+        appendLine("Phone now:    ${if (onWifi) "unmetered (Wi-Fi)" else "metered or offline"}, ${power.describe()}")
 
         val work = WorkManager.getInstance(context)
             .getWorkInfosForUniqueWorkFlow(PERIODIC_SYNC_WORK)
@@ -222,12 +224,20 @@ object Diagnostics : KoinComponent {
                     "battery not low ${yesNo(needs.requiresBatteryNotLow())}"
             )
             // The line the switch test turns on: what the schedule is waiting
-            // for that the phone is not doing. The battery level is left out
-            // because nothing here can read it without a permission, so the
-            // verdict says only what it knows.
+            // for that the phone is not doing.
+            //
+            // "A charger" is asked of *plugged in*, not of charging. The first
+            // version asked BatteryManager.isCharging, and a Pixel on its
+            // charger overnight is often not charging at all - adaptive
+            // charging holds it at 80% until near the alarm - so a phone
+            // sitting on its charger was reported as waiting for one. Whether
+            // the scheduler counts a held charge as charging is the phone's
+            // decision rather than something this can see, so that state is
+            // named as what it is and the verdict does not guess.
             val unmet = buildList {
                 if (wantsUnmetered && !onWifi) add("Wi-Fi")
-                if (needs.requiresCharging() && !charging) add("a charger")
+                if (needs.requiresCharging() && !power.pluggedIn) add("a charger")
+                if (needs.requiresBatteryNotLow() && power.low) add("more battery")
             }
             appendLine(
                 "Waiting for:  " + if (unmet.isEmpty()) "nothing it can see - due at its next slot" else unmet.joinToString(" and ")
@@ -267,9 +277,58 @@ object Diagnostics : KoinComponent {
         caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
     }.getOrDefault(false)
 
-    private fun isCharging(context: Context): Boolean = runCatching {
-        context.getSystemService(BatteryManager::class.java).isCharging
-    }.getOrDefault(false)
+    /**
+     * Plugged in or not, charging or held, and the level.
+     *
+     * Read from the sticky battery broadcast, which needs no permission and
+     * no receiver - it hands back the last state the system announced.
+     */
+    private class PowerState(
+        val pluggedIn: Boolean,
+        val source: String,
+        val status: Int,
+        val percent: Int,
+    ) {
+        /** Roughly the system's own "battery low": under 15% and on battery. */
+        val low: Boolean get() = !pluggedIn && percent in 0 until LOW_BATTERY_PERCENT
+
+        fun describe(): String {
+            val level = if (percent >= 0) "battery $percent%" else "battery unknown"
+            if (!pluggedIn) return "on battery, $level"
+            val state = when (status) {
+                BatteryManager.BATTERY_STATUS_CHARGING -> "charging"
+                BatteryManager.BATTERY_STATUS_FULL -> "full"
+                // Plugged in and not taking charge: adaptive charging or a
+                // charge limit holding it. Named, because it reads as
+                // "unplugged" to anything that only asks whether it is charging.
+                else -> "plugged in but held, not charging"
+            }
+            return "plugged in ($source), $state, $level"
+        }
+    }
+
+    private fun powerState(context: Context): PowerState = runCatching {
+        val battery = ContextCompat.registerReceiver(
+            context,
+            null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+        val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        PowerState(
+            pluggedIn = plugged != 0,
+            source = when (plugged) {
+                BatteryManager.BATTERY_PLUGGED_AC -> "mains"
+                BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+                BatteryManager.BATTERY_PLUGGED_WIRELESS -> "wireless"
+                else -> "other"
+            },
+            status = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1,
+            percent = if (level >= 0 && scale > 0) level * 100 / scale else -1,
+        )
+    }.getOrDefault(PowerState(pluggedIn = false, source = "unknown", status = -1, percent = -1))
 
     /**
      * How long any one database section may take before the report goes on
@@ -278,6 +337,9 @@ object Diagnostics : KoinComponent {
      * never finishes is nothing at all.
      */
     private const val SECTION_TIMEOUT_MS = 4_000L
+
+    /** Where Android calls the battery low, near enough; the exact line is the device's. */
+    private const val LOW_BATTERY_PERCENT = 15
 
     private fun readOwnLogcat(): String = runCatching {
         val process = Runtime.getRuntime().exec(
