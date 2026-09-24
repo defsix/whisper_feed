@@ -36,7 +36,7 @@ import com.saulhdev.feeder.manager.models.FeedParser
 import com.saulhdev.feeder.manager.models.getResponse
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
-import com.saulhdev.feeder.utils.blobFile
+import com.saulhdev.feeder.utils.deleteArticleFiles
 import com.saulhdev.feeder.utils.blobOutputStream
 import com.saulhdev.feeder.utils.getSyncDays
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
@@ -58,6 +58,7 @@ import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import org.koin.java.KoinJavaComponent.inject
@@ -89,9 +90,43 @@ const val TAG = "RssLocalSync"
  */
 private const val MAX_CONCURRENT_FEEDS = 4
 
-private val syncHttpClient: OkHttpClient by lazy {
-    OkHttpClient.Builder().asFeedReader().onlyPublicHttps().build()
-}
+/**
+ * The feed client, with a disk cache.
+ *
+ * Every request already asked for revalidation - see getResponse - but the
+ * client had no cache, so there was nothing to revalidate and every sync
+ * downloaded every feed in full: ten megabytes an hour for a hundred and
+ * twenty feeds that had mostly not changed. With a cache, OkHttp sends the
+ * feed's ETag or Last-Modified back and a server with nothing new answers
+ * 304 with no body. Feeds whose servers send neither still download in full;
+ * nothing on this side can help those.
+ *
+ * Made on first use rather than at load, because the cache lives in the
+ * app's cache directory and that needs a Context.
+ */
+private const val FEED_CACHE_BYTES = 20L * 1024 * 1024
+
+@Volatile
+private var feedClient: OkHttpClient? = null
+private val feedClientLock = Any()
+
+private fun syncHttpClient(context: Context): OkHttpClient =
+    feedClient ?: synchronized(feedClientLock) {
+        feedClient ?: OkHttpClient.Builder()
+            .asFeedReader()
+            .onlyPublicHttps()
+            .cache(Cache(File(context.cacheDir, "feeds"), FEED_CACHE_BYTES))
+            .build()
+            .also { feedClient = it }
+    }
+
+/**
+ * Whether a response is the copy already processed: a 304 from the server,
+ * or the cache answering without asking (within getResponse's one-minute
+ * window). Both mean the bytes are the ones the last sync parsed.
+ */
+internal fun servedUnchanged(networkCode: Int?, hadCachedCopy: Boolean): Boolean =
+    hadCachedCopy && (networkCode == null || networkCode == 304)
 
 suspend fun syncFeeds(
     context: Context,
@@ -147,6 +182,9 @@ internal suspend fun syncFeeds(
     // Feeds that threw, counted for the history: a sync that reached 118 of
     // 120 feeds and one that reached none were both just "ok".
     val failedFeeds = AtomicInteger(0)
+    // And the ones the server said had not changed, which cost a few hundred
+    // bytes instead of the whole feed. See syncHttpClient.
+    val unchangedFeeds = AtomicInteger(0)
     val feedsRepo: SourcesRepository by inject(SourcesRepository::class.java)
     val articlesRepo: ArticleRepository by inject(ArticleRepository::class.java)
     val downloadTime = Clock.System.now()
@@ -210,7 +248,7 @@ internal suspend fun syncFeeds(
                                 // Mark as syncing START
                                 feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = true)
 
-                                syncFeed(
+                                val changed = syncFeed(
                                     context = context,
                                     feedsRepo = feedsRepo,
                                     articleRepo = articlesRepo,
@@ -220,6 +258,7 @@ internal suspend fun syncFeeds(
                                     forceNetwork = forceNetwork,
                                     downloadTime = downloadTime
                                 )
+                                if (!changed) unchangedFeeds.incrementAndGet()
 
                                 // Successful sync, update lastSync
                                 feedsRepo.setCurrentlySyncingOn(
@@ -278,7 +317,11 @@ internal suspend fun syncFeeds(
                 }
 
                 jobs.joinAll()
-                result = SyncResult(due = feedsToFetch.size, failed = failedFeeds.get())
+                result = SyncResult(
+                    due = feedsToFetch.size,
+                    failed = failedFeeds.get(),
+                    unchanged = unchangedFeeds.get(),
+                )
 
             }
         } catch (e: CancellationException) {
@@ -307,11 +350,27 @@ private suspend fun syncFeed(
     maxFeedItemCount: Int,
     forceNetwork: Boolean = false,
     downloadTime: Instant
-) {
+): Boolean {
     Log.d(TAG, "Fetching ${feedSql.title}")
 
     val response: Response =
-        syncHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)
+        syncHttpClient(context).getResponse(url = feedSql.url, forceNetwork = forceNetwork)
+
+    // Nothing new: the parse, the article writes and the icon lookup all
+    // redo what the last sync did, and the parse is the part that fills the
+    // heap. Only when the source has articles, though - a source whose
+    // articles were cleared, or one removed and added back at the same
+    // address, would otherwise stay empty until the publisher next posted.
+    if (response.isSuccessful &&
+        servedUnchanged(response.networkResponse?.code, response.cacheResponse != null) &&
+        articleRepo.countInFeed(feedSql.id) > 0
+    ) {
+        response.close()
+        Log.d(TAG, "Unchanged: ${feedSql.title}")
+        cleanUpFeed(articleRepo, feedSql, filesDir)
+        return false
+    }
+
     val feedParser = FeedParser()
     val feed: JsonFeed = response.use {
         response.body.let { responseBody ->
@@ -409,23 +468,35 @@ private suspend fun syncFeed(
         }
     }
 
+    cleanUpFeed(articleRepo, syncedFeed, filesDir)
+    return true
+}
+
+/**
+ * Drops articles older than the sync range, with their files.
+ *
+ * Its own step so an unchanged feed still ages out: a publisher that stops
+ * posting would otherwise keep last month's articles for ever.
+ */
+private suspend fun cleanUpFeed(articleRepo: ArticleRepository, feed: Feed, filesDir: File) {
+    val days = getSyncDays(prefs)
+    val minKeptPubDate = Clock.System.now().minus(
+        period = DateTimePeriod(days = days),
+        timeZone = TimeZone.currentSystemDefault()
+    ).toEpochMilliseconds()
     val ids = articleRepo.getItemsToBeCleanedFromFeed(
-        feedId = syncedFeed.id,
+        feedId = feed.id,
         minKeptPubDate = minKeptPubDate
     )
-    Log.d(
-        TAG,
-        "Cleanup ${feedSql.title}: days=$days cutoff=$minKeptPubDate deleting=${ids.size}"
-    )
+    Log.d(TAG, "Cleanup ${feed.title}: days=$days cutoff=$minKeptPubDate deleting=${ids.size}")
 
-    for (id in ids) {
-        val file = blobFile(itemId = id, filesDir = filesDir)
-        try {
-            if (file.isFile) {
-                file.delete()
+    withContext(Dispatchers.IO) {
+        for (id in ids) {
+            try {
+                deleteArticleFiles(itemId = id, filesDir = filesDir)
+            } catch (e: IOException) {
+                Log.e(TAG, "Failed to delete the files of $id", e)
             }
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to delete $file", e)
         }
     }
 

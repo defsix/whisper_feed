@@ -23,6 +23,7 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import com.saulhdev.feeder.data.entity.JsonFeed
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
+import com.saulhdev.feeder.utils.HttpStatusException
 import com.saulhdev.feeder.utils.JsonFeedParser
 import com.saulhdev.feeder.utils.extensions.asFeed
 import com.saulhdev.feeder.utils.relativeLinkIntoAbsolute
@@ -397,13 +398,10 @@ suspend fun OkHttpClient.curl(url: URL): String? {
 }
 
 suspend fun OkHttpClient.curlAndOnResponse(url: URL, block: (suspend (Response) -> Unit)) {
-    val response = getResponse(url)
-
-    if (!response.isSuccessful) {
-        throw IOException("Unexpected code $response")
-    }
-
-    response.use {
-        block(it)
+    // Closed on the failure path too. It used to throw before the use block,
+    // leaving every refused response - and its connection - open.
+    getResponse(url).use { response ->
+        if (!response.isSuccessful) throw HttpStatusException(response.code)
+        block(response)
     }
 }

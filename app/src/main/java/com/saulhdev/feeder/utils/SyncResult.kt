@@ -36,6 +36,15 @@ data class SyncResult(
      * then reads plain "ok" rather than a feed count made up to fill it.
      */
     val counted: Boolean = true,
+    /** Due feeds whose server said nothing had changed (a 304, no body). */
+    val unchanged: Int = 0,
+    /**
+     * What Whisper received over the network while the run lasted, or null
+     * where Android does not say. Everything the app received, not the feeds
+     * alone - images loading on screen at the same moment count too - which
+     * is why it is labelled as data, not as feed size.
+     */
+    val bytes: Long? = null,
 ) {
     /** Not broken. Nothing due is fine; some feeds failing is still a sync. */
     val ok: Boolean get() = error == null
@@ -68,9 +77,29 @@ fun syncOutcome(result: SyncResult, notes: List<String> = emptyList()): String {
         result.due == 0 -> "nothing due" to emptyList()
         else -> "ok" to listOfNotNull(
             if (result.due == 1) "1 feed" else "${result.due} feeds",
+            if (result.unchanged > 0) "${result.unchanged} unchanged" else null,
             if (result.failed > 0) "${result.failed} failed" else null,
         )
     }
-    val all = details + notes
+    val data = result.bytes?.let(::formatBytes)
+    val all = details + listOfNotNull(data) + notes
     return if (all.isEmpty()) head else "$head (${all.joinToString(", ")})"
 }
+
+/**
+ * A byte count the way Android's own data screen writes it: thousands, not
+ * 1024s, so a figure here can be set beside the one in Settings.
+ */
+fun formatBytes(bytes: Long): String = when {
+    bytes < 1_000 -> "<1 KB"
+    bytes < 1_000_000 -> "${bytes / 1_000} KB"
+    else -> String.format(java.util.Locale.US, "%.1f MB", bytes / 1_000_000.0)
+}
+
+/** The history's outcome for a full-article prefetch run. */
+fun fullTextOutcome(fetched: Int, failed: Int, bytes: Long?): String =
+    "ok (" + listOfNotNull(
+        "$fetched fetched",
+        if (failed > 0) "$failed failed" else null,
+        bytes?.let(::formatBytes),
+    ).joinToString(", ") + ")"

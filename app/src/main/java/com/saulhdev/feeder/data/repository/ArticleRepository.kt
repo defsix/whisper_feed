@@ -528,6 +528,16 @@ class ArticleRepository(db: NeoFeedDb) {
         )
     }
 
+    /** Every stored article's id; see sweepOrphanArticleFiles. */
+    suspend fun allArticleIds(): Set<String> = withContext(cc) {
+        articlesDao.loadAllUuids().toHashSet()
+    }
+
+    /** How many articles one source has stored. */
+    suspend fun countInFeed(feedId: Long): Int = withContext(cc) {
+        articlesDao.countInFeed(feedId)
+    }
+
     fun getFeedsItemsWithDefaultFullTextParse(allFeeds: Boolean): Flow<List<ArticleIdWithLink>> =
         articlesDao.getArticleIdLinks(allFeeds)
             .flowOn(cc)

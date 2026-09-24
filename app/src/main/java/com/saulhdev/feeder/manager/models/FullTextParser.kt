@@ -17,6 +17,16 @@ import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import com.saulhdev.feeder.utils.HttpIdentity.asArticleReader
 import com.saulhdev.feeder.utils.blobFullFile
+import com.saulhdev.feeder.utils.blobFullFailedFile
+import com.saulhdev.feeder.utils.FullTextAttempts
+import com.saulhdev.feeder.utils.HttpStatusException
+import com.saulhdev.feeder.utils.SyncLog
+import com.saulhdev.feeder.utils.bytesSince
+import com.saulhdev.feeder.utils.fullTextOutcome
+import com.saulhdev.feeder.utils.isPermanentHttpFailure
+import com.saulhdev.feeder.utils.receivedBytes
+import com.saulhdev.feeder.utils.shouldPrefetchFullText
+import kotlinx.coroutines.CancellationException
 import com.saulhdev.feeder.utils.blobFullOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -68,31 +78,84 @@ class FullTextWorker(
 
     override suspend fun doWork(): Result {
         Log.i("FeederFullText", "Parsing full texts for articles if missing")
-        val itemsToSync: List<ArticleIdWithLink> =
+        val now = System.currentTimeMillis()
+        val filesDir = context.filesDir
+        // Chosen before anything is fetched, so a run with nothing to do
+        // leaves no line in the history: it follows every sync, and twenty
+        // lines of "nothing to fetch" would push the syncs themselves out.
+        val toFetch = withContext(Dispatchers.IO) {
             repository.getFeedsItemsWithDefaultFullTextParse(
                 allFeeds = prefs.fullTextForAllFeeds.getValue()
             )
                 .firstOrNull()
-                ?: return Result.success()
-
-        val success: Boolean = itemsToSync
-            .map { feedItem ->
-                parseFullArticleIfMissing(
-                    feedItem = feedItem,
-                    okHttpClient = okHttpClient,
-                    filesDir = context.filesDir
-                )
-            }
-            .fold(true) { acc, value ->
-                acc && value
-            }
-
-        return when (success) {
-            true  -> Result.success()
-            false -> Result.failure()
+                .orEmpty()
+                .filter { item ->
+                    !blobFullFile(item.uuid, filesDir).isFile &&
+                        shouldPrefetchFullText(now, readAttempts(item.uuid, filesDir))
+                }
         }
+        if (toFetch.isEmpty()) return Result.success()
+
+        val run = SyncLog.started(applicationContext, SyncLog.ORIGIN_FULL_TEXT)
+        val receivedBefore = receivedBytes()
+        var fetched = 0
+        var failed = 0
+        try {
+            for (item in toFetch) {
+                if (prefetchFullArticle(item, okHttpClient, filesDir)) fetched++ else failed++
+            }
+        } catch (e: CancellationException) {
+            SyncLog.finished(applicationContext, run, "stopped after $fetched")
+            throw e
+        }
+        SyncLog.finished(
+            applicationContext,
+            run,
+            fullTextOutcome(fetched, failed, bytesSince(receivedBefore)),
+        )
+        // Success whatever happened to individual pages: each failure is
+        // remembered against its article, and a retry of the whole run would
+        // only fetch the same refusals again.
+        return Result.success()
     }
 }
+
+/**
+ * One prefetch, remembered if it fails.
+ *
+ * A refusal the server means (see isPermanentHttpFailure) is never asked
+ * again; anything else - a timeout, a dropped connection, a server error - is
+ * tried up to MAX_FULL_TEXT_ATTEMPTS times, FULL_TEXT_RETRY_AFTER_MS apart.
+ * Opening the article still fetches it on the spot whatever this says; this
+ * only stops the background asking.
+ */
+private suspend fun prefetchFullArticle(
+    item: ArticleIdWithLink,
+    okHttpClient: OkHttpClient,
+    filesDir: File,
+): Boolean {
+    val (ok, error) = parseFullArticle(item, okHttpClient, filesDir)
+    // parseFullArticle catches everything, the worker being stopped included;
+    // that is not the page failing, and must not count against it.
+    if (error is CancellationException) throw error
+    if (!ok) {
+        val permanent = item.link.isNullOrBlank() ||
+            (error is HttpStatusException && isPermanentHttpFailure(error.code))
+        val previous = readAttempts(item.uuid, filesDir) ?: FullTextAttempts.none
+        withContext(Dispatchers.IO) {
+            runCatching {
+                blobFullFailedFile(item.uuid, filesDir)
+                    .writeText(previous.next(System.currentTimeMillis(), permanent).encode())
+            }
+        }
+    }
+    return ok
+}
+
+private fun readAttempts(uuid: String, filesDir: File): FullTextAttempts? =
+    runCatching {
+        blobFullFailedFile(uuid, filesDir).takeIf { it.isFile }?.readText()
+    }.getOrNull()?.let(FullTextAttempts::decode)
 
 /**
  * The client full-article fetches share.
@@ -160,6 +223,9 @@ suspend fun parseFullArticle(
                 writer.write(article.contentWithUtf8Encoding)
             }
         }
+        // Fetched after all, perhaps from the reader opening it: the record
+        // of earlier failures no longer applies.
+        withContext(Dispatchers.IO) { blobFullFailedFile(feedItem.uuid, filesDir).delete() }
         true to null
     } catch (e: Throwable) {
         Log.e(

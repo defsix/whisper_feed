@@ -69,6 +69,45 @@ fun blobInputStream(itemId: String, filesDir: File): InputStream =
 fun blobOutputStream(itemId: String, filesDir: File): OutputStream =
     GZIPOutputStream(blobFile(itemId = itemId, filesDir = filesDir).outputStream())
 
+/** Marks a full-article fetch that failed; see FullTextAttempts. */
+fun blobFullFailedFile(itemId: String, filesDir: File): File =
+    File(filesDir, "${safeId(itemId)}.full.failed")
+
+/**
+ * Everything stored for one article: its summary, its full text, and any
+ * record of a full-text fetch that failed.
+ *
+ * Cleanup used to delete the summary alone. The full text, which is the
+ * larger file by far and is written for every article when "Fetch full
+ * articles for every feed" is on, stayed behind for every article ever
+ * cleaned up.
+ */
+fun deleteArticleFiles(itemId: String, filesDir: File) {
+    blobFile(itemId, filesDir).delete()
+    blobFullFile(itemId, filesDir).delete()
+    blobFullFailedFile(itemId, filesDir).delete()
+}
+
+private val ARTICLE_FILE = Regex("""([A-Za-z0-9_-]+)\.(txt\.gz|full\.html\.gz|full\.failed)""")
+
+/**
+ * Article files whose article is gone, from a directory listing.
+ *
+ * Only files named the way this app names them, and only those older than
+ * [minAgeMs] before [nowMs]: a sync writes an article's file around the same
+ * moment it inserts the row, and a sweep that read the ids between the two
+ * would otherwise take a new article's text for litter.
+ */
+fun orphanArticleFiles(
+    files: List<Pair<String, Long>>,
+    knownIds: Set<String>,
+    nowMs: Long,
+    minAgeMs: Long,
+): List<String> = files.mapNotNull { (name, modifiedMs) ->
+    val id = ARTICLE_FILE.matchEntire(name)?.groupValues?.get(1) ?: return@mapNotNull null
+    name.takeIf { id !in knownIds && nowMs - modifiedMs > minAgeMs }
+}
+
 fun blobFullFile(itemId: String, filesDir: File): File =
     File(filesDir, "${safeId(itemId)}.full.html.gz")
 

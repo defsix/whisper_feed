@@ -1,6 +1,8 @@
 package com.saulhdev.feeder.manager.sync
 
 import com.saulhdev.feeder.utils.backgroundMobileDataBlocked
+import com.saulhdev.feeder.utils.bytesSince
+import com.saulhdev.feeder.utils.receivedBytes
 import com.saulhdev.feeder.utils.isPowerSaveMode
 import com.saulhdev.feeder.utils.stopReasonName
 import com.saulhdev.feeder.utils.SyncLog
@@ -114,6 +116,8 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         // Whether another sync holds the lock, so a run that spent its first
         // minutes waiting is not mistaken for a slow one.
         val queued = syncMutex.isLocked
+        // Counted from here: what this run cost in data. See SyncResult.bytes.
+        val receivedBefore = receivedBytes()
 
         try {
             val feedId = inputData.getLong("feed_id", ID_UNSET)
@@ -195,6 +199,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             if (queued) "queued" else null,
             if (inForeground) "foreground" else null,
         )
+        result = result.copy(bytes = bytesSince(receivedBefore))
         SyncLog.finished(
             applicationContext,
             run,

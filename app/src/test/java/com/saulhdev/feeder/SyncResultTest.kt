@@ -88,7 +88,10 @@ class SyncResultTest {
     @Test
     fun `the local sync reports what it did`() {
         val sync = source("manager/sync/RssLocalSync.kt")
-        assertTrue(sync.contains("result = SyncResult(due = feedsToFetch.size, failed = failedFeeds.get())"))
+        val built = sync.substring(sync.indexOf("result = SyncResult(\n")).substringBefore(")\n")
+        assertTrue(built.contains("due = feedsToFetch.size"))
+        assertTrue(built.contains("failed = failedFeeds.get()"))
+        assertTrue(built.contains("unchanged = unchangedFeeds.get()"))
         assertTrue(sync.contains("result = SyncResult.broken(e)"))
         assertFalse("an empty list is not a failure any more", sync.contains("result = feedsToFetch.isNotEmpty()"))
         // Counted in the failure catch, not the cancellation one before it:

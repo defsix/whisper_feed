@@ -58,6 +58,12 @@ object SyncLog {
     const val ORIGIN_SOURCE_CHANGE = "source change"
 
     /**
+     * The full-article prefetch after a sync. Logged because it is the
+     * heaviest download the app makes, and it was the one nobody could see.
+     */
+    const val ORIGIN_FULL_TEXT = "full text"
+
+    /**
      * The syncs nobody asked for at that moment. Battery Saver pauses these
      * and only these; see FeedSyncer.
      */
@@ -123,7 +129,8 @@ data class SyncEntry(
  * No Android in here, so it can be tested as ordinary code.
  */
 internal object SyncHistory {
-    const val MAX_ENTRIES = 20
+    // Thirty since the full-text runs joined the syncs here.
+    const val MAX_ENTRIES = 30
     private const val FIELD = '\t'
 
     /** Newest first, and never more than [MAX_ENTRIES]. */

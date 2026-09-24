@@ -11,6 +11,8 @@ import coil.memory.MemoryCache
 import com.saulhdev.feeder.manager.bookmarks.onlyPublicHttps
 import com.saulhdev.feeder.utils.HttpIdentity.asImageFetcher
 import okhttp3.OkHttpClient
+import com.saulhdev.feeder.utils.orphanArticleFiles
+import java.io.File
 import android.util.Log
 import androidx.work.WorkManager
 import com.google.android.material.color.DynamicColors
@@ -55,6 +57,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         reportFeedTrace()
         stampOnboardingForExistingInstalls()
         purgeMisfiledFullText()
+        sweepOrphanArticleFiles()
         DiscoveryWorker.schedule(this)
     }
 
@@ -96,6 +99,32 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
                     ?.forEach { it.delete() }
             }.onFailure { Log.w(TAG, "Could not clear the cached full-text articles", it) }
             prefs.fullTextPurged.setValue(true)
+        }
+    }
+
+    /**
+     * Deletes the files of articles that no longer exist.
+     *
+     * Cleanup removed an article's summary and left its full text, and
+     * removing a source or clearing its articles left both. With "Fetch full
+     * articles for every feed" on, that is a page for every article ever
+     * cleaned up, kept for good. Run at each start, off the main thread; a
+     * listing and one query, and nothing to do once it has caught up.
+     */
+    private fun sweepOrphanArticleFiles() {
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            runCatching {
+                val listing = filesDir.listFiles()?.map { it.name to it.lastModified() }.orEmpty()
+                val known = get<ArticleRepository>().allArticleIds()
+                val orphans = orphanArticleFiles(
+                    files = listing,
+                    knownIds = known,
+                    nowMs = System.currentTimeMillis(),
+                    minAgeMs = 60 * 60_000L,
+                )
+                orphans.forEach { File(filesDir, it).delete() }
+                if (orphans.isNotEmpty()) Log.i(TAG, "Deleted ${orphans.size} files of removed articles")
+            }.onFailure { Log.w(TAG, "Could not sweep old article files", it) }
         }
     }
 

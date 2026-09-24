@@ -19,6 +19,8 @@ package com.saulhdev.feeder.utils
 
 import android.app.ActivityManager
 import android.content.Context
+import android.net.TrafficStats
+import android.os.Process
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
@@ -131,6 +133,20 @@ internal fun backgroundStatus(context: Context): Int = runCatching {
 /** Only the plain "restricted": exempt counts as allowed. */
 internal fun restrictsBackground(status: Int): Boolean =
     status == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+
+/**
+ * Bytes Whisper has received since the phone started, or null where Android
+ * does not count per app. Read before and after a run; see [bytesSince].
+ */
+internal fun receivedBytes(): Long? = runCatching {
+    TrafficStats.getUidRxBytes(Process.myUid())
+}.getOrNull()?.takeIf { it >= 0 }
+
+/** What arrived since [before]; null if either reading is missing or it went backwards. */
+internal fun bytesSince(before: Long?): Long? {
+    val after = receivedBytes() ?: return null
+    return before?.let { after - it }?.takeIf { it >= 0 }
+}
 
 /** WorkManager's stop reason, in words. */
 internal fun stopReasonName(reason: Int): String = when (reason) {
