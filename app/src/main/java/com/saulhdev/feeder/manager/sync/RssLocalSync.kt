@@ -19,6 +19,7 @@
 package com.saulhdev.feeder.manager.sync
 
 import com.saulhdev.feeder.utils.usableImageUrl
+import com.saulhdev.feeder.utils.SyncResult
 import android.content.Context
 import android.util.Log
 import com.saulhdev.feeder.data.content.FeedPreferences
@@ -63,6 +64,7 @@ import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -97,7 +99,7 @@ suspend fun syncFeeds(
     feedTag: String = "",
     forceNetwork: Boolean = false,
     minFeedAgeMinutes: Int = 5
-): Boolean {
+): SyncResult {
     // When this was asked for, before any wait for the lock. A forced sync
     // that had to queue behind another only needs what that one did not
     // fetch after this moment; see freshSince below.
@@ -140,8 +142,11 @@ internal suspend fun syncFeeds(
      * is exactly as fresh as the pull wanted.
      */
     freshSince: Long? = null,
-): Boolean {
-    var result = false
+): SyncResult {
+    var result = SyncResult(due = 0)
+    // Feeds that threw, counted for the history: a sync that reached 118 of
+    // 120 feeds and one that reached none were both just "ok".
+    val failedFeeds = AtomicInteger(0)
     val feedsRepo: SourcesRepository by inject(SourcesRepository::class.java)
     val articlesRepo: ArticleRepository by inject(ArticleRepository::class.java)
     val downloadTime = Clock.System.now()
@@ -266,13 +271,14 @@ internal suspend fun syncFeeds(
                                 // say, and the reader finds out by noticing a
                                 // silence months later.
                                 feedsRepo.recordFailure(feed.id)
+                                failedFeeds.incrementAndGet()
                             }
                         }
                     }
                 }
 
                 jobs.joinAll()
-                result = feedsToFetch.isNotEmpty()
+                result = SyncResult(due = feedsToFetch.size, failed = failedFeeds.get())
 
             }
         } catch (e: CancellationException) {
@@ -281,6 +287,7 @@ internal suspend fun syncFeeds(
             throw e
         } catch (e: Throwable) {
             Log.e(TAG, "Outer error", e)
+            result = SyncResult.broken(e)
         } finally {
             if (needFullTextSync) {
                 scheduleFullTextParse()

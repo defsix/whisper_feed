@@ -5,7 +5,6 @@ import com.saulhdev.feeder.utils.usableImageUrl
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,12 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.rememberNavController
-import com.saulhdev.feeder.MainActivity
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.ui.overlay.CARD_MARGIN
 import com.saulhdev.feeder.ui.components.HeaderAction
@@ -50,8 +46,6 @@ import com.saulhdev.feeder.ui.components.WithBidiDeterminedLayoutDirection
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowSquareOut
 import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
-import com.saulhdev.feeder.ui.navigation.Routes
-import com.saulhdev.feeder.ui.theme.LinkTextStyle
 import com.saulhdev.feeder.utils.blobFile
 import com.saulhdev.feeder.utils.blobFullFile
 import com.saulhdev.feeder.utils.blobFullInputStream
@@ -61,7 +55,6 @@ import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.extensions.shareIntent
 import com.saulhdev.feeder.utils.htmlFormattedText
 import com.saulhdev.feeder.utils.unicodeWrap
-import com.saulhdev.feeder.utils.urlEncode
 import com.saulhdev.feeder.viewmodels.ArticleViewModel
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
@@ -276,22 +269,15 @@ fun ArticlePage(
                             sourceName = feedTitle,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+                        // Plain text. It was drawn as a link whose tap built an
+                        // intent and never started it, so it looked like the
+                        // way to the page and did nothing - and the page is
+                        // one tap away in the bar above anyway.
                         WithBidiDeterminedLayoutDirection(paragraph = feedTitle) {
                             Text(
                                 text = feedTitle,
-                                style = MaterialTheme.typography.titleMedium
-                                    .merge(LinkTextStyle()),
-                                modifier = Modifier
-                                    .wrapContentWidth()
-                                    .clearAndSetSemantics {
-                                        contentDescription = feedTitle
-                                    }
-                                    .clickable {
-                                        MainActivity.navigateIntent(
-                                            context,
-                                            "${Routes.WEB_VIEW}/${state?.article?.link?.urlEncode()}"
-                                        )
-                                    }
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.wrapContentWidth()
                             )
                         }
                     }

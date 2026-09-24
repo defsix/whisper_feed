@@ -112,6 +112,10 @@
         <item quantity="other">%1$d feeds have stopped working</item>
     </plurals>
     <string name="sources_stuck_text">Tap to see which, and look for new addresses.</string>
+    <!-- Settings, under the sync switches, when Android keeps Whisper off mobile data in the background. -->
+    <string name="background_data_blocked_title">Background syncs can\'t use mobile data</string>
+    <string name="background_data_blocked_body">Android keeps Whisper off mobile data when it isn\'t on screen, so scheduled syncs wait for Wi-Fi. Pull to refresh still works. To let scheduled syncs use mobile data, turn on Unrestricted mobile data usage for Whisper.</string>
+    <string name="background_data_blocked_action">Open mobile data settings</string>
     <string name="date_at">at</string>
     <string name="today">today</string>
     <string name="tomorrow">tomorrow</string>

@@ -64,6 +64,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Row
 import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.ui.components.ActionButton
+import com.saulhdev.feeder.ui.components.BackgroundDataHint
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
@@ -183,6 +184,7 @@ fun PreferencesPage(
     // Turning the global switch on should start downloading now, not at the
     // next scheduled sync — the setting reads as an instruction, not a plan.
     val fullTextForAll by prefs.fullTextForAllFeeds.asState()
+    val syncWifiOnly by prefs.syncOnlyOnWifi.asState()
     var wasFullTextForAll by remember { mutableStateOf(fullTextForAll) }
     LaunchedEffect(fullTextForAll) {
         if (fullTextForAll && !wasFullTextForAll) scheduleFullTextParse()
@@ -252,6 +254,11 @@ fun PreferencesPage(
                     stringResource(id = R.string.pref_cat_fetching),
                     prefs = fetchingPrefs,
                     onPrefDialog = onPrefDialog
+                )
+                // Under the switches it overrules. See BackgroundDataHint.
+                BackgroundDataHint(
+                    wifiOnly = syncWifiOnly,
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
             item(key = R.string.pref_cat_feed) {

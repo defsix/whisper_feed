@@ -110,6 +110,28 @@ internal fun isUnmetered(context: Context): Boolean = runCatching {
     caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true
 }.getOrDefault(false)
 
+/**
+ * Whether a background sync started now would lose its network: off Wi-Fi,
+ * with Android keeping Whisper's mobile data for when it is on screen.
+ *
+ * A report showed eight scheduled syncs in half an hour on mobile data, each
+ * cut off within seconds of Whisper leaving the screen and each retried - all
+ * of the waking and none of the articles. Asked before a run, so the run
+ * never starts. See [dataSaverState] for why this cannot say which setting
+ * is responsible.
+ */
+internal fun backgroundMobileDataBlocked(context: Context): Boolean =
+    !isUnmetered(context) && restrictsBackground(backgroundStatus(context))
+
+/** Android's answer, or "not restricted" when it cannot be asked. */
+internal fun backgroundStatus(context: Context): Int = runCatching {
+    context.getSystemService(ConnectivityManager::class.java).restrictBackgroundStatus
+}.getOrDefault(ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED)
+
+/** Only the plain "restricted": exempt counts as allowed. */
+internal fun restrictsBackground(status: Int): Boolean =
+    status == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+
 /** WorkManager's stop reason, in words. */
 internal fun stopReasonName(reason: Int): String = when (reason) {
     WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"

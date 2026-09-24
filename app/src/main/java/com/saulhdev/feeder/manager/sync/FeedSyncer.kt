@@ -1,5 +1,6 @@
 package com.saulhdev.feeder.manager.sync
 
+import com.saulhdev.feeder.utils.backgroundMobileDataBlocked
 import com.saulhdev.feeder.utils.isPowerSaveMode
 import com.saulhdev.feeder.utils.stopReasonName
 import com.saulhdev.feeder.utils.SyncLog
@@ -28,6 +29,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.saulhdev.feeder.R
+import com.saulhdev.feeder.utils.SyncResult
+import com.saulhdev.feeder.utils.syncOutcome
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.ID_UNSET
 import com.saulhdev.feeder.data.repository.SourcesRepository
@@ -49,7 +52,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
     }
 
     override suspend fun doWork(): Result {
-        var success: Boolean
+        var result: SyncResult
         // Written before anything else can fail, so even a run that dies
         // immediately leaves a line saying it started. See SyncLog.
         val origin = inputData.getString(SyncLog.ORIGIN_KEY) ?: "unlabelled"
@@ -68,6 +71,17 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         // waiting to run. Pull to refresh and the rest go through.
         if (origin in SyncLog.AUTOMATIC_ORIGINS && isPowerSaveMode(applicationContext)) {
             SyncLog.finished(applicationContext, run, "skipped: Battery Saver")
+            return Result.success()
+        }
+
+        // On mobile data with Android keeping Whisper off it in the
+        // background, a run gets seconds - until Whisper leaves the screen -
+        // and is then cut off and retried, again and again. Skipped the same
+        // way as for Battery Saver: the next slot may be on Wi-Fi, and pull
+        // to refresh runs in the foreground, where the block does not apply.
+        // Settings says which switch lifts it; see BackgroundDataHint.
+        if (origin in SyncLog.AUTOMATIC_ORIGINS && backgroundMobileDataBlocked(applicationContext)) {
+            SyncLog.finished(applicationContext, run, "skipped: background mobile data blocked")
             return Result.success()
         }
 
@@ -128,20 +142,22 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             val wholeFeed = feedId == ID_UNSET && feedTag.isEmpty()
             val service = dispatcher.current()
 
-            success = if (wholeFeed && service !is LocalRssService) {
+            result = if (wholeFeed && service !is LocalRssService) {
+                // An account says only whether it worked, so its line has no
+                // feed count; see SyncResult.counted.
                 when (val outcome = service.sync()) {
-                    is SyncOutcome.Success -> true
+                    is SyncOutcome.Success -> SyncResult.uncounted
                     SyncOutcome.SignedOut -> {
                         // The token is gone, and retrying will not bring it
                         // back. Reported as success so WorkManager does not
                         // back off and retry a thing that needs the reader.
                         Log.w(TAG, "Account signed out; scheduled sync stopped")
-                        true
+                        SyncResult(due = 0, error = "signed out")
                     }
 
                     is SyncOutcome.Failed -> {
                         Log.e(TAG, "Account sync failed", outcome.cause)
-                        false
+                        outcome.cause?.let(SyncResult::broken) ?: SyncResult(due = 0, error = "error")
                     }
                 }
             } else {
@@ -171,7 +187,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             SyncLog.finished(applicationContext, run, "stopped: $why")
             throw e
         } catch (e: Exception) {
-            success = false
+            result = SyncResult.broken(e)
             Log.e(TAG, "Failure during sync", e)
         }
 
@@ -182,8 +198,11 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         SyncLog.finished(
             applicationContext,
             run,
-            (if (success) "ok" else "failed") + if (notes.isEmpty()) "" else " (${notes.joinToString(", ")})",
+            syncOutcome(result, notes),
         )
+        // Signed out stays a success to WorkManager: retrying cannot bring a
+        // token back, and a backoff would only repeat the same line.
+        val success = result.ok || result.error == "signed out"
         // A notice that syncing had stopped is taken back by the sync that
         // proves it has started again.
         if (success) {
