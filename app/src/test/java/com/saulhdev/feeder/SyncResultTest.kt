@@ -49,6 +49,7 @@ class SyncResultTest {
         assertEquals("ok (120 feeds)", syncOutcome(SyncResult(due = 120)))
         assertEquals("ok (120 feeds, 2 failed)", syncOutcome(SyncResult(due = 120, failed = 2)))
         assertTrue("some feeds failing is still a sync", SyncResult(due = 120, failed = 2).ok)
+        assertEquals("ok (1 feed, queued)", syncOutcome(SyncResult(due = 1), listOf("queued")))
     }
 
     @Test

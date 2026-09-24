@@ -67,7 +67,7 @@ fun syncOutcome(result: SyncResult, notes: List<String> = emptyList()): String {
         !result.counted -> "ok" to emptyList()
         result.due == 0 -> "nothing due" to emptyList()
         else -> "ok" to listOfNotNull(
-            "${result.due} feeds",
+            if (result.due == 1) "1 feed" else "${result.due} feeds",
             if (result.failed > 0) "${result.failed} failed" else null,
         )
     }
