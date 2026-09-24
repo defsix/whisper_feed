@@ -293,8 +293,8 @@ object Diagnostics : KoinComponent {
                 // switches say. Named, because nothing else would explain it -
                 // unless "Wi-Fi only" already asked for Wi-Fi, which read
                 // "Wi-Fi and Wi-Fi (...)".
-                if (!onWifi && !wantsUnmetered && dataSaverState(context) == "Data Saver on") {
-                    add("Wi-Fi (Data Saver keeps background syncs off mobile data)")
+                if (!onWifi && !wantsUnmetered && dataSaverState(context) == BACKGROUND_DATA_BLOCKED) {
+                    add("Wi-Fi (Android blocks Whisper's mobile data in the background)")
                 }
             }
             appendLine(

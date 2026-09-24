@@ -182,16 +182,26 @@ private fun anyNetworkUp(connectivity: ConnectivityManager): Boolean =
             ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
     }
 
+/** What [dataSaverState] says when Android keeps Whisper off mobile data in the background. */
+internal const val BACKGROUND_DATA_BLOCKED = "background mobile data blocked"
+
 /**
- * Data Saver, as it applies to Whisper: off, on, or on with Whisper exempted.
+ * Whether Android lets Whisper use mobile data while it is in the background.
+ *
+ * This read "Data Saver on" until a reader with Data Saver switched off saw
+ * it on nearly every line. Android answers the same "restricted" for two
+ * different settings: Data Saver for the whole phone, and this app's own
+ * "Background data" switch under Mobile data - and the second is checked
+ * first. Nothing an app can call tells the two apart, so the line names the
+ * effect, which is what matters to a sync, rather than guessing the cause.
  */
 internal fun dataSaverState(context: Context): String = runCatching {
     when (context.getSystemService(ConnectivityManager::class.java).restrictBackgroundStatus) {
-        ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED -> "Data Saver on"
+        ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED -> BACKGROUND_DATA_BLOCKED
         ConnectivityManager.RESTRICT_BACKGROUND_STATUS_WHITELISTED -> "Data Saver on, Whisper exempt"
-        else -> "Data Saver off"
+        else -> "background mobile data allowed"
     }
-}.getOrDefault("Data Saver unknown")
+}.getOrDefault("background mobile data unknown")
 
 /**
  * Whether Whisper is on screen, running something the reader can see, or in
@@ -240,7 +250,7 @@ internal fun deviceSnapshot(context: Context): String {
         if (isDeviceIdle(context)) add("dozing")
         // Only when on: the ordinary case is off, and a word on every line
         // would bury the one line where it matters.
-        dataSaverState(context).takeIf { it == "Data Saver on" }?.let(::add)
+        dataSaverState(context).takeIf { it == BACKGROUND_DATA_BLOCKED }?.let(::add)
         if (isBackgroundRestricted(context)) add("battery Restricted")
     }
     return "${networkState(context).short()}, ${power.short()}, ${appVisibility()}" +

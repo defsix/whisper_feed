@@ -88,16 +88,20 @@ class SyncConditionsRecordTest {
         assertTrue(device.contains("if (anyNetworkUp(connectivity)) \"blocked for Whisper\" else \"offline\""))
         val snapshot = device.substringAfter("internal fun deviceSnapshot(")
         assertTrue("Data Saver is recorded", snapshot.contains("dataSaverState(context)"))
+        // Named by effect: Android reports the app's own Background data
+        // switch and Data Saver as the same thing.
+        assertTrue(device.contains("RESTRICT_BACKGROUND_STATUS_ENABLED -> BACKGROUND_DATA_BLOCKED"))
+        assertFalse(device.contains("-> \"Data Saver on\""))
         assertTrue("and whether Whisper was on screen", snapshot.contains("appVisibility()"))
         assertTrue("and the Restricted battery setting", snapshot.contains("isBackgroundRestricted(context)"))
         val report = source("utils/Diagnostics.kt")
         assertTrue(
             "the verdict names Data Saver when it is the reason",
-            report.contains("Wi-Fi (Data Saver keeps background syncs off mobile data)"),
+            report.contains("Wi-Fi (Android blocks Whisper's mobile data in the background)"),
         )
         assertTrue(
             "but not a second time when Wi-Fi only already asked for Wi-Fi",
-            report.contains("if (!onWifi && !wantsUnmetered && dataSaverState(context) == \"Data Saver on\")"),
+            report.contains("if (!onWifi && !wantsUnmetered && dataSaverState(context) == BACKGROUND_DATA_BLOCKED)"),
         )
     }
 
