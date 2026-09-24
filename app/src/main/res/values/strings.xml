@@ -108,10 +108,10 @@
     <string name="sync_stuck_unknown">Android has not run it yet.</string>
     <string name="sync_stuck_hint">Pull down on the feed to update now.</string>
     <plurals name="sources_stuck_title">
-        <item quantity="one">%1$d source has stopped updating</item>
-        <item quantity="other">%1$d sources have stopped updating</item>
+        <item quantity="one">%1$d feed has stopped working</item>
+        <item quantity="other">%1$d feeds have stopped working</item>
     </plurals>
-    <string name="sources_stuck_text">Tap to see which.</string>
+    <string name="sources_stuck_text">Tap to see which, and look for new addresses.</string>
     <string name="date_at">at</string>
     <string name="today">today</string>
     <string name="tomorrow">tomorrow</string>

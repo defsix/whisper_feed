@@ -39,9 +39,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.repository.SourcesRepository
-import com.saulhdev.feeder.ui.components.STALE_AFTER_MS
-import com.saulhdev.feeder.ui.components.SourceHealth
-import com.saulhdev.feeder.ui.components.sourceHealth
+import com.saulhdev.feeder.data.repository.FAILURES_BEFORE_BROKEN
 import com.saulhdev.feeder.ui.navigation.Routes
 import com.saulhdev.feeder.utils.StuckReason
 import com.saulhdev.feeder.utils.SyncProblem
@@ -149,14 +147,11 @@ class SyncWatchdog(context: Context, params: WorkerParameters) :
 
         private fun check(context: Context, feeds: List<Feed>, prefs: FeedPreferences) {
             val now = System.currentTimeMillis()
-            val staleSince = now - STALE_AFTER_MS
+            // Counted exactly as "Feeds that stopped working" lists them, which
+            // is where the notice opens: a count that included feeds the page
+            // leaves out would send somebody looking for sources not there.
             val stopped = feeds.count {
-                sourceHealth(
-                    lastSyncMs = it.lastSync.toEpochMilliseconds(),
-                    isEnabled = it.isEnabled,
-                    staleSince = staleSince,
-                    consecutiveFailures = it.consecutiveFailures,
-                ) == SourceHealth.NotUpdating
+                it.isEnabled && it.consecutiveFailures >= FAILURES_BEFORE_BROKEN
             }
             val newest = newestSync(feeds)
             val problem = syncProblem(
@@ -207,7 +202,7 @@ class SyncWatchdog(context: Context, params: WorkerParameters) :
                             R.plurals.sources_stuck_title, stopped, stopped,
                         ),
                         text = context.getString(R.string.sources_stuck_text),
-                        tap = MainActivity.navigateIntent(context, Routes.SOURCES),
+                        tap = MainActivity.navigateIntent(context, Routes.BROKEN_FEEDS),
                     )
                     state.edit { putInt(KEY_SOURCES_COUNT, stopped) }
                 }

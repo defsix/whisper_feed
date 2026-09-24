@@ -116,11 +116,7 @@ fun NavigationManager(
                 deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.SETTINGS}" })
             ) { PreferencesPage() }
             composable<NavRoute.GlanceLocation> { GlanceLocationPage() }
-            // Deep-linked for the "sources have stopped updating"
-            // notification, which should open the list that marks them.
-            composable<NavRoute.Sources>(
-                deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.SOURCES}" })
-            ) { SourceListPage() }
+            composable<NavRoute.Sources> { SourceListPage() }
             composable<NavRoute.About> { AboutPage() }
             composable<NavRoute.License> { LicensePage() }
             composable<NavRoute.Changelog> { ChangelogPage() }
@@ -132,7 +128,11 @@ fun NavigationManager(
             composable<NavRoute.Launcher> { LauncherPage() }
             composable<NavRoute.Suggestions> { SuggestionsPage() }
             composable<NavRoute.BookmarkImport> { BookmarkImportPage() }
-            composable<NavRoute.BrokenFeeds> { BrokenFeedsPage() }
+            // Deep-linked for the "feeds have stopped working" notification,
+            // which opens the page that lists them and can fix them.
+            composable<NavRoute.BrokenFeeds>(
+                deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.BROKEN_FEEDS}" })
+            ) { BrokenFeedsPage() }
             composable<NavRoute.InsecureFeeds> { InsecureFeedsPage() }
             composable<NavRoute.FeedLibrary> { FeedLibraryPage() }
             composable<NavRoute.Statistics> { StatisticsPage() }
@@ -160,7 +160,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val WEB_VIEW = "web_view"
     const val ARTICLE_VIEW = "article_page"
-    const val SOURCES = "sources"
+    const val BROKEN_FEEDS = "broken_feeds"
 }
 
 sealed class NavItem(

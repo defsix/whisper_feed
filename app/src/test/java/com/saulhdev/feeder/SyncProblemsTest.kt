@@ -156,10 +156,23 @@ class SyncProblemsTest {
     }
 
     @Test
-    fun `stopped sources open the list that marks them`() {
-        assertTrue(watchdog.contains("MainActivity.navigateIntent(context, Routes.SOURCES)"))
+    fun `failing feeds open the page that lists them`() {
+        assertTrue(watchdog.contains("MainActivity.navigateIntent(context, Routes.BROKEN_FEEDS)"))
         val nav = File("src/main/java/com/saulhdev/feeder/ui/navigation/NavigationManager.kt").readText()
-        assertTrue(nav.contains("uriPattern = \"\$NAV_BASE\${Routes.SOURCES}\""))
+        val route = nav.substring(nav.indexOf("composable<NavRoute.BrokenFeeds>"))
+            .substringBefore("BrokenFeedsPage()")
+        assertTrue(route.contains("uriPattern = \"\$NAV_BASE\${Routes.BROKEN_FEEDS}\""))
+    }
+
+    @Test
+    fun `the count is the page's count`() {
+        // The page lists getFailingFeeds(FAILURES_BEFORE_BROKEN); the notice
+        // counts the same threshold, among sources that are switched on.
+        assertTrue(watchdog.contains("it.isEnabled && it.consecutiveFailures >= FAILURES_BEFORE_BROKEN"))
+        val repo = File("src/main/java/com/saulhdev/feeder/data/repository/SourcesRepository.kt").readText()
+        assertTrue(repo.contains("fun getFailingFeeds(threshold: Int = FAILURES_BEFORE_BROKEN)"))
+        val vm = File("src/main/java/com/saulhdev/feeder/viewmodels/BrokenFeedsViewModel.kt").readText()
+        assertTrue(vm.contains("sources.getFailingFeeds()"))
     }
 
     @Test

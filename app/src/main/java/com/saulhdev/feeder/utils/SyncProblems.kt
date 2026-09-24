@@ -27,7 +27,7 @@ package com.saulhdev.feeder.utils
  */
 enum class SyncProblem { None, SyncStuck, SourcesStuck }
 
-/** Stopped sources before it is worth saying so; one dead feed is not news. */
+/** Failing feeds before it is worth saying so; one dead feed is not news. */
 const val SOURCES_STUCK_BEFORE_NOTIFYING = 3
 
 /** A stuck sync is said again at most this often, while it stays stuck. */
@@ -35,12 +35,13 @@ const val RENOTIFY_STUCK_AFTER_MS = 24 * 60 * 60_000L
 
 /**
  * [newestSyncMs] is the newest successful fetch among enabled sources, null
- * when there are none. [stoppedSources] counts enabled sources that
- * [com.saulhdev.feeder.ui.components.sourceHealth] calls not updating.
+ * when there are none. [stoppedSources] counts enabled sources that have
+ * failed [com.saulhdev.feeder.data.repository.FAILURES_BEFORE_BROKEN] times
+ * in a row — the ones "Feeds that stopped working" lists.
  *
- * A stuck sync comes first and hides the rest: once nothing has synced for
- * three days every source looks stopped, and naming a hundred of them would
- * bury the one thing that is actually wrong.
+ * A stuck sync comes first and hides the rest: with the phone offline for a
+ * day every feed would be failing, and naming a hundred of them would bury
+ * the one thing that is actually wrong.
  *
  * Nothing when no source has ever synced. That is a fresh install or an
  * import still settling, the feed already says "Not updated yet", and a
