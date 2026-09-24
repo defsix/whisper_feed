@@ -95,6 +95,10 @@ class SyncConditionsRecordTest {
             "the verdict names Data Saver when it is the reason",
             report.contains("Wi-Fi (Data Saver keeps background syncs off mobile data)"),
         )
+        assertTrue(
+            "but not a second time when Wi-Fi only already asked for Wi-Fi",
+            report.contains("if (!onWifi && !wantsUnmetered && dataSaverState(context) == \"Data Saver on\")"),
+        )
     }
 
     @Test

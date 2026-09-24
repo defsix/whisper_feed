@@ -290,8 +290,10 @@ object Diagnostics : KoinComponent {
                 // Data Saver keeps a backgrounded app off mobile data, and a
                 // scheduled sync always runs in the background - so on mobile
                 // data with Data Saver on it can never start, whatever the
-                // switches say. Named, because nothing else would explain it.
-                if (!onWifi && dataSaverState(context) == "Data Saver on") {
+                // switches say. Named, because nothing else would explain it -
+                // unless "Wi-Fi only" already asked for Wi-Fi, which read
+                // "Wi-Fi and Wi-Fi (...)".
+                if (!onWifi && !wantsUnmetered && dataSaverState(context) == "Data Saver on") {
                     add("Wi-Fi (Data Saver keeps background syncs off mobile data)")
                 }
             }
