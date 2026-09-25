@@ -302,8 +302,16 @@ data class Subscription(
     /** The feed's address, from whichever field this server chose to fill in. */
     val feedUrl: String get() = url ?: GoogleReaderIds.feedUrl(id)
 
-    /** The folders it is filed in, as the category names Whisper uses. */
-    val folders: List<String> get() = categories.map { GoogleReaderIds.labelName(it.id) }
+    /**
+     * The folders it is filed in, as the category names Whisper uses.
+     *
+     * Without the server's catch-all folder, which is its name for "none":
+     * FreshRSS files anything without a folder under "Uncategorized", and
+     * taken as a category it turned up in Whisper's list as if the reader had
+     * made it. See [isCatchAllFolder].
+     */
+    val folders: List<String>
+        get() = categories.map { GoogleReaderIds.labelName(it.id) }.filterNot(::isCatchAllFolder)
 }
 
 @JsonClass(generateAdapter = true)
@@ -338,3 +346,12 @@ data class StreamItem(
 
 @JsonClass(generateAdapter = true)
 data class StreamLink(val href: String? = null, val type: String? = null)
+
+/**
+ * A server's folder for feeds that have no folder.
+ *
+ * FreshRSS calls it "Uncategorized", in English whatever the account's
+ * language, and other servers use the same word or its British spelling.
+ */
+fun isCatchAllFolder(name: String): Boolean =
+    name.trim().lowercase() in setOf("uncategorized", "uncategorised")

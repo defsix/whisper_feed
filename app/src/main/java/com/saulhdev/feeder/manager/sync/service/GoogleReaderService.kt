@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.manager.sync.service
 
+import com.saulhdev.feeder.manager.sync.greader.isCatchAllFolder
 import android.content.Context
 import android.util.Log
 import com.saulhdev.feeder.data.content.SyncAccount
@@ -120,6 +121,9 @@ class GoogleReaderService(
                 // The server's folders win for a feed it knows about: they are
                 // what the reader set on whichever device they set it.
                 sources.updateSource(existing.copy(tag = tag))
+            } else if (tag.isEmpty() && existing.tags.isNotEmpty() && existing.tags.all(::isCatchAllFolder)) {
+                // Taken as a category by an earlier version; see isCatchAllFolder.
+                sources.updateSource(existing.copy(tag = ""))
             }
         }
     }

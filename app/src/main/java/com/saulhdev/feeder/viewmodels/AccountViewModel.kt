@@ -17,7 +17,14 @@
  */
 package com.saulhdev.feeder.viewmodels
 
+import android.app.Application
 import androidx.lifecycle.viewModelScope
+import com.saulhdev.feeder.manager.sync.service.toSyncResult
+import com.saulhdev.feeder.utils.SyncLog
+import com.saulhdev.feeder.utils.bytesSince
+import com.saulhdev.feeder.utils.receivedBytes
+import com.saulhdev.feeder.utils.syncOutcome
+import kotlin.coroutines.cancellation.CancellationException
 import com.saulhdev.feeder.data.content.SyncAccount
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
 import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
@@ -51,6 +58,8 @@ data class AccountState(
 )
 
 class AccountViewModel(
+    /** The application, never a screen: this outlives the account screen's own. */
+    private val app: Application,
     private val account: SyncAccount,
     private val dispatcher: RssServiceDispatcher,
 ) : NeoViewModel() {
@@ -105,8 +114,24 @@ class AccountViewModel(
     fun syncNow() {
         _state.value = _state.value.copy(busy = true, error = null)
         ioScope.launch {
+            // Written to the sync history like every other sync. It ran
+            // straight from this screen rather than through the worker, and
+            // so left no line: two syncs on the night the account was first
+            // tried were visible only in what they had fetched.
+            val run = SyncLog.started(app, SyncLog.ORIGIN_ACCOUNT)
+            val receivedBefore = receivedBytes()
             // "Sync now" is a request, so everything is fetched.
-            val outcome = dispatcher.current().sync(forceNetwork = true)
+            val outcome = try {
+                dispatcher.current().sync(forceNetwork = true)
+            } catch (e: CancellationException) {
+                SyncLog.finished(app, run, "stopped: left the screen")
+                throw e
+            }
+            SyncLog.finished(
+                app,
+                run,
+                syncOutcome(outcome.toSyncResult().copy(bytes = bytesSince(receivedBefore))),
+            )
             _state.value = when (outcome) {
                 is SyncOutcome.Success -> read()
                 SyncOutcome.SignedOut -> {

@@ -103,6 +103,17 @@ sealed interface SyncOutcome {
 }
 
 /**
+ * The history line's view of an outcome. One place, because the worker and
+ * the account screen's "Sync now" both write one.
+ */
+fun SyncOutcome.toSyncResult(): com.saulhdev.feeder.utils.SyncResult = when (this) {
+    is SyncOutcome.Success -> feeds ?: com.saulhdev.feeder.utils.SyncResult.uncounted
+    SyncOutcome.SignedOut -> com.saulhdev.feeder.utils.SyncResult(due = 0, error = "signed out")
+    is SyncOutcome.Failed -> cause?.let(com.saulhdev.feeder.utils.SyncResult::broken)
+        ?: com.saulhdev.feeder.utils.SyncResult(due = 0, error = "error")
+}
+
+/**
  * Which service is in charge, from the account there is.
  *
  * A single place that maps the account to a provider, so nothing else in the

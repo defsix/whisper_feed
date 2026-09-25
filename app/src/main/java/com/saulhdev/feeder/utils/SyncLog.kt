@@ -58,6 +58,8 @@ object SyncLog {
     const val ORIGIN_RESTORE = "restore"
     /** Adding back, editing or undoing the removal of a source. */
     const val ORIGIN_SOURCE_CHANGE = "source change"
+    /** "Sync now" on the account screen. */
+    const val ORIGIN_ACCOUNT = "account (sync now)"
 
     /**
      * The full-article prefetch after a sync. Logged because it is the
