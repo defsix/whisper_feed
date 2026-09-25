@@ -104,6 +104,7 @@ fun PreferencesPage(
         prefs.syncOnlyOnWifi,
         prefs.syncOnlyWhenCharging,
         prefs.fullTextForAllFeeds,
+        prefs.fullTextOnMobile,
     )
 
     /**

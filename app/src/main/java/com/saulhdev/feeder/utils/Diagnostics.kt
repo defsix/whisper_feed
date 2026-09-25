@@ -213,6 +213,25 @@ object Diagnostics : KoinComponent {
         } }.onFailure { appendLine("Article counts unavailable: $it") }
         appendLine()
 
+        // Every feed's own last few fetches, which the sync lines above
+        // cannot give: they say "4 failed", not which four, and their data
+        // figure is the whole app's. Feeds with a recent failure first.
+        appendLine("== Feeds (last ${FeedHistory.MAX_PER_FEED} fetches, newest first) ==")
+        runCatching { withTimeout(SECTION_TIMEOUT_MS) {
+            val sources = get<SourcesRepository>().getAllSourcesFlow().first()
+            FeedHistory.keepOnly(context, sources.map { it.id }.toSet())
+            val histories = sources.associateWith { FeedHistory.read(context, it.id) }
+            FeedHistoryCodec.summary(histories.map { (feed, fetches) -> feed.title to fetches }).forEach(::appendLine)
+            histories.entries
+                .sortedWith(
+                    compareByDescending<Map.Entry<com.saulhdev.feeder.data.db.models.Feed, List<FeedFetch>>> { (_, fetches) ->
+                        fetches.any { it.kind == FetchKind.Failed }
+                    }.thenBy { it.key.title.lowercase() }
+                )
+                .forEach { (feed, fetches) -> appendLine(FeedHistoryCodec.line(feed.title, fetches)) }
+        } }.onFailure { appendLine("Feed history unavailable: $it") }
+        appendLine()
+
         appendLine("== Log (last $LOG_LINE_LIMIT lines, this app only) ==")
         appendLine(readOwnLogcat())
     }

@@ -270,6 +270,25 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /**
+     * Whether full articles are downloaded in advance over mobile data too.
+     *
+     * Off by default. The advance download is the heaviest thing Whisper
+     * does - a report showed 265 pages, about 29 MB, in one morning on mobile
+     * data, for articles that mostly go unread - and the reader loses nothing
+     * by it waiting for Wi-Fi: opening an article fetches its page on the
+     * spot, on any network. Covers the per-source switch as well as the
+     * blanket one.
+     */
+    var fullTextOnMobile = BooleanPref(
+        titleId = R.string.pref_full_text_on_mobile,
+        summaryId = R.string.pref_full_text_on_mobile_summary,
+        icon = Phosphor.CloudArrowDown,
+        key = FULL_TEXT_ON_MOBILE,
+        dataStore = dataStore,
+        defaultValue = false
+    )
+
+    /**
      * Volume keys page the feed instead of changing the volume.
      *
      * Off by default — an app quietly taking over the volume keys is a
@@ -1121,6 +1140,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
          */
         var markEverythingRead: (() -> Unit)? = null
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
+        val FULL_TEXT_ON_MOBILE = booleanPreferencesKey("pref_full_text_on_mobile")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")
         val SYNC_ON_WIFI = booleanPreferencesKey("pref_sync_only_wifi")
         val SYNC_ONLY_CHARGING = booleanPreferencesKey("pref_sync_only_charging")

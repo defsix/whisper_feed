@@ -145,11 +145,11 @@ class DataUseTest {
     fun `an unchanged feed is not parsed, but still ages out`() {
         val sync = source("manager/sync/RssLocalSync.kt")
         val body = sync.substring(sync.indexOf("private suspend fun syncFeed("))
-        val skip = body.substring(body.indexOf("servedUnchanged("), body.indexOf("return false"))
+        val skip = body.substring(body.indexOf("servedUnchanged("), body.indexOf("return null"))
         assertTrue("only when the source has articles", skip.contains("articleRepo.countInFeed(feedSql.id) > 0"))
         assertTrue("old articles still go", skip.contains("cleanUpFeed(articleRepo, feedSql, filesDir)"))
-        assertTrue("before any parsing", body.indexOf("return false") < body.indexOf("FeedParser()"))
-        assertTrue(sync.contains("if (!changed) unchangedFeeds.incrementAndGet()"))
+        assertTrue("before any parsing", body.indexOf("return null") < body.indexOf("FeedParser()"))
+        assertTrue(sync.contains("if (newArticles == null) unchangedFeeds.incrementAndGet()"))
     }
 
     @Test
@@ -173,7 +173,7 @@ class DataUseTest {
             .substringBefore("\n}\n")
         val rethrow = prefetch.indexOf("if (error is CancellationException) throw error")
         assertTrue("stopping is not failing", rethrow >= 0 && rethrow < prefetch.indexOf("writeText("))
-        assertTrue(prefetch.contains("isPermanentHttpFailure(error.code)"))
+        assertTrue(prefetch.contains("isPermanentHttpFailure(code)"))
         assertTrue("a success clears the record", full.contains("blobFullFailedFile(feedItem.uuid, filesDir).delete()"))
         val worker = full.substring(full.indexOf("override suspend fun doWork()"))
         assertTrue(

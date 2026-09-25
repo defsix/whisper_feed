@@ -45,6 +45,13 @@ data class SyncResult(
      * is why it is labelled as data, not as feed size.
      */
     val bytes: Long? = null,
+    /**
+     * Due feeds that could not be reached because Whisper had no network -
+     * not failures of the feeds, and not counted against them.
+     */
+    val offline: Int = 0,
+    /** Feeds left for a later sync because they rarely publish; see dueByPace. */
+    val resting: Int = 0,
 ) {
     /** Not broken. Nothing due is fine; some feeds failing is still a sync. */
     val ok: Boolean get() = error == null
@@ -79,10 +86,12 @@ fun syncOutcome(result: SyncResult, notes: List<String> = emptyList()): String {
             if (result.due == 1) "1 feed" else "${result.due} feeds",
             if (result.unchanged > 0) "${result.unchanged} unchanged" else null,
             if (result.failed > 0) "${result.failed} failed" else null,
+            if (result.offline > 0) "${result.offline} without network" else null,
         )
     }
     val data = result.bytes?.let(::formatBytes)
-    val all = details + listOfNotNull(data) + notes
+    val resting = if (result.resting > 0 && result.error == null) "${result.resting} not due yet" else null
+    val all = details + listOfNotNull(resting, data) + notes
     return if (all.isEmpty()) head else "$head (${all.joinToString(", ")})"
 }
 
@@ -97,9 +106,10 @@ fun formatBytes(bytes: Long): String = when {
 }
 
 /** The history's outcome for a full-article prefetch run. */
-fun fullTextOutcome(fetched: Int, failed: Int, bytes: Long?): String =
+fun fullTextOutcome(fetched: Int, failed: Int, bytes: Long?, unreached: Int = 0): String =
     "ok (" + listOfNotNull(
         "$fetched fetched",
         if (failed > 0) "$failed failed" else null,
+        if (unreached > 0) "$unreached left for later, no network" else null,
         bytes?.let(::formatBytes),
     ).joinToString(", ") + ")"

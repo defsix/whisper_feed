@@ -23,6 +23,7 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import com.saulhdev.feeder.data.entity.JsonFeed
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
+import com.saulhdev.feeder.utils.ByteCounter
 import com.saulhdev.feeder.utils.HttpStatusException
 import com.saulhdev.feeder.utils.JsonFeedParser
 import com.saulhdev.feeder.utils.extensions.asFeed
@@ -319,7 +320,12 @@ class FeedParser {
     class FeedParsingError(val url: URL, e: Throwable) : Exception(e.message, e)
 }
 
-suspend fun OkHttpClient.getResponse(url: URL, forceNetwork: Boolean = false): Response {
+suspend fun OkHttpClient.getResponse(
+    url: URL,
+    forceNetwork: Boolean = false,
+    /** Hears this request's bytes, where the client listens; see ByteCounter. */
+    byteCounter: ByteCounter? = null,
+): Response {
     val request = Request.Builder()
         .url(url)
         .cacheControl(
@@ -335,6 +341,7 @@ suspend fun OkHttpClient.getResponse(url: URL, forceNetwork: Boolean = false): R
                 }
                 .build()
         )
+        .apply { byteCounter?.let { tag(ByteCounter::class.java, it) } }
         .build()
 
     val clientToUse = if (url.userInfo?.isNotBlank() == true) {

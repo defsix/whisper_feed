@@ -37,6 +37,14 @@ import com.saulhdev.feeder.manager.models.getResponse
 import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.utils.HttpIdentity.asFeedReader
 import com.saulhdev.feeder.utils.deleteArticleFiles
+import com.saulhdev.feeder.utils.ByteCounter
+import com.saulhdev.feeder.utils.dueByPace
+import com.saulhdev.feeder.utils.FeedFetch
+import com.saulhdev.feeder.utils.FeedHistory
+import com.saulhdev.feeder.utils.FetchKind
+import com.saulhdev.feeder.utils.countsAgainstSource
+import com.saulhdev.feeder.utils.errorKind
+import com.saulhdev.feeder.utils.whisperHasNetwork
 import com.saulhdev.feeder.utils.blobOutputStream
 import com.saulhdev.feeder.utils.getSyncDays
 import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
@@ -58,6 +66,7 @@ import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
+import kotlinx.coroutines.flow.first
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -116,6 +125,7 @@ private fun syncHttpClient(context: Context): OkHttpClient =
             .asFeedReader()
             .onlyPublicHttps()
             .cache(Cache(File(context.cacheDir, "feeds"), FEED_CACHE_BYTES))
+            .eventListenerFactory(ByteCounter.factory)
             .build()
             .also { feedClient = it }
     }
@@ -185,6 +195,10 @@ internal suspend fun syncFeeds(
     // And the ones the server said had not changed, which cost a few hundred
     // bytes instead of the whole feed. See syncHttpClient.
     val unchangedFeeds = AtomicInteger(0)
+    // And those Whisper had no network to reach; see countsAgainstSource.
+    val offlineFeeds = AtomicInteger(0)
+    // And those left for a later sync because they rarely publish.
+    var restingFeeds = 0
     val feedsRepo: SourcesRepository by inject(SourcesRepository::class.java)
     val articlesRepo: ArticleRepository by inject(ArticleRepository::class.java)
     val downloadTime = Clock.System.now()
@@ -218,7 +232,7 @@ internal suspend fun syncFeeds(
                         Log.e(TAG, "Error during sync", throwable)
                     }
 
-                val feedsToFetch = feedsToSync(
+                val candidates = feedsToSync(
                     repository = sRepository,
                     feedId = feedId,
                     tag = feedTag,
@@ -228,7 +242,21 @@ internal suspend fun syncFeeds(
                     forceNetwork = forceNetwork && freshSince == null
                 )
 
-                Log.d(TAG, "Feeds to sync: ${feedsToFetch.size}")
+                // Slow feeds rest between checks; see recheckAfterMs. Only
+                // for the whole-list syncs nobody asked for at that moment:
+                // a pull means everything, and a sync of one source is a
+                // source that was just added or changed.
+                val paced = !forceNetwork && feedId <= 0 && feedTag.isEmpty()
+                val pace: Map<Long, Float> = if (paced) articlesRepo.sourcePace().first() else emptyMap()
+                val nowMs = Clock.System.now().toEpochMilliseconds()
+                val feedsToFetch = if (paced) {
+                    candidates.filter { dueByPace(nowMs, it.lastSync.toEpochMilliseconds(), pace[it.id]) }
+                } else {
+                    candidates
+                }
+                restingFeeds = candidates.size - feedsToFetch.size
+
+                Log.d(TAG, "Feeds to sync: ${feedsToFetch.size}, resting: $restingFeeds")
 
                 // Every feed at once was the arrangement, and it does not
                 // survive a real subscription list. Forty-five feeds launched
@@ -248,7 +276,8 @@ internal suspend fun syncFeeds(
                                 // Mark as syncing START
                                 feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = true)
 
-                                val changed = syncFeed(
+                                val counter = ByteCounter()
+                                val newArticles = syncFeed(
                                     context = context,
                                     feedsRepo = feedsRepo,
                                     articleRepo = articlesRepo,
@@ -256,9 +285,19 @@ internal suspend fun syncFeeds(
                                     filesDir = context.filesDir,
                                     maxFeedItemCount = maxFeedItemCount,
                                     forceNetwork = forceNetwork,
-                                    downloadTime = downloadTime
+                                    downloadTime = downloadTime,
+                                    counter = counter,
                                 )
-                                if (!changed) unchangedFeeds.incrementAndGet()
+                                if (newArticles == null) unchangedFeeds.incrementAndGet()
+                                FeedHistory.record(
+                                    context,
+                                    feed.id,
+                                    if (newArticles == null) {
+                                        FeedFetch(Clock.System.now().toEpochMilliseconds(), FetchKind.Unchanged, bytes = counter.bytes)
+                                    } else {
+                                        FeedFetch(Clock.System.now().toEpochMilliseconds(), FetchKind.New, "$newArticles", counter.bytes)
+                                    },
+                                )
 
                                 // Successful sync, update lastSync
                                 feedsRepo.setCurrentlySyncingOn(
@@ -304,13 +343,29 @@ internal suspend fun syncFeeds(
                                 Log.e(TAG, "Failed to sync ${feed.title}: ${feed.url}", e)
                                 // Error, clear syncing flag but don't update lastSync
                                 feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = false)
+                                val code = (e as? ResponseFailure)?.code
+                                val at = Clock.System.now().toEpochMilliseconds()
                                 // Counted rather than only logged. Without this
                                 // a feed that has stopped working is
                                 // indistinguishable from one with nothing to
                                 // say, and the reader finds out by noticing a
                                 // silence months later.
-                                feedsRepo.recordFailure(feed.id)
-                                failedFeeds.incrementAndGet()
+                                //
+                                // But only when the feed can be blamed: with no
+                                // network every feed fails together, and a
+                                // phone that lost signal for an hour used to
+                                // put a failure against each of them.
+                                if (countsAgainstSource(code, whisperHasNetwork(context))) {
+                                    feedsRepo.recordFailure(feed.id)
+                                    failedFeeds.incrementAndGet()
+                                    FeedHistory.record(
+                                        context, feed.id,
+                                        FeedFetch(at, FetchKind.Failed, code?.toString() ?: errorKind(e)),
+                                    )
+                                } else {
+                                    offlineFeeds.incrementAndGet()
+                                    FeedHistory.record(context, feed.id, FeedFetch(at, FetchKind.NoNetwork))
+                                }
                             }
                         }
                     }
@@ -321,6 +376,8 @@ internal suspend fun syncFeeds(
                     due = feedsToFetch.size,
                     failed = failedFeeds.get(),
                     unchanged = unchangedFeeds.get(),
+                    offline = offlineFeeds.get(),
+                    resting = restingFeeds,
                 )
 
             }
@@ -349,12 +406,13 @@ private suspend fun syncFeed(
     filesDir: File,
     maxFeedItemCount: Int,
     forceNetwork: Boolean = false,
-    downloadTime: Instant
-): Boolean {
+    downloadTime: Instant,
+    counter: ByteCounter? = null,
+): Int? {
     Log.d(TAG, "Fetching ${feedSql.title}")
 
     val response: Response =
-        syncHttpClient(context).getResponse(url = feedSql.url, forceNetwork = forceNetwork)
+        syncHttpClient(context).getResponse(url = feedSql.url, forceNetwork = forceNetwork, byteCounter = counter)
 
     // Nothing new: the parse, the article writes and the icon lookup all
     // redo what the last sync did, and the parse is the part that fills the
@@ -368,7 +426,7 @@ private suspend fun syncFeed(
         response.close()
         Log.d(TAG, "Unchanged: ${feedSql.title}")
         cleanUpFeed(articleRepo, feedSql, filesDir)
-        return false
+        return null
     }
 
     val feedParser = FeedParser()
@@ -376,7 +434,7 @@ private suspend fun syncFeed(
         response.body.let { responseBody ->
             when {
                 !response.isSuccessful -> {
-                    throw ResponseFailure("${response.code} when fetching ${feedSql.title}: ${feedSql.url}")
+                    throw ResponseFailure(response.code, "${response.code} when fetching ${feedSql.title}: ${feedSql.url}")
                 }
 
                 else                   -> {
@@ -469,7 +527,9 @@ private suspend fun syncFeed(
     }
 
     cleanUpFeed(articleRepo, syncedFeed, filesDir)
-    return true
+    // New to Whisper, not merely changed: an article seen before keeps the
+    // time it was first synced, and only this run's have this one.
+    return articles.count { (article, _) -> article.firstSyncedTime == downloadTime }
 }
 
 /**
@@ -503,7 +563,7 @@ private suspend fun cleanUpFeed(articleRepo: ArticleRepository, feed: Feed, file
     articleRepo.deleteArticles(ids)
 }
 
-class ResponseFailure(message: String?) : Exception(message)
+class ResponseFailure(val code: Int, message: String?) : Exception(message)
 
 fun List<Pair<Article, String>>.filterBlockedWords(): List<Pair<Article, String>> {
     val blocked = prefs.blockedWords.getValue()

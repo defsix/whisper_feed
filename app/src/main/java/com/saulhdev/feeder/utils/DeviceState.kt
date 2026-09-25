@@ -148,6 +148,17 @@ internal fun bytesSince(before: Long?): Long? {
     return before?.let { after - it }?.takeIf { it >= 0 }
 }
 
+/**
+ * Whether Whisper has a network it may use right now: one Android is not
+ * keeping it off. False offline, in a tunnel, or with the background block
+ * on; true when it cannot be asked, so nothing is excused by accident.
+ */
+internal fun whisperHasNetwork(context: Context): Boolean = runCatching {
+    val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+        ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+}.getOrDefault(true)
+
 /** WorkManager's stop reason, in words. */
 internal fun stopReasonName(reason: Int): String = when (reason) {
     WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"

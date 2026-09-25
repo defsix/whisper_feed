@@ -25,6 +25,10 @@ import com.saulhdev.feeder.utils.bytesSince
 import com.saulhdev.feeder.utils.fullTextOutcome
 import com.saulhdev.feeder.utils.isPermanentHttpFailure
 import com.saulhdev.feeder.utils.receivedBytes
+import com.saulhdev.feeder.utils.backgroundMobileDataBlocked
+import com.saulhdev.feeder.utils.isUnmetered
+import com.saulhdev.feeder.utils.countsAgainstSource
+import com.saulhdev.feeder.utils.whisperHasNetwork
 import com.saulhdev.feeder.utils.shouldPrefetchFullText
 import kotlinx.coroutines.CancellationException
 import com.saulhdev.feeder.utils.blobFullOutputStream
@@ -49,8 +53,10 @@ fun scheduleFullTextParse() {
     val prefs: FeedPreferences by inject(FeedPreferences::class.java)
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(
-            if (prefs.syncOnlyOnWifi.getValue()) NetworkType.UNMETERED
-            else NetworkType.CONNECTED
+            fullTextNetwork(
+                syncOnlyOnWifi = prefs.syncOnlyOnWifi.getValue(),
+                fullTextOnMobile = prefs.fullTextOnMobile.getValue(),
+            )
         )
         .setRequiresBatteryNotLow(true)
         .build()
@@ -78,6 +84,17 @@ class FullTextWorker(
 
     override suspend fun doWork(): Result {
         Log.i("FeederFullText", "Parsing full texts for articles if missing")
+        // Asked again here, not only in the constraint: work enqueued before
+        // the switch changed still carries the old one. And off Wi-Fi with
+        // Android keeping Whisper off mobile data in the background, a run
+        // lasts until Whisper leaves the screen - the report showed seven in
+        // a morning stopped with nothing fetched. The next sync enqueues it
+        // again, so the pages still come on Wi-Fi.
+        if (!isUnmetered(context) &&
+            (!prefs.fullTextOnMobile.getValue() || backgroundMobileDataBlocked(context))
+        ) {
+            return Result.success()
+        }
         val now = System.currentTimeMillis()
         val filesDir = context.filesDir
         // Chosen before anything is fetched, so a run with nothing to do
@@ -100,9 +117,19 @@ class FullTextWorker(
         val receivedBefore = receivedBytes()
         var fetched = 0
         var failed = 0
+        var unreached = 0
         try {
-            for (item in toFetch) {
-                if (prefetchFullArticle(item, okHttpClient, filesDir)) fetched++ else failed++
+            for ((i, item) in toFetch.withIndex()) {
+                when (prefetchFullArticle(context, item, okHttpClient, filesDir)) {
+                    Prefetch.Fetched -> fetched++
+                    Prefetch.Failed -> failed++
+                    // The network is gone, so is every page after this one:
+                    // stop, and leave them all for the next run.
+                    Prefetch.Unreached -> {
+                        unreached = toFetch.size - i
+                        break
+                    }
+                }
             }
         } catch (e: CancellationException) {
             SyncLog.finished(applicationContext, run, "stopped after $fetched")
@@ -111,7 +138,7 @@ class FullTextWorker(
         SyncLog.finished(
             applicationContext,
             run,
-            fullTextOutcome(fetched, failed, bytesSince(receivedBefore)),
+            fullTextOutcome(fetched, failed, bytesSince(receivedBefore), unreached),
         )
         // Success whatever happened to individual pages: each failure is
         // remembered against its article, and a retry of the whole run would
@@ -129,33 +156,50 @@ class FullTextWorker(
  * Opening the article still fetches it on the spot whatever this says; this
  * only stops the background asking.
  */
+private enum class Prefetch { Fetched, Failed, Unreached }
+
 private suspend fun prefetchFullArticle(
+    context: Context,
     item: ArticleIdWithLink,
     okHttpClient: OkHttpClient,
     filesDir: File,
-): Boolean {
+): Prefetch {
     val (ok, error) = parseFullArticle(item, okHttpClient, filesDir)
     // parseFullArticle catches everything, the worker being stopped included;
     // that is not the page failing, and must not count against it.
     if (error is CancellationException) throw error
-    if (!ok) {
-        val permanent = item.link.isNullOrBlank() ||
-            (error is HttpStatusException && isPermanentHttpFailure(error.code))
-        val previous = readAttempts(item.uuid, filesDir) ?: FullTextAttempts.none
-        withContext(Dispatchers.IO) {
-            runCatching {
-                blobFullFailedFile(item.uuid, filesDir)
-                    .writeText(previous.next(System.currentTimeMillis(), permanent).encode())
-            }
+    if (ok) return Prefetch.Fetched
+    // Nor is a connection that could not be made because Whisper had no
+    // network: three of those used to spend an article's three tries in the
+    // time it takes to walk out of Wi-Fi range. See countsAgainstSource.
+    val code = (error as? HttpStatusException)?.code
+    if (item.link != null && !countsAgainstSource(code, whisperHasNetwork(context))) {
+        return Prefetch.Unreached
+    }
+    val permanent = item.link.isNullOrBlank() ||
+        (code != null && isPermanentHttpFailure(code))
+    val previous = readAttempts(item.uuid, filesDir) ?: FullTextAttempts.none
+    withContext(Dispatchers.IO) {
+        runCatching {
+            blobFullFailedFile(item.uuid, filesDir)
+                .writeText(previous.next(System.currentTimeMillis(), permanent).encode())
         }
     }
-    return ok
+    return Prefetch.Failed
 }
 
 private fun readAttempts(uuid: String, filesDir: File): FullTextAttempts? =
     runCatching {
         blobFullFailedFile(uuid, filesDir).takeIf { it.isFile }?.readText()
     }.getOrNull()?.let(FullTextAttempts::decode)
+
+/**
+ * What the advance download waits for: Wi-Fi, unless both switches allow
+ * mobile data. "Sync on Wi-Fi only" keeps everything off mobile data;
+ * [fullTextOnMobile] is the second, narrower question.
+ */
+fun fullTextNetwork(syncOnlyOnWifi: Boolean, fullTextOnMobile: Boolean): NetworkType =
+    if (syncOnlyOnWifi || !fullTextOnMobile) NetworkType.UNMETERED else NetworkType.CONNECTED
 
 /**
  * The client full-article fetches share.
