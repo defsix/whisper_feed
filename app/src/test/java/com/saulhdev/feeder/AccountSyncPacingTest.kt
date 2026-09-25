@@ -33,12 +33,21 @@ class AccountSyncPacingTest {
     @Test
     fun `an account sync fetches the feeds only as hard as it was asked to`() {
         val remote = source("manager/sync/service/GoogleReaderService.kt")
-        assertTrue(remote.contains("syncFeeds(context = context, forceNetwork = forceNetwork)"))
+        assertTrue(remote.contains("syncFeeds(context = context, feedId = ID_ALL, forceNetwork = forceNetwork)"))
         assertFalse(remote.contains("forceNetwork = true"))
         val local = source("manager/sync/service/LocalRssService.kt")
         assertTrue(local.contains("syncFeeds(context = context, forceNetwork = forceNetwork)"))
         val base = source("manager/sync/service/RssService.kt")
         assertTrue("nobody asking means not forced", base.contains("forceNetwork: Boolean = false,\n    ): SyncOutcome"))
+    }
+
+    @Test
+    fun `every way of asking for all feeds reaches the account`() {
+        assertTrue("the schedule", com.saulhdev.feeder.manager.sync.isWholeFeed(com.saulhdev.feeder.data.db.ID_UNSET, ""))
+        assertTrue("the panel and the app", com.saulhdev.feeder.manager.sync.isWholeFeed(com.saulhdev.feeder.data.db.ID_ALL, ""))
+        assertFalse("one feed", com.saulhdev.feeder.manager.sync.isWholeFeed(42L, ""))
+        assertFalse("one tag", com.saulhdev.feeder.manager.sync.isWholeFeed(com.saulhdev.feeder.data.db.ID_ALL, "Tech"))
+        assertTrue(source("manager/sync/FeedSyncer.kt").contains("val wholeFeed = isWholeFeed(feedId, feedTag)"))
     }
 
     @Test

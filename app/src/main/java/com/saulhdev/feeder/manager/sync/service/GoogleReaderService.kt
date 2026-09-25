@@ -27,6 +27,7 @@ import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderIds
 import com.saulhdev.feeder.manager.sync.syncFeeds
+import com.saulhdev.feeder.data.db.ID_ALL
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.utils.isUnmetered
@@ -84,7 +85,10 @@ class GoogleReaderService(
             syncSubscriptions(auth, token)
 
             // Articles still come from the feeds themselves; see the note above.
-            val feeds = syncFeeds(context = context, forceNetwork = forceNetwork)
+            // ID_ALL rather than the default, so a feed fetched in the last
+            // few minutes is left alone unless the reader forced it, as it is
+            // without an account.
+            val feeds = syncFeeds(context = context, feedId = ID_ALL, forceNetwork = forceNetwork)
 
             mapRemoteIds(auth)
             val sent = pushChanges(auth, token)

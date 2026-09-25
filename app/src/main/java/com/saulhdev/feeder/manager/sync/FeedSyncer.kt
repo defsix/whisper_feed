@@ -148,7 +148,11 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             // open: subscriptions added on another device did not arrive, and
             // read state never moved unless somebody went looking for it. The
             // scheduled sync was local-only without saying so.
-            val wholeFeed = feedId == ID_UNSET && feedTag.isEmpty()
+            // Both ways of saying "every feed": the schedule leaves the id
+            // unset, the panel and the app say ID_ALL. Only the first counted,
+            // so a panel or app-opened sync with an account signed in fetched
+            // the feeds and never spoke to the server.
+            val wholeFeed = isWholeFeed(feedId, feedTag)
             val service = dispatcher.current()
 
             result = if (wholeFeed && service !is LocalRssService) {
@@ -355,6 +359,10 @@ fun requestAutomaticFeedSync(
 
     workManager.enqueueUniqueWork(AUTOMATIC_SYNC_WORK, ExistingWorkPolicy.KEEP, workRequest)
 }
+
+/** Whether a sync request is for every feed rather than one feed or one tag. */
+fun isWholeFeed(feedId: Long, feedTag: String): Boolean =
+    (feedId == ID_UNSET || feedId == ID_ALL) && feedTag.isEmpty()
 
 /** The name the panel's automatic sync is enqueued under. See requestAutomaticFeedSync. */
 const val AUTOMATIC_SYNC_WORK = "feeder_sync_automatic"
