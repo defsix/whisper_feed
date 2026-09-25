@@ -232,6 +232,14 @@ class SourcesRepository(db: NeoFeedDb) {
 
     suspend fun getAllSources(): List<Feed> = feedsDao.loadFeeds()
 
+    /**
+     * Every subscription, switched on or off - what a sync server should
+     * hear about. [getAllSources] is the fetching question, enabled only, and
+     * asked of it a server's feed that had merely been switched off here was
+     * added a second time.
+     */
+    suspend fun getAllSubscriptions(): List<Feed> = withContext(jcc) { feedsDao.loadAllFeeds() }
+
     fun getEnabledSources(): Flow<List<Feed>> = feedsDao.getEnabledFeeds()
         .flowOn(cc)
 

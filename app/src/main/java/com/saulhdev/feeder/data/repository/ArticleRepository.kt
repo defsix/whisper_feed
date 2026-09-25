@@ -18,6 +18,7 @@
 
 package com.saulhdev.feeder.data.repository
 
+import com.saulhdev.feeder.data.db.models.MappedArticle
 import com.saulhdev.feeder.data.db.NeoFeedDb
 import com.saulhdev.feeder.data.db.models.Article
 import com.saulhdev.feeder.data.db.models.ArticleIdWithLink
@@ -70,6 +71,19 @@ class ArticleRepository(db: NeoFeedDb) {
      * be talked out of. Set once at startup.
      */
     var onSavedRemoved: ((Long) -> Unit)? = null
+
+    /**
+     * Told when the reader changes whether articles are read, by local id.
+     *
+     * Only for what the reader did: a sync applying the server's read state
+     * goes through [applyServerRead], which says nothing, or every change
+     * would be sent straight back to the server it came from. Set at startup;
+     * see NeoApp, and GoogleReaderState for where the changes wait.
+     */
+    var onReadChanged: ((ids: List<String>, read: Boolean) -> Unit)? = null
+
+    /** The same, for saving and unsaving. See [onReadChanged]. */
+    var onStarredChanged: ((id: String, starred: Boolean) -> Unit)? = null
     private val cc = Dispatchers.IO
     private val jcc = Dispatchers.IO + SupervisorJob()
 
@@ -196,6 +210,7 @@ class ArticleRepository(db: NeoFeedDb) {
         // list that redraws inflate the chart.
         if (articlesDao.markRead(articleId, System.currentTimeMillis()) == 1) {
             tally(seen = 1)
+            onReadChanged?.invoke(listOf(articleId), true)
         }
     }
 
@@ -214,6 +229,7 @@ class ArticleRepository(db: NeoFeedDb) {
         // opened without ever being scrolled past counts once as both.
         if (articlesDao.markOpened(articleId, System.currentTimeMillis()) == 1) {
             tally(seen = 1, opened = 1)
+            onReadChanged?.invoke(listOf(articleId), true)
         }
     }
 
@@ -369,7 +385,10 @@ class ArticleRepository(db: NeoFeedDb) {
         val ids = articlesDao.unreadIds()
         val now = System.currentTimeMillis()
         ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.markReadBatch(it, now) }
-        if (ids.isNotEmpty()) tally(seen = ids.size)
+        if (ids.isNotEmpty()) {
+            tally(seen = ids.size)
+            onReadChanged?.invoke(ids, true)
+        }
         ids
     }
 
@@ -380,7 +399,10 @@ class ArticleRepository(db: NeoFeedDb) {
         // An undo that crosses the turn of an hour takes them out of the wrong
         // bucket; the subtraction floors at zero so that is a rounding error
         // in one bar rather than a negative count.
-        if (ids.isNotEmpty()) untally(seen = ids.size)
+        if (ids.isNotEmpty()) {
+            untally(seen = ids.size)
+            onReadChanged?.invoke(ids, false)
+        }
     }
 
     /** Reads per source since [since], for the reading-habit weight term. */
@@ -503,6 +525,7 @@ class ArticleRepository(db: NeoFeedDb) {
     ) = withContext(jcc) {
         articlesDao.getArticleById(articleId)?.let {
             articlesDao.updateFeedArticle(it.copy(bookmarked = bookmark))
+            if (it.bookmarked != bookmark) onStarredChanged?.invoke(articleId, bookmark)
             // A source removed while it still held saved articles is kept
             // only for their sake. Taking the last one back is what ends
             // that, and is what makes "kept until you un-bookmark it" a fact
@@ -555,30 +578,28 @@ class ArticleRepository(db: NeoFeedDb) {
         articlesDao.remoteIdFor(uuid)
     }
 
+    /** Every article a server has claimed, with its read and saved state. */
+    suspend fun mappedArticles(): List<MappedArticle> = withContext(cc) { articlesDao.loadMapped() }
+
     /**
-     * Applies a server's unread list, in chunks SQLite will accept.
+     * Read state from the server, applied without telling anyone.
      *
-     * `NOT IN (:list)` becomes one bind parameter per id and SQLite stops at
-     * 999 by default, so a thousand unread articles would throw rather than
-     * sync. The read pass has to see the whole list at once to be correct —
-     * chunking a NOT IN would mark an article read for being absent from a
-     * chunk it was never going to be in — so the guard is on the count, and a
-     * list too long to bind is left alone rather than half-applied.
+     * Not tallied: these were read somewhere else, at a time the server did
+     * not say, and the only timestamp available is when this sync ran -
+     * putting fifty of them into that hour would show the scheduler's habits
+     * on the time-of-day chart rather than the reader's. And not passed to
+     * [onReadChanged]: it came from the server, and sending it back would be
+     * an echo.
      */
-    suspend fun markReadFromServer(unreadRemoteIds: List<String>): Int = withContext(cc) {
-        // Deliberately not tallied. These were read somewhere else, at a time
-        // the server did not tell us, and the only timestamp available is when
-        // this sync happened to run. Putting fifty of them into whatever hour
-        // the sync fired would invent an evening reading session out of a
-        // scheduled job — the time-of-day chart would be showing WorkManager's
-        // habits rather than the reader's.
-        if (unreadRemoteIds.size > SQLITE_ARG_LIMIT) 0
-        else articlesDao.markReadExcept(unreadRemoteIds, System.currentTimeMillis())
+    suspend fun applyServerRead(read: List<String>, unread: List<String>) = withContext(cc) {
+        val now = System.currentTimeMillis()
+        read.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.markReadBatch(it, now) }
+        unread.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.unmarkRead(it) }
     }
 
-    /** The other direction, which chunks safely because it is an IN. */
-    suspend fun markUnreadFromServer(unreadRemoteIds: List<String>): Int = withContext(cc) {
-        unreadRemoteIds.chunked(SQLITE_ARG_LIMIT).sumOf { articlesDao.markUnread(it) }
+    /** Stars from the server, as saves. Additions only; see GoogleReaderService. */
+    suspend fun applyServerStars(ids: List<String>) = withContext(cc) {
+        ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.setBookmarked(it) }
     }
 
     /** How many articles a server has claimed. */

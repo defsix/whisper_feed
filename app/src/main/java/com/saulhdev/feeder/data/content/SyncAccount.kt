@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.data.content
 
+import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -43,6 +44,8 @@ import androidx.security.crypto.MasterKey
  * cannot.
  */
 class SyncAccount(context: Context) {
+
+    private val appContext = context.applicationContext
 
     private val prefs = EncryptedSharedPreferences.create(
         context,
@@ -80,6 +83,9 @@ class SyncAccount(context: Context) {
         username = user
         authToken = token
         lastSync = 0L
+        // Another account's memory of which feeds it had would decide what
+        // happens to this one's. Starts empty, which is a first sync.
+        GoogleReaderState.clear(appContext)
     }
 
     /**
@@ -92,6 +98,7 @@ class SyncAccount(context: Context) {
      */
     fun signOut() {
         prefs.edit().clear().apply()
+        GoogleReaderState.clear(appContext)
     }
 
     private companion object {

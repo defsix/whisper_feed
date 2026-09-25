@@ -36,6 +36,7 @@ import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.data.db.models.SourcePace
 import com.saulhdev.feeder.data.db.models.SourceReadCount
 import com.saulhdev.feeder.data.db.models.FeedLink
+import com.saulhdev.feeder.data.db.models.MappedArticle
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
 import kotlinx.coroutines.flow.Flow
@@ -271,6 +272,13 @@ interface FeedArticleDao {
         """
     )
     fun sourcePace(): Flow<List<SourcePace>>
+
+    /** Every article a sync server has claimed; see GoogleReaderService. */
+    @Query("SELECT uuid, remoteId, readAt, bookmarked FROM Article WHERE remoteId IS NOT NULL")
+    suspend fun loadMapped(): List<MappedArticle>
+
+    @Query("UPDATE Article SET bookmarked = 1 WHERE uuid IN (:ids)")
+    suspend fun setBookmarked(ids: List<String>)
 
     /** Every article's source and address, for telling which sources are one feed. */
     @Query("SELECT feedId, link FROM Article WHERE link IS NOT NULL AND link != ''")
@@ -564,30 +572,6 @@ interface FeedArticleDao {
     /** The server's id for one article, for pushing a change back. */
     @Query("SELECT remoteId FROM Article WHERE uuid = :uuid")
     suspend fun remoteIdFor(uuid: String): String?
-
-    /**
-     * Marks read everything the server did not list as unread.
-     *
-     * Scoped to articles that have a remoteId, which is the whole safety
-     * property: an article the server has never claimed is left alone rather
-     * than assumed read because it was absent from a list it was never in.
-     */
-    @Query(
-        """
-    UPDATE Article SET readAt = :now
-    WHERE remoteId IS NOT NULL AND readAt = 0 AND remoteId NOT IN (:unreadRemoteIds)
-    """
-    )
-    suspend fun markReadExcept(unreadRemoteIds: List<String>, now: Long): Int
-
-    /** And back the other way, for something read here and unread there. */
-    @Query(
-        """
-    UPDATE Article SET readAt = 0
-    WHERE remoteId IS NOT NULL AND readAt != 0 AND remoteId IN (:unreadRemoteIds)
-    """
-    )
-    suspend fun markUnread(unreadRemoteIds: List<String>): Int
 
     /**
      * Articles the reader actually read, most recent first.

@@ -139,18 +139,49 @@ class GoogleReaderApi(
         excludeTag: String? = null,
         limit: Int = 1000,
         since: Long? = null,
-    ): List<String> = withContext(Dispatchers.IO) {
+    ): List<String> = itemIdPage(auth, stream, excludeTag, limit, since, null).first
+
+    /** One page of [itemIds], and where the next one starts, if there is one. */
+    private suspend fun itemIdPage(
+        auth: String,
+        stream: String,
+        excludeTag: String?,
+        limit: Int,
+        since: Long?,
+        continuation: String?,
+    ): Pair<List<String>, String?> = withContext(Dispatchers.IO) {
         val params = buildList {
             add("s" to stream)
             add("n" to limit.toString())
             add("output" to "json")
             excludeTag?.let { add("xt" to it) }
             since?.let { add("ot" to (it / 1000).toString()) }
+            continuation?.let { add("c" to it) }
         }
         val json = getString(auth, "reader/api/0/stream/items/ids", *params.toTypedArray())
-        itemRefsAdapter.fromJson(json)?.itemRefs.orEmpty()
-            .mapNotNull { GoogleReaderIds.itemId(it.id) }
+        val page = itemRefsAdapter.fromJson(json)
+        page?.itemRefs.orEmpty().mapNotNull { GoogleReaderIds.itemId(it.id) } to
+            page?.continuation?.takeIf { it.isNotBlank() }
     }
+
+    /**
+     * Every id in a stream, page by page, and whether that was all of them.
+     *
+     * One page of a thousand was all this ever asked for, and an account
+     * with more unread than that - any account that has imported a hundred
+     * feeds - got the first thousand and took them for the whole answer.
+     * [Paged.complete] is false when the pages ran out before the server did,
+     * and anything that reads meaning into what is *missing* from the list
+     * has to check it.
+     */
+    suspend fun allItemIds(
+        auth: String,
+        stream: String = GoogleReaderIds.STREAM_READING_LIST,
+        excludeTag: String? = null,
+        since: Long? = null,
+        pageSize: Int = 10_000,
+        maxPages: Int = 10,
+    ): Paged<String> = collectPages(maxPages) { c -> itemIdPage(auth, stream, excludeTag, pageSize, since, c) }
 
     /**
      * The items in a stream, with the addresses they point at.
@@ -171,19 +202,42 @@ class GoogleReaderApi(
         stream: String = GoogleReaderIds.STREAM_READING_LIST,
         limit: Int = 1000,
         since: Long? = null,
-    ): List<StreamItem> = withContext(Dispatchers.IO) {
+    ): List<StreamItem> = contentsPage(auth, stream, limit, since, null).first
+
+    private suspend fun contentsPage(
+        auth: String,
+        stream: String,
+        limit: Int,
+        since: Long?,
+        continuation: String?,
+    ): Pair<List<StreamItem>, String?> = withContext(Dispatchers.IO) {
         val params = buildList {
             add("n" to limit.toString())
             add("output" to "json")
             since?.let { add("ot" to (it / 1000).toString()) }
+            continuation?.let { add("c" to it) }
         }
         val json = getString(
             auth,
             "reader/api/0/stream/contents/" + stream,
             *params.toTypedArray(),
         )
-        streamContentsAdapter.fromJson(json)?.items.orEmpty()
+        val page = streamContentsAdapter.fromJson(json)
+        page?.items.orEmpty() to page?.continuation?.takeIf { it.isNotBlank() }
     }
+
+    /**
+     * Every item in a stream since [since], page by page. Heavier than the
+     * ids - each item carries its article - so [since] is what keeps it
+     * small: only what arrived since the last time articles were matched.
+     */
+    suspend fun allStreamContents(
+        auth: String,
+        stream: String = GoogleReaderIds.STREAM_READING_LIST,
+        since: Long? = null,
+        pageSize: Int = 1000,
+        maxPages: Int = 20,
+    ): Paged<StreamItem> = collectPages(maxPages) { c -> contentsPage(auth, stream, pageSize, since, c) }
 
     /** Marks items read or unread, starred or not, in one call per batch. */
     suspend fun editTag(
@@ -318,13 +372,37 @@ data class Subscription(
 data class SubscriptionCategory(val id: String = "", val label: String? = null)
 
 @JsonClass(generateAdapter = true)
-data class ItemRefList(val itemRefs: List<ItemRef> = emptyList())
+data class ItemRefList(val itemRefs: List<ItemRef> = emptyList(), val continuation: String? = null)
 
 @JsonClass(generateAdapter = true)
 data class ItemRef(val id: String = "")
 
 @JsonClass(generateAdapter = true)
-data class StreamContents(val items: List<StreamItem> = emptyList())
+data class StreamContents(val items: List<StreamItem> = emptyList(), val continuation: String? = null)
+
+/** Items from every page asked for, and whether that was all the server had. */
+data class Paged<T>(val items: List<T>, val complete: Boolean)
+
+/**
+ * Follows continuations until the server has no more or [maxPages] have been
+ * read. A continuation that repeats is the end too: a server that hands back
+ * the same one would otherwise be asked for the same page until the cap.
+ */
+suspend fun <T> collectPages(
+    maxPages: Int,
+    page: suspend (continuation: String?) -> Pair<List<T>, String?>,
+): Paged<T> {
+    val items = mutableListOf<T>()
+    var continuation: String? = null
+    val seen = HashSet<String>()
+    repeat(maxPages) {
+        val (got, next) = page(continuation)
+        items += got
+        if (next == null || !seen.add(next)) return Paged(items, complete = true)
+        continuation = next
+    }
+    return Paged(items, complete = false)
+}
 
 @JsonClass(generateAdapter = true)
 data class StreamItem(

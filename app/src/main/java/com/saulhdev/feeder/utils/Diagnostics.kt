@@ -17,6 +17,8 @@
  */
 package com.saulhdev.feeder.utils
 
+import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.data.content.SyncAccount
 import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import androidx.work.WorkInfo
 import androidx.core.content.ContextCompat
@@ -361,7 +363,29 @@ object Diagnostics : KoinComponent {
             appendLine("Last sync:    never")
         }
         appendLine("Problems:     " + SyncWatchdog.describe(context))
+        appendLine("Account:      " + accountLine(context))
     }
+
+    /**
+     * Whether an account is signed in, and where its sync stands. Counts and
+     * times only: the server's address is somebody's own machine, and never
+     * goes in a file that is sent to a stranger.
+     */
+    private suspend fun accountLine(context: Context): String = runCatching {
+        if (!get<SyncAccount>().isSignedIn) return@runCatching "none"
+        val waiting = GoogleReaderState.outbox(context)
+        val mapped = get<ArticleRepository>().mappedArticles().size
+        val mappedAt = GoogleReaderState.mappedAt(context)
+        val clock = SimpleDateFormat("MM-dd HH:mm", Locale.US)
+        listOf(
+            "signed in",
+            "${waiting.pending.size} changes waiting (${waiting.read.size} read, ${waiting.unread.size} unread, " +
+                "${waiting.star.size} saved, ${waiting.unstar.size} unsaved)",
+            "$mapped articles matched",
+            if (mappedAt > 0) "last matched ${clock.format(Date(mappedAt))}" else "not matched yet",
+            "${GoogleReaderState.everOnServer(context).size} feeds seen on the server",
+        ).joinToString(", ")
+    }.getOrDefault("unknown")
 
     private fun yesNo(value: Boolean) = if (value) "yes" else "no"
 

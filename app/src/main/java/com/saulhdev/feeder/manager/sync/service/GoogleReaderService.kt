@@ -28,6 +28,14 @@ import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderIds
 import com.saulhdev.feeder.manager.sync.syncFeeds
 import com.saulhdev.feeder.utils.isSameFeedUrl
+import com.saulhdev.feeder.utils.normalizeFeedUrl
+import com.saulhdev.feeder.utils.isUnmetered
+import com.saulhdev.feeder.utils.getSyncDays
+import com.saulhdev.feeder.manager.sync.prefs
+import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.manager.sync.greader.planSubscriptions
+import com.saulhdev.feeder.manager.sync.greader.readChanges
+import com.saulhdev.feeder.manager.sync.greader.rememberAfter
 import java.net.URL
 
 /**
@@ -65,17 +73,27 @@ class GoogleReaderService(
         if (auth.isEmpty()) return SyncOutcome.SignedOut
 
         return try {
-            val remote = api.subscriptions(auth)
-            reconcileSubscriptions(remote)
+            // The order is the design. Feeds first, both ways, so the
+            // articles fetched next come from the right list. Then the
+            // matching, which says which of those articles the server knows.
+            // Then what changed here goes up, before anything comes down: a
+            // read made in Whisper and not yet sent would otherwise be undone
+            // by the server's older answer, which is what happened to every
+            // read in the first version of this.
+            val token = api.writeToken(auth)
+            syncSubscriptions(auth, token)
 
             // Articles still come from the feeds themselves; see the note above.
             val feeds = syncFeeds(context = context, forceNetwork = forceNetwork)
 
-            // Learn which of our articles the server knows about, then apply
-            // what it says about them. The order matters: read state is
-            // useless until the mapping exists.
             mapRemoteIds(auth)
-            pullReadState(auth)
+            val sent = pushChanges(auth, token)
+            if (sent) {
+                pullReadState(auth)
+                pullStars(auth)
+            } else {
+                Log.w(TAG, "Changes not sent; the server's read state waits for the next sync")
+            }
 
             account.lastSync = System.currentTimeMillis()
             SyncOutcome.Success(feeds = feeds)
@@ -90,42 +108,97 @@ class GoogleReaderService(
     }
 
     /**
-     * Makes the local subscription list match the server's.
+     * Makes the two subscription lists agree, in both directions.
      *
-     * Additions and category changes are applied. **Removals are not**, and
-     * that is the one place this deliberately does less than a full sync would:
+     * See [planSubscriptions] for how each side's additions and removals are
+     * told apart. Removals on the server are still never applied here:
      * deleting somebody's feeds because a server did not mention them is
-     * unrecoverable, and the failure modes that would trigger it — a partial
-     * response, a server mid-migration, an account that is not the one they
-     * thought — are exactly the ones a first version will meet. Feeds the
-     * server does not know about are left alone and can be removed by hand.
+     * unrecoverable, and a partial response, a server mid-migration or the
+     * wrong account are exactly what a first version meets. A feed removed
+     * in Whisper is removed from the server, because that is what the reader
+     * did, here, on purpose.
+     *
+     * Folders from the server win for a feed both sides have: they are what
+     * the reader set on whichever device they set it.
      */
-    private suspend fun reconcileSubscriptions(remote: List<com.saulhdev.feeder.manager.sync.greader.Subscription>) {
-        val local = sources.getAllSources()
+    private suspend fun syncSubscriptions(auth: String, token: String?) {
+        val remote = api.subscriptions(auth)
+        val local = sources.getAllSubscriptions()
+        val localByKey = local.associateBy { normalizeFeedUrl(it.url) }
+        val remoteByKey = remote.mapNotNull { sub ->
+            runCatching { URL(sub.feedUrl) }.getOrNull()?.let { normalizeFeedUrl(it) to sub }
+        }.toMap()
 
+        val lastLocal = GoogleReaderState.lastLocal(context)
+        val everOnServer = GoogleReaderState.everOnServer(context)
+        val plan = planSubscriptions(localByKey.keys, remoteByKey.keys, lastLocal, everOnServer)
+
+        plan.addLocal.forEach { key ->
+            val sub = remoteByKey.getValue(key)
+            val url = URL(sub.feedUrl)
+            sources.insertSource(
+                Feed(
+                    title = sub.title.ifBlank { url.host },
+                    url = url,
+                    tag = sub.folders.joinToString(","),
+                    isEnabled = true,
+                )
+            )
+        }
+
+        // Only with a write token: without one every edit would be refused,
+        // and the plan is simply made again next time.
+        val subscribed = mutableSetOf<String>()
+        val unsubscribed = mutableSetOf<String>()
+        if (token != null) {
+            plan.subscribe.forEach { key ->
+                val feed = localByKey.getValue(key)
+                val folder = feed.tags.firstOrNull { it.isNotBlank() }
+                if (api.editSubscription(auth, token, "subscribe", feed.url.toString(), feed.title, folder)) {
+                    subscribed += key
+                }
+            }
+            plan.unsubscribe.forEach { key ->
+                // By the server's own id for it, which every server accepts.
+                val sub = remoteByKey.getValue(key)
+                if (api.editSubscription(auth, token, "unsubscribe", sub.id.ifBlank { sub.feedUrl })) {
+                    unsubscribed += key
+                }
+            }
+        }
+        if (plan.subscribe.isNotEmpty() || plan.unsubscribe.isNotEmpty() || plan.addLocal.isNotEmpty()) {
+            Log.i(
+                TAG,
+                "Feeds: ${subscribed.size} of ${plan.subscribe.size} sent, " +
+                    "${unsubscribed.size} of ${plan.unsubscribe.size} removed, ${plan.addLocal.size} added here"
+            )
+        }
+
+        // Feeds both sides have: the server's folders.
         remote.forEach { sub ->
             val url = runCatching { URL(sub.feedUrl) }.getOrNull() ?: return@forEach
-            val existing = local.firstOrNull { isSameFeedUrl(it.url, url) }
+            val existing = local.firstOrNull { isSameFeedUrl(it.url, url) } ?: return@forEach
             val tag = sub.folders.joinToString(",")
-
-            if (existing == null) {
-                sources.insertSource(
-                    Feed(
-                        title = sub.title.ifBlank { url.host },
-                        url = url,
-                        tag = tag,
-                        isEnabled = true,
-                    )
-                )
-            } else if (existing.tag != tag && tag.isNotEmpty()) {
-                // The server's folders win for a feed it knows about: they are
-                // what the reader set on whichever device they set it.
+            if (existing.tag != tag && tag.isNotEmpty()) {
                 sources.updateSource(existing.copy(tag = tag))
             } else if (tag.isEmpty() && existing.tags.isNotEmpty() && existing.tags.all(::isCatchAllFolder)) {
                 // Taken as a category by an earlier version; see isCatchAllFolder.
                 sources.updateSource(existing.copy(tag = ""))
             }
         }
+
+        // What is remembered is what was done, so a subscribe that failed is
+        // tried again next time rather than taken for a feed the server dropped.
+        val (nextLocal, nextEver) = rememberAfter(
+            plan = plan,
+            local = localByKey.keys,
+            server = remoteByKey.keys,
+            lastLocal = lastLocal,
+            everOnServer = everOnServer,
+            subscribed = subscribed,
+            unsubscribed = unsubscribed,
+        )
+        GoogleReaderState.rememberSubscriptions(context, nextLocal, nextEver)
     }
 
     /**
@@ -140,54 +213,142 @@ class GoogleReaderService(
      * Matched on the article's address, which is the only thing both sides
      * know. Not the guid: that is set by the publisher and has nothing to do
      * with the id the server assigned.
+     *
+     * Only what arrived since the last match, with an hour's overlap: each
+     * item comes with its whole article, and asking for the lot every half
+     * hour would download the server's copy of everything, every time.
+     *
+     * An article newly matched keeps what the reader did here: read in
+     * Whisper before the server knew it, it is sent up as read, rather than
+     * being marked unread by a server that has simply not heard yet. The same
+     * for saved.
      */
     private suspend fun mapRemoteIds(auth: String) {
-        val items = api.streamContents(auth)
+        val startedAt = System.currentTimeMillis()
+        val before = articles.mappedArticles().mapTo(HashSet()) { it.uuid }
+        val last = GoogleReaderState.mappedAt(context)
+        // The first match brings the server's copy of every article in the
+        // window, which after signing in with a hundred feeds is tens of
+        // megabytes. It waits for Wi-Fi; after that each match is the last
+        // half hour's worth, and small.
+        if (last == 0L && !isUnmetered(context)) {
+            Log.i(TAG, "First match of articles waits for Wi-Fi")
+            return
+        }
+        // As far back as Whisper keeps articles, and a day more: anything
+        // older has already gone from here, and there is nothing to match.
+        val since = if (last > 0) last - MAP_OVERLAP_MS else startedAt - (getSyncDays(prefs) + 1) * DAY_MS
+        val page = api.allStreamContents(auth, since = since)
         var attached = 0
-        items.forEach { item ->
+        page.items.forEach { item ->
             val (link, remoteId) = item.mapping() ?: return@forEach
             attached += articles.attachRemoteId(link, remoteId)
         }
-        Log.i(TAG, "Mapped $attached of ${items.size} server items to local articles")
+        val newlyMapped = articles.mappedArticles().filter { it.uuid !in before }
+        GoogleReaderState.updateOutbox(context) { outbox ->
+            outbox
+                .withRead(newlyMapped.filter { it.readAt != 0L && it.uuid !in outbox.unread }.map { it.uuid }, true)
+                .let { o ->
+                    newlyMapped.filter { it.bookmarked && it.uuid !in o.unstar }
+                        .fold(o) { acc, a -> acc.withStar(a.uuid, true) }
+                }
+        }
+        if (page.complete) GoogleReaderState.setMappedAt(context, startedAt)
+        Log.i(TAG, "Mapped $attached of ${page.items.size} server items, ${newlyMapped.size} newly")
+    }
+
+    /**
+     * Sends what the reader changed here: reads, unreads, saves, unsaves.
+     *
+     * By the server's id, so only for articles it has claimed. An article it
+     * has not claimed by now has nothing to be sent to - its feed is not on
+     * the server - and is let go rather than kept for ever.
+     *
+     * False if anything failed, and then nothing is let go: it all waits for
+     * the next sync, and the server's read state is not applied this time,
+     * because it would be older than what is still waiting to go.
+     */
+    private suspend fun pushChanges(auth: String, token: String?): Boolean {
+        val outbox = GoogleReaderState.outbox(context)
+        if (outbox.isEmpty) return true
+        if (token == null) return false
+        val remoteIds = articles.mappedArticles().associate { it.uuid to it.remoteId }
+        val batches = listOf(
+            Triple(outbox.read, GoogleReaderIds.TAG_READ, true),
+            Triple(outbox.unread, GoogleReaderIds.TAG_READ, false),
+            Triple(outbox.star, GoogleReaderIds.TAG_STARRED, true),
+            Triple(outbox.unstar, GoogleReaderIds.TAG_STARRED, false),
+        )
+        var ok = true
+        batches.forEach { (ids, tag, add) ->
+            ids.mapNotNull(remoteIds::get).chunked(EDIT_BATCH).forEach { chunk ->
+                val done = api.editTag(
+                    auth = auth,
+                    token = token,
+                    itemIds = chunk,
+                    addTag = if (add) tag else null,
+                    removeTag = if (add) null else tag,
+                )
+                if (!done) ok = false
+            }
+        }
+        if (ok) {
+            // Everything in the outbox as it was read above is done with:
+            // sent, or never sendable. Anything the reader did during the
+            // sending is still there.
+            GoogleReaderState.updateOutbox(context) { it.without(outbox) }
+        }
+        Log.i(TAG, "Sent ${outbox.pending.count { it in remoteIds }} changes; ${if (ok) "all accepted" else "some refused, kept"}")
+        return ok
     }
 
     /**
      * Brings read state down from the server and applies it.
      *
-     * Asks for the unread ids rather than the read ones, because unread is the
-     * smaller set by a wide margin on any real account — a year of reading is
-     * tens of thousands of read articles and a few dozen unread ones.
+     * **Only articles the server has claimed are touched.** An article with
+     * no `remoteId` is one the server has never mentioned, so its absence from
+     * a list of unread ids means nothing about whether it has been read.
      *
-     * **Only articles the server has claimed are touched.** That is the whole
-     * safety property of this, and the reason it can be applied at all: an
-     * article with no `remoteId` is one the server has never mentioned, so its
-     * absence from a list of unread ids means nothing about whether it has
-     * been read. Marking those read is exactly the mistake this used to avoid
-     * by throwing the answer away.
+     * The unread list is read page by page, and only a *complete* one is
+     * allowed to mark anything read: "not in the list" means read only when
+     * the list is all of it. An incomplete one still marks unread what it
+     * does name. An empty one changes nothing - everything read, or a server
+     * that answered oddly, and the second is the one to guard against.
+     *
+     * Nothing still waiting in the outbox is touched: what the reader did
+     * here is newer than anything the server can say.
      */
     private suspend fun pullReadState(auth: String) {
-        val unread = api.itemIds(
+        val page = api.allItemIds(
             auth = auth,
             stream = GoogleReaderIds.STREAM_READING_LIST,
             excludeTag = GoogleReaderIds.TAG_READ,
-        ).toSet()
-
-        if (unread.isEmpty()) {
-            // Everything read, or a server that answered oddly. Applying a
-            // blanket "mark everything read" on an empty response is precisely
-            // the failure a first version meets, so it is left alone.
-            Log.i(TAG, "Server reported nothing unread; leaving read state alone")
-            return
-        }
-
-        val ids = unread.toList()
-        val markedRead = articles.markReadFromServer(ids)
-        val markedUnread = articles.markUnreadFromServer(ids)
+        )
+        val unread = page.items.toHashSet()
+        val waiting = GoogleReaderState.outbox(context).pending
+        val change = readChanges(articles.mappedArticles(), unread, page.complete, waiting)
+        articles.applyServerRead(read = change.first, unread = change.second)
         Log.i(
             TAG,
-            "Read state applied: $markedRead read, $markedUnread unread, " +
-                "of ${articles.countWithRemoteId()} mapped articles"
+            "Read state applied: ${change.first.size} read, ${change.second.size} unread, " +
+                "${unread.size} unread on the server${if (page.complete) "" else " (partial)"}"
         )
+    }
+
+    /**
+     * Stars from the server, as saves here. Additions only: an empty or
+     * partial list must not unsave anything, and a save is the one thing the
+     * reader would least forgive losing. Unsaving here does reach the server.
+     */
+    private suspend fun pullStars(auth: String) {
+        val starred = api.allItemIds(auth = auth, stream = GoogleReaderIds.STREAM_STARRED).items.toHashSet()
+        if (starred.isEmpty()) return
+        val waiting = GoogleReaderState.outbox(context).pending
+        val toSave = articles.mappedArticles()
+            .filter { !it.bookmarked && it.remoteId in starred && it.uuid !in waiting }
+            .map { it.uuid }
+        if (toSave.isNotEmpty()) articles.applyServerStars(toSave)
+        Log.i(TAG, "Stars applied: ${toSave.size} saved")
     }
 
     override suspend fun setRead(articleId: String, read: Boolean) {
@@ -233,5 +394,13 @@ class GoogleReaderService(
 
     private companion object {
         const val TAG = "GoogleReaderSync"
+
+        /** Items per edit-tag call; the protocol repeats a parameter per item. */
+        const val EDIT_BATCH = 100
+
+        /** Overlap with the last match, for items the server crawled late. */
+        const val MAP_OVERLAP_MS = 60 * 60_000L
+
+        const val DAY_MS = 24 * 60 * 60_000L
     }
 }

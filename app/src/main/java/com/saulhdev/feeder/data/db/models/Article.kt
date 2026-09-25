@@ -367,6 +367,14 @@ data class DayCount(val day: String, val seen: Int, val opened: Int)
  * with a source that has published twice live in Kotlin, where they can be
  * argued with and tested, rather than inside a query.
  */
+/** An article a sync server has claimed, and what Whisper holds about it. */
+data class MappedArticle(
+    val uuid: String,
+    val remoteId: String,
+    val readAt: Long,
+    val bookmarked: Boolean,
+)
+
 /** Which source an article came through, and its address. See sameArticleGroups. */
 data class FeedLink(
     val feedId: Long,

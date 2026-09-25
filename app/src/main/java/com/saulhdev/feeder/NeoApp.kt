@@ -1,5 +1,7 @@
 package com.saulhdev.feeder
 
+import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.data.content.SyncAccount
 import android.app.Activity
 import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Bundle
@@ -170,6 +172,7 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         wm.pruneWork()
         carryOverHiddenSources()
         reapRemovedSourcesOnUnsave()
+        queueChangesForAccount()
         onAppStarted()
     }
 
@@ -192,6 +195,24 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
      * Wired here because articles cannot hold a reference to sources without
      * making a cycle of a dependency that already runs the other way.
      */
+    /**
+     * Keeps what the reader reads and saves, for the account's next sync.
+     *
+     * Only while an account is signed in. Without one there is nobody to
+     * tell, and a queue kept anyway would arrive at whichever account was
+     * signed into next as a pile of changes it never asked for.
+     */
+    private fun queueChangesForAccount() {
+        val articles: ArticleRepository by inject(ArticleRepository::class.java)
+        val account: SyncAccount by inject(SyncAccount::class.java)
+        articles.onReadChanged = { ids, read ->
+            if (account.isSignedIn) GoogleReaderState.updateOutbox(this) { it.withRead(ids, read) }
+        }
+        articles.onStarredChanged = { id, starred ->
+            if (account.isSignedIn) GoogleReaderState.updateOutbox(this) { it.withStar(id, starred) }
+        }
+    }
+
     private fun reapRemovedSourcesOnUnsave() {
         val articles: ArticleRepository by inject(ArticleRepository::class.java)
         val sources: SourcesRepository by inject(SourcesRepository::class.java)
