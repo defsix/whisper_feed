@@ -2,11 +2,24 @@ package com.saulhdev.feeder.data.db.models
 
 import com.saulhdev.feeder.utils.usableImageUrl
 import android.graphics.Color
+import androidx.compose.runtime.Immutable
 import androidx.room.Embedded
 import androidx.room.Relation
 import com.saulhdev.feeder.data.entity.FeedCategory
 import com.saulhdev.feeder.manager.models.StoryCardContent
 
+/**
+ * An article with its source, as the feed shows it.
+ *
+ * Immutable to Compose, which it is in fact: every one comes out of a query
+ * and nothing writes to it after. Unannotated, the list and URL fields inside
+ * made it "unstable", and an unstable card argument is compared by identity.
+ * Every reload builds new objects, so every card on screen was redrawn on
+ * every reload, including the ones whose article had not changed at all.
+ * Stable, they are compared by value, and only a card whose article did change
+ * is drawn again.
+ */
+@Immutable
 data class FeedItem(
     @Embedded
     val article: Article,

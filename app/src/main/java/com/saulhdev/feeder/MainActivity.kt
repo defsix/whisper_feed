@@ -39,6 +39,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.utils.FrameWatch
 import com.saulhdev.feeder.manager.sync.FeedSyncer
 import com.saulhdev.feeder.manager.sync.SyncWatchdog
 import com.saulhdev.feeder.ui.navigation.NAV_BASE
@@ -93,6 +94,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             prefs.volumeKeyScroll.get().collect { volumeKeyScroll = it }
         }
+        // Frame times for the diagnostics trace, while Debugging is on.
+        lifecycleScope.launch { FrameWatch.watch(window, prefs.debugging.get()) }
         // A deep link — from the launcher overlay, or a notification — carries
         // data; a tap on the app icon does not. Read here rather than in
         // composition, where a later onNewIntent could change the answer

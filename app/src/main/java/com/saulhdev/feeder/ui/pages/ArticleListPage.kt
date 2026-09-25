@@ -124,11 +124,11 @@ import com.saulhdev.feeder.ui.overlay.rememberDimRead
 import com.saulhdev.feeder.ui.overlay.rememberSkippedSources
 import com.saulhdev.feeder.ui.theme.reducedMotion
 import com.saulhdev.feeder.ui.overlay.feedItems
-import com.saulhdev.feeder.ui.overlay.rememberStoryClusters
+import com.saulhdev.feeder.ui.overlay.rememberFeedFrame
+import com.saulhdev.feeder.ui.overlay.feedContentType
 import com.saulhdev.feeder.ui.overlay.ActiveFilterBar
 import com.saulhdev.feeder.ui.overlay.AnchorFeedOnFocusChange
 import com.saulhdev.feeder.ui.overlay.FEED_HEADER_KEY
-import com.saulhdev.feeder.ui.overlay.rememberFeedEmphasis
 import com.saulhdev.feeder.utils.BrowserReadTimer
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
@@ -263,12 +263,18 @@ fun ArticleListPage(
         }
     }
 
+    // What is drawn: the articles with their sizes and stories, built off the
+    // main thread and never swapped in under a moving finger. See FeedFrame.
+    val frame = rememberFeedFrame(state.articles, state.focusedSource) {
+        listState.isScrollInProgress || gridState.isScrollInProgress
+    }
+
     // Tapping a source narrows the feed to it, and backing out widens it
     // again; both land on the article the tap came from. See FocusAnchor.
     AnchorFeedOnFocusChange(
-        appliedFocus = state.focusedSource,
+        appliedFocus = frame.focus,
         anchorId = focusAnchor,
-        articles = state.articles,
+        articles = frame.articles,
         isGrid = isGridLayout,
         listState = listState,
         gridState = gridState,
@@ -564,9 +570,9 @@ fun ArticleListPage(
                                 else          -> {
                                     val dimRead = rememberDimRead()
                     val skipped = rememberSkippedSources()
-                                    val clusters = rememberStoryClusters(state.articles)
+                                    val clusters = frame.clusters
                                     TrackReading(
-                                        articles = state.articles,
+                                        articles = frame.articles,
                                         isGrid = feedLayoutIsGrid(layout),
                                         listState = listState,
                                         gridState = gridState,
@@ -621,12 +627,12 @@ fun ArticleListPage(
                                     }
 
                                     // One decision for every layout, made once.
-                                    val emphasis = rememberFeedEmphasis(state.articles)
+                                    val emphasis = frame.emphasis
                                     if (searching && searchQuery.isNotBlank() &&
-                                        state.articles.isEmpty()
+                                        frame.articles.isEmpty()
                                     ) {
                                         SearchEmptyState(searchQuery)
-                                    } else if (state.articles.isEmpty()) {
+                                    } else if (frame.articles.isEmpty()) {
                                         // Nothing to scroll, so the header has
                                         // nowhere to scroll away to.
                                         header()
@@ -657,8 +663,11 @@ fun ArticleListPage(
                                                     span = StaggeredGridItemSpan.FullLine,
                                                 ) { header() }
                                                 itemsIndexed(
-                                                    state.articles,
+                                                    frame.articles,
                                                     key = { _, item -> item.id },
+                                                    contentType = { index, item ->
+                                                        feedContentType(index, item, layout, emphasis)
+                                                    },
                                                     span = { index, _ ->
                                                         if (emphasis.getOrNull(index) ==
                                                             FeedEmphasis.Large
@@ -710,7 +719,13 @@ fun ArticleListPage(
                                             contentPadding = FEED_PADDING,
                                             content = {
                                                 item(key = FEED_HEADER_KEY) { header() }
-                                                feedItems(state.articles, animate) { index, item ->
+                                                feedItems(
+                                                    frame.articles,
+                                                    animate,
+                                                    contentType = { index, item ->
+                                                        feedContentType(index, item, layout, emphasis)
+                                                    },
+                                                ) { index, item ->
                                                     article(
                                                         index,
                                                         item,

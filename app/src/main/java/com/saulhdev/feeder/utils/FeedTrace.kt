@@ -106,6 +106,24 @@ object FeedTrace {
     /** Images that never arrived, by why. */
     private val failures = ConcurrentHashMap<String, AtomicInteger>()
 
+    /**
+     * Frames drawn, the ones slow enough to see, and the slowest of them.
+     *
+     * The one number here that is what the reader experiences rather than a
+     * cause of it; see [FrameWatch].
+     */
+    private val frames = AtomicInteger()
+    private val slowFrames = AtomicInteger()
+    private val worstFrameNs = AtomicLong()
+
+    fun frame(durationNs: Long, intervalNs: Long) {
+        frames.incrementAndGet()
+        if (isSlowFrame(durationNs, intervalNs)) {
+            slowFrames.incrementAndGet()
+            worstFrameNs.accumulateAndGet(durationNs, ::maxOf)
+        }
+    }
+
     fun invalidated() {
         invalidations.incrementAndGet()
     }
@@ -246,7 +264,10 @@ object FeedTrace {
         val fr = flushedRows.getAndSet(0)
         val asks = dwellAsks.getAndSet(0)
         val images = drainImages()
-        if (inv == 0 && e == 0 && p == 0 && f == 0 && asks == 0 && images == null) return null
+        val drawn = frames.getAndSet(0)
+        val slow = slowFrames.getAndSet(0)
+        val worst = worstFrameNs.getAndSet(0)
+        if (inv == 0 && e == 0 && p == 0 && f == 0 && asks == 0 && images == null && drawn == 0) return null
 
         val seconds = windowMs / 1000.0
         val perSecond = if (seconds > 0) e / seconds else 0.0
@@ -263,6 +284,7 @@ object FeedTrace {
             append(", dwell %d asks -> %d writes".format(asks, f))
             if (f > 0) append(" (%d rows)".format(fr))
             if (images != null) append(", ").append(images)
+            if (drawn > 0) append(", ").append(frameSummary(drawn, slow, worst))
         }
     }
 
@@ -311,6 +333,11 @@ object FeedTrace {
         drain(1L)
     }
 }
+
+/** "frames 600, slow 3 (worst 48ms)", or "frames 600, none slow". */
+internal fun frameSummary(frames: Int, slow: Int, worstNs: Long): String =
+    if (slow == 0) "frames %d, none slow".format(frames)
+    else "frames %d, slow %d (worst %dms)".format(frames, slow, worstNs / 1_000_000)
 
 /** How often [FeedTrace] writes a line while Debugging is on. */
 const val FEED_TRACE_WINDOW_MS = 5_000L

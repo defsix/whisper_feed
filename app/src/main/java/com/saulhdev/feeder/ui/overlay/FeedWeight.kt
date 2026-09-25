@@ -670,44 +670,9 @@ fun parseAffinity(raw: Set<String>): Map<String, Int> = raw.mapNotNull { entry -
 }.toMap()
 
 /**
- * The sizes for the articles on screen, recomputed only when they change.
- *
- * Both surfaces need the same answer and neither should be threading an
- * affinity map through its own parameter list to get it, so the preference is
- * read here.
- */
-@Composable
-fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
-    val prefs: FeedPreferences = koinInject()
-    val raw by prefs.sourceAffinity.get().collectAsState(initial = emptySet())
-    val affinity = remember(raw) { parseAffinity(raw) }
-    val habit = rememberReadingHabits()
-    val clusters = rememberStoryClusters(articles)
-    val pace = rememberSourcePace()
-
-    // An article keeps the size it was first given. Without this the feed
-    // reflows under the reader's finger: marking an article read subtracts
-    // from its weight, so scrolling past one with read-on-scroll enabled
-    // shrank it from a card to a row and shunted everything below it up the
-    // screen. Every article did it in turn, so the whole list jumped
-    // continuously while being scrolled.
-    //
-    // Read state was the visible cause but not the only one. Marking read also
-    // rewrites the reading-habit counts and re-runs the clustering, so all
-    // three inputs change identity at once and keying a cache on any of them
-    // would defeat it.
-    return remember(articles, affinity, habit, clusters, pace) {
-        FeedEmphasisMemory.settle(
-            articles,
-            feedEmphasisFor(articles, affinity, System.currentTimeMillis(), habit, clusters, pace),
-        )
-    }
-}
-
-/**
  * The size each article has already been given, kept beyond any one screen.
  *
- * This was a `remember` inside [rememberFeedEmphasis], which fixed the overlay
+ * This was a `remember` inside the sizing composable, which fixed the overlay
  * and left the app broken in a way that looked unrelated. The overlay's feed
  * composes once and stays composed — opening an article launches a separate
  * activity over the top of it. The app's feed is the list pane of a
@@ -721,10 +686,10 @@ fun rememberFeedEmphasis(articles: List<FeedItem>): List<FeedEmphasis> {
  * Held here, outside composition, so both surfaces answer the same way and
  * neither depends on how long its own screen happens to live.
  *
- * Synchronised rather than concurrent: it is touched once per feed
- * recomposition, from the main thread, on two surfaces that are never both
- * on screen. The lock is for the case where they are both composed — the app
- * behind, the panel in front — rather than for contention.
+ * Synchronised rather than concurrent: it is touched once per feed reload,
+ * from a background thread (see rememberFeedFrame), by two surfaces that are
+ * never both on screen. The lock is for the case where they are both
+ * composed — the app behind, the panel in front — rather than for contention.
  */
 internal object FeedEmphasisMemory {
 
@@ -755,25 +720,6 @@ internal object FeedEmphasisMemory {
     /** For tests, which must not inherit sizes from one another. */
     @Synchronized
     fun forget() = settled.clear()
-}
-
-/**
- * The stories several sources are covering, recomputed only when the feed
- * changes.
- *
- * Off unless the reader has asked for it. The detection is inference, and
- * inference is occasionally wrong in public — a feed that suddenly gives a
- * hero slot to the wrong article, for reasons the reader did not ask for, is
- * worse than one that never tries.
- */
-@Composable
-fun rememberStoryClusters(articles: List<FeedItem>): Map<String, StoryCluster> {
-    val prefs: FeedPreferences = koinInject()
-    val enabled by prefs.breakingNews.asState()
-    return remember(articles, enabled) {
-        if (!enabled) emptyMap()
-        else clusterStories(articles, System.currentTimeMillis())
-    }
 }
 
 /**
@@ -989,7 +935,7 @@ fun weightReasons(
  *
  * A composable so a card can ask without being handed two maps it has no
  * other use for. It is cheap — the two flows behind it are already collected
- * once per feed by [rememberFeedEmphasis], and the reasons themselves are a
+ * once per feed by [rememberFeedFrame], and the reasons themselves are a
  * dozen comparisons.
  */
 @Composable

@@ -194,12 +194,18 @@ fun FeedScaffold(
         }
     }
 
+    // What is drawn: the articles with their sizes and stories, built off the
+    // main thread and never swapped in under a moving finger. See FeedFrame.
+    val frame = rememberFeedFrame(articles, appliedFocus) {
+        listState.isScrollInProgress || gridState.isScrollInProgress
+    }
+
     // Tapping a source narrows the feed to it, and backing out widens it
     // again; both land on the article the tap came from. See FocusAnchor.
     AnchorFeedOnFocusChange(
-        appliedFocus = appliedFocus,
+        appliedFocus = frame.focus,
         anchorId = focusAnchor,
-        articles = articles,
+        articles = frame.articles,
         isGrid = isGrid,
         listState = listState,
         gridState = gridState,
@@ -393,7 +399,7 @@ fun FeedScaffold(
                 // inside it. Everything else is a single column.
                 // Which article gets the big shape is one decision for every
                 // layout, so it is made once here rather than per container.
-                val emphasis = rememberFeedEmphasis(articles)
+                val emphasis = frame.emphasis
                 // Asked of the system rather than assumed, and asked on both
                 // surfaces: somebody who has set the animation scale to zero
                 // has said what they want, and the panel is no more exempt
@@ -401,9 +407,9 @@ fun FeedScaffold(
                 val animate = !reducedMotion()
                 val dimRead = rememberDimRead()
                     val skipped = rememberSkippedSources()
-                val clusters = rememberStoryClusters(articles)
+                val clusters = frame.clusters
                 TrackReading(
-                    articles = articles,
+                    articles = frame.articles,
                     isGrid = isGrid,
                     listState = listState,
                     gridState = gridState,
@@ -411,9 +417,9 @@ fun FeedScaffold(
                     onDwell = onArticleDwell,
                     onLeave = onDwellFlush,
                 )
-                if (isSearching && searchQuery.isNotBlank() && articles.isEmpty()) {
+                if (isSearching && searchQuery.isNotBlank() && frame.articles.isEmpty()) {
                     SearchEmptyState(searchQuery)
-                } else if (articles.isEmpty()) {
+                } else if (frame.articles.isEmpty()) {
                     // Nothing to scroll, so the header has nowhere to scroll
                     // away to and is drawn plainly.
                     header()
@@ -448,8 +454,11 @@ fun FeedScaffold(
                             span = StaggeredGridItemSpan.FullLine,
                         ) { header() }
                         itemsIndexed(
-                            articles,
+                            frame.articles,
                             key = { _, item -> item.id },
+                            contentType = { index, item ->
+                                feedContentType(index, item, layout, emphasis)
+                            },
                             // The grid needs the span before it composes the
                             // item, so the sizes are worked out for the whole
                             // list up front rather than asked per tile.
@@ -516,7 +525,14 @@ fun FeedScaffold(
                         contentPadding = padding,
                         content = {
                             item(key = FEED_HEADER_KEY) { header() }
-                            feedItems(articles, animate, article)
+                            feedItems(
+                                frame.articles,
+                                animate,
+                                contentType = { index, item ->
+                                    feedContentType(index, item, layout, emphasis)
+                                },
+                                article = article,
+                            )
                         },
                     )
                 }

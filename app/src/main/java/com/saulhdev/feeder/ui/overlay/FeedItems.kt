@@ -72,12 +72,39 @@ fun LazyListScope.feedItems(
      * they are looking at.
      */
     animate: Boolean = true,
+    /**
+     * The card shape at each position; see [feedContentType].
+     *
+     * Without it every card is the same kind to the list, so the composition
+     * it keeps from a compact row that scrolled away is reused for the hero
+     * coming in: nothing in common, all of it rebuilt in the frame the hero
+     * appears. Told the shape, the list reuses a hero for a hero.
+     */
+    contentType: (index: Int, item: FeedItem) -> Any? = { _, _ -> null },
     article: @Composable (index: Int, item: FeedItem) -> Unit,
 ) {
     // Keyed, so a sync moves cards rather than replacing the list.
-    itemsIndexed(articles, key = { _, item -> item.id }) { index, item ->
+    itemsIndexed(articles, key = { _, item -> item.id }, contentType = contentType) { index, item ->
         Box(modifier = if (animate) Modifier.animateItem() else Modifier) {
             article(index, item)
         }
     }
 }
+
+/**
+ * The shape a card will take, as the lazy containers' content type.
+ *
+ * The same answer [FeedArticleItem] reaches, from the same function, so the
+ * type a slot is filed under is the shape actually drawn in it.
+ */
+fun feedContentType(
+    index: Int,
+    item: FeedItem,
+    layout: String,
+    emphasis: List<FeedEmphasis>,
+): FeedCardShape = feedCardShape(
+    index = index,
+    hasImage = !item.imageUrl.isNullOrBlank(),
+    layout = layout,
+    emphasis = emphasis.getOrNull(index) ?: FeedEmphasis.Medium,
+)

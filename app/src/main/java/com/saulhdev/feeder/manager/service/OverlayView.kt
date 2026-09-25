@@ -35,6 +35,7 @@ import com.saulhdev.feeder.ui.overlay.FeedScaffold
 import com.saulhdev.feeder.ui.overlay.gateLog
 import com.saulhdev.feeder.ui.overlay.LocalFeedVisible
 import com.saulhdev.feeder.utils.BrowserReadTimer
+import com.saulhdev.feeder.utils.FrameWatch
 import com.saulhdev.feeder.utils.extensions.launchView
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.extensions.safeShareIntent
@@ -53,6 +54,7 @@ import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -66,6 +68,7 @@ class OverlayView(val context: Context) :
     private lateinit var themeHolder: OverlayThemeHolder
     private val syncScope = CoroutineScope(Dispatchers.IO) + CoroutineName("NeoFeedSync")
     private val mainScope = CoroutineScope(Dispatchers.Main)
+    private var frameWatch: Job? = null
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
     private val articles: SyncRestClient by inject(SyncRestClient::class.java)
     val prefs: FeedPreferences by inject()
@@ -267,6 +270,8 @@ class OverlayView(val context: Context) :
         // Automatic, so it waits for what the scheduled sync waits for; see
         // SyncRestClient.syncAllFeedsWhenAllowed.
         syncWhenAllowed()
+        // Frame times for the diagnostics trace, while Debugging is on.
+        frameWatch = mainScope.launch { FrameWatch.watch(getWindow(), prefs.debugging.get()) }
 
         syncScope.launch {
             viewModel.articleListState.collect {
@@ -565,6 +570,7 @@ class OverlayView(val context: Context) :
     }
 
     override fun onDestroy() {
+        frameWatch?.cancel()
         try {
             context.unregisterReceiver(closeSystemDialogsReceiver)
         } catch (_: Exception) {
