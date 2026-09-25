@@ -78,4 +78,35 @@ fun syncFreshness(
 }
 
 /** Milliseconds until the minute rolls over, so the line changes on time. */
+/**
+ * Whether opening the app should sync.
+ *
+ * When the feed is older than one scheduled interval, and never more often
+ * than every quarter of an hour. With background data off, the schedule
+ * never gets to run on mobile data, and an afternoon went by with the app
+ * opened several times and nothing fetched since lunchtime. Opening the app
+ * is the moment Android allows it.
+ *
+ * Not when syncing is set to manual ("0"), and not with no sources to sync
+ * ([newestSyncMs] null).
+ */
+fun openedSyncDue(nowMs: Long, newestSyncMs: Long?, frequencyHours: String): Boolean {
+    val hours = frequencyHours.toDoubleOrNull()?.takeIf { it > 0 } ?: return false
+    val newest = newestSyncMs ?: return false
+    val interval = maxOf(OPENED_SYNC_MIN_MS, (hours * HOUR_MS).toLong())
+    return nowMs - newest >= interval
+}
+
+const val OPENED_SYNC_MIN_MS = 15 * 60_000L
+
+/**
+ * Whether an automatic sync should give way to blocked background data.
+ *
+ * Only when Whisper is not on screen. The block is Android's, and it is
+ * lifted while Whisper is in the foreground; skipping then as well is how
+ * six syncs in one afternoon were skipped while Whisper was open.
+ */
+fun skipForBlockedData(automatic: Boolean, blocked: Boolean, onScreen: Boolean): Boolean =
+    automatic && blocked && !onScreen
+
 fun msUntilNextMinute(nowMs: Long): Long = 60_000L - Math.floorMod(nowMs, 60_000L)

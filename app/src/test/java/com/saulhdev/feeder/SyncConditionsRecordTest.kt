@@ -64,7 +64,7 @@ class SyncConditionsRecordTest {
      */
     @Test
     fun `Battery Saver pauses automatic syncs only`() {
-        assertEquals(setOf(SyncLog.ORIGIN_SCHEDULED, SyncLog.ORIGIN_PANEL), SyncLog.AUTOMATIC_ORIGINS)
+        assertEquals(setOf(SyncLog.ORIGIN_SCHEDULED, SyncLog.ORIGIN_PANEL, SyncLog.ORIGIN_OPENED), SyncLog.AUTOMATIC_ORIGINS)
         assertFalse(SyncLog.ORIGIN_PULL in SyncLog.AUTOMATIC_ORIGINS)
         val worker = source("manager/sync/FeedSyncer.kt").substringAfter("override suspend fun doWork()")
         val check = worker.indexOf("origin in SyncLog.AUTOMATIC_ORIGINS && isPowerSaveMode(applicationContext)")

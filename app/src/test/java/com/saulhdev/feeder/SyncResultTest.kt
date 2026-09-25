@@ -113,10 +113,12 @@ class SyncResultTest {
     @Test
     fun `a sync Android would cut off is not started`() {
         val worker = source("manager/sync/FeedSyncer.kt")
-        val skip = worker.indexOf("backgroundMobileDataBlocked(applicationContext)")
+        val skip = worker.indexOf("if (skipForBlockedData(automatic, dataBlocked, whisperOnScreen())) {")
         assertTrue(skip > 0)
-        val line = worker.substring(skip - 60, skip)
-        assertTrue("only the automatic ones", line.contains("origin in SyncLog.AUTOMATIC_ORIGINS"))
+        assertTrue(
+            "only the automatic ones",
+            worker.contains("val dataBlocked = automatic && backgroundMobileDataBlocked(applicationContext)"),
+        )
         assertTrue(worker.contains("\"skipped: background mobile data blocked\""))
         assertTrue("before anything is fetched", skip < worker.indexOf("syncFeeds("))
         assertTrue("and before it asks to run in the foreground", skip < worker.indexOf("setForeground("))

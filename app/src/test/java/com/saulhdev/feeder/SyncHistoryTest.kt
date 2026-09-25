@@ -70,7 +70,7 @@ class SyncHistoryTest {
         val activity = File(main, "MainActivity.kt").readText()
         assertTrue("the schedule too", activity.contains("SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_SCHEDULED"))
         val syncer = File(main, "manager/sync/FeedSyncer.kt").readText()
-        assertTrue("and the panel", syncer.contains("SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_PANEL"))
+        assertTrue("and the panel", syncer.contains("origin: String = SyncLog.ORIGIN_PANEL,"))
         assertTrue("a stopped run records why", syncer.contains("stopReasonName(stopReason)"))
         assertTrue("where the worker is allowed to ask", syncer.contains("Build.VERSION.SDK_INT >= Build.VERSION_CODES.S"))
     }

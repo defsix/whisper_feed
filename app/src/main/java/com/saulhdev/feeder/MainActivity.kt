@@ -2,6 +2,9 @@ package com.saulhdev.feeder
 
 import androidx.work.workDataOf
 import com.saulhdev.feeder.utils.SyncLog
+import com.saulhdev.feeder.utils.openedSyncDue
+import com.saulhdev.feeder.manager.sync.requestAutomaticFeedSync
+import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import com.saulhdev.feeder.manager.sync.PERIODIC_SYNC_WORK
 import android.Manifest
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var navController: NavHostController
     private val prefs: FeedPreferences by inject(FeedPreferences::class.java)
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
+    private val sources: SourcesRepository by inject(SourcesRepository::class.java)
 
     /**
      * Cached rather than read per press: reading the preference goes through
@@ -212,6 +216,23 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         BrowserReadTimer.settle()?.let { (id, millis) -> viewModel.addReading(id, millis) }
+        syncIfStale()
+    }
+
+    /**
+     * Syncs when the app comes to the front with a stale feed. See
+     * openedSyncDue. Through the automatic request, so it waits for Wi-Fi or
+     * a charger when the switches say to, and Battery Saver still pauses it.
+     */
+    private fun syncIfStale() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                val newest = sources.newestSync.first()
+                if (openedSyncDue(System.currentTimeMillis(), newest, prefs.syncFrequency.getValue())) {
+                    requestAutomaticFeedSync(origin = SyncLog.ORIGIN_OPENED)
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -42,6 +42,8 @@ object SyncLog {
 
     const val ORIGIN_SCHEDULED = "scheduled"
     const val ORIGIN_PANEL = "panel"
+    /** The app coming to the front with a feed older than one interval. */
+    const val ORIGIN_OPENED = "opened (app)"
     /**
      * Pull to refresh, by where it was pulled. Told apart because on the
      * launcher panel a downward swipe at the top of the list - the gesture
@@ -67,7 +69,7 @@ object SyncLog {
      * The syncs nobody asked for at that moment. Battery Saver pauses these
      * and only these; see FeedSyncer.
      */
-    val AUTOMATIC_ORIGINS = setOf(ORIGIN_SCHEDULED, ORIGIN_PANEL)
+    val AUTOMATIC_ORIGINS = setOf(ORIGIN_SCHEDULED, ORIGIN_PANEL, ORIGIN_OPENED)
 
     private const val FILE = "sync_log"
     private const val KEY = "entries"

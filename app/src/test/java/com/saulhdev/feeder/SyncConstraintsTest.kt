@@ -167,7 +167,7 @@ class SyncConstraintsTest {
         )
 
         val syncer = source("manager/sync/FeedSyncer.kt")
-        val automatic = syncer.substringAfter("fun requestAutomaticFeedSync()").substringBefore("\n}\n")
+        val automatic = syncer.substringAfter("fun requestAutomaticFeedSync(").substringBefore("\n}\n")
         assertTrue(automatic.contains("setRequiresCharging(prefs.syncOnlyWhenCharging.getValue())"))
         assertTrue(automatic.contains("prefs.syncOnlyOnWifi.getValue()"))
         assertTrue(

@@ -268,6 +268,17 @@ internal fun appVisibility(): String = runCatching {
     }
 }.getOrDefault("unknown")
 
+/**
+ * Whether Whisper is in the foreground: the app open, or its launcher panel
+ * showing, so Android lets it use mobile data even with background data off.
+ * The same question [appVisibility] answers "on screen" to.
+ */
+internal fun whisperOnScreen(): Boolean = runCatching {
+    val info = ActivityManager.RunningAppProcessInfo()
+    ActivityManager.getMyMemoryState(info)
+    info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+}.getOrDefault(false)
+
 /** The battery setting "Restricted" for Whisper, which holds background work back. */
 internal fun isBackgroundRestricted(context: Context): Boolean = runCatching {
     android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P &&

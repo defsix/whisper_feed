@@ -1,6 +1,8 @@
 package com.saulhdev.feeder.manager.sync
 
 import com.saulhdev.feeder.utils.backgroundMobileDataBlocked
+import com.saulhdev.feeder.utils.skipForBlockedData
+import com.saulhdev.feeder.utils.whisperOnScreen
 import com.saulhdev.feeder.utils.bytesSince
 import com.saulhdev.feeder.utils.receivedBytes
 import com.saulhdev.feeder.utils.isPowerSaveMode
@@ -77,12 +79,15 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         }
 
         // On mobile data with Android keeping Whisper off it in the
-        // background, a run gets seconds - until Whisper leaves the screen -
-        // and is then cut off and retried, again and again. Skipped the same
-        // way as for Battery Saver: the next slot may be on Wi-Fi, and pull
-        // to refresh runs in the foreground, where the block does not apply.
-        // Settings says which switch lifts it; see BackgroundDataHint.
-        if (origin in SyncLog.AUTOMATIC_ORIGINS && backgroundMobileDataBlocked(applicationContext)) {
+        // background, a run in the background is cut off and retried, again
+        // and again. Skipped the same way as for Battery Saver: the next slot
+        // may be on Wi-Fi. But only in the background - on screen, Android
+        // lets Whisper use the data, so the run goes ahead, as a foreground
+        // task below so that it keeps the network if the reader then leaves.
+        // Settings says which switch lifts the block; see BackgroundDataHint.
+        val automatic = origin in SyncLog.AUTOMATIC_ORIGINS
+        val dataBlocked = automatic && backgroundMobileDataBlocked(applicationContext)
+        if (skipForBlockedData(automatic, dataBlocked, whisperOnScreen())) {
             SyncLog.finished(applicationContext, run, "skipped: background mobile data blocked")
             return Result.success()
         }
@@ -100,7 +105,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         // never shows it at all. Asked while the app is still on screen,
         // which is when a pull starts; if Android refuses, the sync simply
         // runs as it did before.
-        val foreground = origin == SyncLog.ORIGIN_PULL || origin == SyncLog.ORIGIN_PULL_PANEL
+        val foreground = origin == SyncLog.ORIGIN_PULL || origin == SyncLog.ORIGIN_PULL_PANEL || dataBlocked
         var inForeground = false
         if (foreground) {
             try {
@@ -320,7 +325,10 @@ fun requestFeedSync(
  * moment the launcher recreated the panel. And a request that is waiting for a
  * charger needs no second copy queued behind it every time the panel opens.
  */
-fun requestAutomaticFeedSync() {
+fun requestAutomaticFeedSync(
+    /** What asked for it: the panel, or the app being opened. See SyncLog. */
+    origin: String = SyncLog.ORIGIN_PANEL,
+) {
     val workManager: WorkManager by inject(WorkManager::class.java)
     val prefs: FeedPreferences by inject(FeedPreferences::class.java)
 
@@ -340,7 +348,7 @@ fun requestAutomaticFeedSync() {
                 "feed_id" to ID_ALL,
                 "feed_tag" to "",
                 "force_network" to false,
-                SyncLog.ORIGIN_KEY to SyncLog.ORIGIN_PANEL,
+                SyncLog.ORIGIN_KEY to origin,
             )
         )
         .build()
