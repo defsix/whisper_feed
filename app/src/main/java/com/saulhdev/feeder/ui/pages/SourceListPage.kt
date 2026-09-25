@@ -652,6 +652,11 @@ fun SourceListPage(
                                     sameSite = sameSite,
                                     groupCount = sameSiteGroupCount,
                                     onClear = { viewModel.setDuplicatesOnly(false) },
+                                    // Only for the filter that is sure. The
+                                    // same-site one is a guess, and acting on
+                                    // a guess in one tap is how a Guardian
+                                    // section goes.
+                                    onRemoveExtra = if (sameSite) null else viewModel::removeDuplicateCopies,
                                 )
                             }
                         } else if (state.allTags.isNotEmpty()) {
@@ -989,16 +994,19 @@ private fun DuplicatesFound(count: Int, onReview: () -> Unit) {
  * not somewhere anyone would look.
  */
 @Composable
-private fun DuplicatesBanner(sameSite: Boolean, groupCount: Int, onClear: () -> Unit) {
+private fun DuplicatesBanner(
+    sameSite: Boolean,
+    groupCount: Int,
+    onClear: () -> Unit,
+    /** Removes all but the oldest of each group; null where that is not safe to offer. */
+    onRemoveExtra: (() -> Unit)? = null,
+) {
     Surface(
         color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-        ) {
+        Column(modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)) {
             Text(
                 // The two filters mean different things and the difference
                 // matters: one found the same feed twice, the other made a
@@ -1014,10 +1022,20 @@ private fun DuplicatesBanner(sameSite: Boolean, groupCount: Int, onClear: () -> 
                     stringResource(R.string.sources_duplicates_showing)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.padding(end = 8.dp),
             )
-            TextButton(onClick = onClear) {
-                Text(stringResource(R.string.sources_show_all))
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (onRemoveExtra != null) {
+                    TextButton(onClick = onRemoveExtra) {
+                        Text(stringResource(R.string.sources_duplicates_remove_extra))
+                    }
+                }
+                TextButton(onClick = onClear) {
+                    Text(stringResource(R.string.sources_show_all))
+                }
             }
         }
     }

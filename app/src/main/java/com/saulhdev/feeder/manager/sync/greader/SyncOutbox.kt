@@ -97,6 +97,80 @@ fun planSubscriptions(
 )
 
 /**
+ * Which server feed is which Whisper feed, when their addresses differ.
+ *
+ * A server keeps a feed under the address it settled on - after redirects,
+ * with its own idea of the canonical form - and that is often not the one
+ * Whisper was given. Compared by address alone, the first sync against a
+ * server that already had the reader's feeds took 29 of them for new ones on
+ * each side: copied down to Whisper, and sent up to the server, twice over.
+ *
+ * So, in order: the same address; a pairing remembered from an earlier sync
+ * ([aliases]); then the same title, one to one, which is what both sides take
+ * from the feed itself. A pairing found by title is returned in
+ * [FeedMatch.newAliases] to be remembered, so a rename later does not undo it.
+ *
+ * What is left is new, except a second copy of a feed already matched - the
+ * same title again - which is left alone on whichever side it is, rather than
+ * copied across to make the duplicate a pair of duplicates.
+ *
+ * @param local Whisper's feeds, key to title.
+ * @param server the server's feeds, key to title.
+ */
+data class FeedMatch(
+    /** Each server feed's key, as the key it is here; null for a second copy, left alone. */
+    val serverAs: Map<String, String?>,
+    /** Whisper feeds that are a second copy of one already matched, left alone. */
+    val localIgnored: Set<String>,
+    val newAliases: Map<String, String>,
+)
+
+fun matchFeeds(
+    local: Map<String, String>,
+    server: Map<String, String>,
+    aliases: Map<String, String>,
+): FeedMatch {
+    val serverAs = LinkedHashMap<String, String?>()
+    val claimed = HashSet<String>()
+    server.keys.sorted().forEach { s ->
+        if (s in local) {
+            serverAs[s] = s
+            claimed += s
+        }
+    }
+    server.keys.sorted().filter { it !in serverAs }.forEach { s ->
+        val k = aliases[s]
+        if (k != null && k in local && k !in claimed) {
+            serverAs[s] = k
+            claimed += k
+        }
+    }
+    val newAliases = LinkedHashMap<String, String>()
+    val unclaimedByTitle = local.keys.sorted().filter { it !in claimed }
+        .groupBy { titleKey(local.getValue(it)) }
+    server.keys.sorted().filter { it !in serverAs }.forEach { s ->
+        val t = titleKey(server.getValue(s))
+        if (t.isEmpty()) return@forEach
+        val pick = unclaimedByTitle[t]?.firstOrNull { it !in claimed } ?: return@forEach
+        serverAs[s] = pick
+        claimed += pick
+        newAliases[s] = pick
+    }
+    val matchedTitles = claimed.mapTo(HashSet()) { titleKey(local.getValue(it)) }
+    server.keys.sorted().filter { it !in serverAs }.forEach { s ->
+        val t = titleKey(server.getValue(s))
+        serverAs[s] = if (t.isNotEmpty() && t in matchedTitles) null else s
+    }
+    val localIgnored = local.keys.filter { it !in claimed }
+        .filterTo(HashSet()) { titleKey(local.getValue(it)).let { t -> t.isNotEmpty() && t in matchedTitles } }
+    return FeedMatch(serverAs, localIgnored, newAliases)
+}
+
+/** A title as both sides would agree on it: case, spacing and trailing marks aside. */
+fun titleKey(title: String): String =
+    title.trim().lowercase().replace(Regex("\\s+"), " ").trimEnd('.', ':', '-', '|', ' ')
+
+/**
  * What the memories become once a plan has been carried out.
  *
  * A feed that left Whisper is forgotten as having been on the server, so that
@@ -159,6 +233,7 @@ object GoogleReaderState {
     private const val LAST_LOCAL = "last_local"
     private const val EVER_ON_SERVER = "ever_on_server"
     private const val MAPPED_AT = "mapped_at"
+    private const val ALIASES = "aliases"
 
     private val lock = Any()
 
@@ -196,6 +271,17 @@ object GoogleReaderState {
             putStringSet(LAST_LOCAL, lastLocal)
             putStringSet(EVER_ON_SERVER, everOnServer)
         }
+    }
+
+    /** Server feed key to Whisper feed key, for pairs whose addresses differ. See matchFeeds. */
+    fun aliases(context: Context): Map<String, String> =
+        prefs(context).getStringSet(ALIASES, null).orEmpty().mapNotNull { entry ->
+            val tab = entry.indexOf('\t')
+            if (tab <= 0) null else entry.substring(0, tab) to entry.substring(tab + 1)
+        }.toMap()
+
+    fun setAliases(context: Context, aliases: Map<String, String>) {
+        prefs(context).edit { putStringSet(ALIASES, aliases.mapTo(HashSet()) { (s, k) -> "$s\t$k" }) }
     }
 
     /** When articles were last matched to the server's, or 0 for never. */

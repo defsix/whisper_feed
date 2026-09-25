@@ -31,13 +31,15 @@ import com.saulhdev.feeder.data.db.ID_ALL
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.utils.isUnmetered
-import com.saulhdev.feeder.utils.getSyncDays
-import com.saulhdev.feeder.manager.sync.prefs
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import com.saulhdev.feeder.manager.sync.greader.planSubscriptions
+import com.saulhdev.feeder.manager.sync.greader.matchFeeds
 import com.saulhdev.feeder.manager.sync.greader.readChanges
 import com.saulhdev.feeder.manager.sync.greader.rememberAfter
 import java.net.URL
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Whisper with a Google Reader account attached.
@@ -61,6 +63,9 @@ import java.net.URL
  * What the reader gets is what they actually wanted from sync: the same
  * subscriptions and the same read state on every device.
  */
+/** See [GoogleReaderService.sync]: one account sync at a time, app-wide. */
+private val accountLock = Mutex()
+
 class GoogleReaderService(
     private val context: Context,
     private val account: SyncAccount,
@@ -73,6 +78,15 @@ class GoogleReaderService(
         val auth = account.authToken
         if (auth.isEmpty()) return SyncOutcome.SignedOut
 
+        // One account sync at a time, whoever asked. The first night with a
+        // live server had the schedule, the panel and Sync now all comparing
+        // feed lists at once, each adding what the others were adding, and
+        // one feed came out four times. The feed fetching already had a lock
+        // of its own; the account half did not.
+        return accountLock.withLock { syncLocked(auth, forceNetwork) }
+    }
+
+    private suspend fun syncLocked(auth: String, forceNetwork: Boolean): SyncOutcome {
         return try {
             // The order is the design. Feeds first, both ways, so the
             // articles fetched next come from the right list. Then the
@@ -101,6 +115,11 @@ class GoogleReaderService(
 
             account.lastSync = System.currentTimeMillis()
             SyncOutcome.Success(feeds = feeds)
+        } catch (e: CancellationException) {
+            // Android stopping the work, or the reader leaving: not a failure.
+            // Caught as one, it read "failed: pd2" - the obfuscated name of
+            // the cancellation - and was retried at once, eight times over.
+            throw e
         } catch (t: Throwable) {
             Log.e(TAG, "Sync failed", t)
             // A 401 means the token has been revoked server-side, which needs
@@ -133,12 +152,30 @@ class GoogleReaderService(
             runCatching { URL(sub.feedUrl) }.getOrNull()?.let { normalizeFeedUrl(it) to sub }
         }.toMap()
 
+        // Which server feed is which of ours, addresses aside; see matchFeeds.
+        val oldAliases = GoogleReaderState.aliases(context)
+        val match = matchFeeds(
+            local = localByKey.mapValues { it.value.title },
+            server = remoteByKey.mapValues { it.value.title },
+            aliases = oldAliases,
+        )
+        // In Whisper's keys from here on: a server feed matched to one of
+        // ours goes by our key, and a second copy is not counted at all.
+        val remoteAs = match.serverAs.entries
+            .mapNotNull { (serverKey, localKey) -> localKey?.let { it to remoteByKey.getValue(serverKey) } }
+            .toMap()
+        val localKeys = localByKey.keys - match.localIgnored
+        GoogleReaderState.setAliases(
+            context,
+            (oldAliases + match.newAliases).filterKeys { it in remoteByKey },
+        )
+
         val lastLocal = GoogleReaderState.lastLocal(context)
         val everOnServer = GoogleReaderState.everOnServer(context)
-        val plan = planSubscriptions(localByKey.keys, remoteByKey.keys, lastLocal, everOnServer)
+        val plan = planSubscriptions(localKeys, remoteAs.keys, lastLocal, everOnServer)
 
         plan.addLocal.forEach { key ->
-            val sub = remoteByKey.getValue(key)
+            val sub = remoteAs.getValue(key)
             val url = URL(sub.feedUrl)
             sources.insertSource(
                 Feed(
@@ -164,7 +201,7 @@ class GoogleReaderService(
             }
             plan.unsubscribe.forEach { key ->
                 // By the server's own id for it, which every server accepts.
-                val sub = remoteByKey.getValue(key)
+                val sub = remoteAs.getValue(key)
                 if (api.editSubscription(auth, token, "unsubscribe", sub.id.ifBlank { sub.feedUrl })) {
                     unsubscribed += key
                 }
@@ -195,8 +232,8 @@ class GoogleReaderService(
         // tried again next time rather than taken for a feed the server dropped.
         val (nextLocal, nextEver) = rememberAfter(
             plan = plan,
-            local = localByKey.keys,
-            server = remoteByKey.keys,
+            local = localKeys,
+            server = remoteAs.keys,
             lastLocal = lastLocal,
             everOnServer = everOnServer,
             subscribed = subscribed,
@@ -241,12 +278,28 @@ class GoogleReaderService(
         }
         // As far back as Whisper keeps articles, and a day more: anything
         // older has already gone from here, and there is nothing to match.
-        val since = if (last > 0) last - MAP_OVERLAP_MS else startedAt - (getSyncDays(prefs) + 1) * DAY_MS
-        val page = api.allStreamContents(auth, since = since)
+        // Two days back the first time, not the whole sync range: each item
+        // arrives with its whole article, and a hundred and forty feeds' week
+        // was fifty megabytes, downloaded again every time the run was cut
+        // off. Older articles simply keep their read state to themselves.
+        val since = if (last > 0) last - MAP_OVERLAP_MS else startedAt - MAP_FIRST_WINDOW_MS
+        // Matched page by page, so what one page matched is kept even if the
+        // run is stopped before the next.
         var attached = 0
-        page.items.forEach { item ->
-            val (link, remoteId) = item.mapping() ?: return@forEach
-            attached += articles.attachRemoteId(link, remoteId)
+        var seen = 0
+        var continuation: String? = null
+        val pagesSeen = HashSet<String>()
+        var pages = 0
+        while (pages < MAP_MAX_PAGES) {
+            val (items, next) = api.contentsPage(auth, GoogleReaderIds.STREAM_READING_LIST, MAP_PAGE_SIZE, since, continuation)
+            pages++
+            seen += items.size
+            items.forEach { item ->
+                val (link, remoteId) = item.mapping() ?: return@forEach
+                attached += articles.attachRemoteId(link, remoteId)
+            }
+            if (next == null || !pagesSeen.add(next)) break
+            continuation = next
         }
         val newlyMapped = articles.mappedArticles().filter { it.uuid !in before }
         GoogleReaderState.updateOutbox(context) { outbox ->
@@ -257,8 +310,11 @@ class GoogleReaderService(
                         .fold(o) { acc, a -> acc.withStar(a.uuid, true) }
                 }
         }
-        if (page.complete) GoogleReaderState.setMappedAt(context, startedAt)
-        Log.i(TAG, "Mapped $attached of ${page.items.size} server items, ${newlyMapped.size} newly")
+        // Whether the pages ran out or the cap did: either way the next match
+        // starts from here. What the cap left behind is older than the
+        // window's newest, and older articles keep their state to themselves.
+        GoogleReaderState.setMappedAt(context, startedAt)
+        Log.i(TAG, "Mapped $attached of $seen server items in $pages pages, ${newlyMapped.size} newly")
     }
 
     /**
@@ -406,5 +462,12 @@ class GoogleReaderService(
         const val MAP_OVERLAP_MS = 60 * 60_000L
 
         const val DAY_MS = 24 * 60 * 60_000L
+
+        /** How far back the first match looks. See mapRemoteIds. */
+        const val MAP_FIRST_WINDOW_MS = 2 * DAY_MS
+
+        /** Items per page, and pages per match: at most two thousand articles. */
+        const val MAP_PAGE_SIZE = 250
+        const val MAP_MAX_PAGES = 8
     }
 }

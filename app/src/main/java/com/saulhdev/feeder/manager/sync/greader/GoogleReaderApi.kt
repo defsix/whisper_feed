@@ -204,7 +204,7 @@ class GoogleReaderApi(
         since: Long? = null,
     ): List<StreamItem> = contentsPage(auth, stream, limit, since, null).first
 
-    private suspend fun contentsPage(
+    suspend fun contentsPage(
         auth: String,
         stream: String,
         limit: Int,

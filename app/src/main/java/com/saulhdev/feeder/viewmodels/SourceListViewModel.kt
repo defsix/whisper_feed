@@ -318,6 +318,24 @@ class SourceListViewModel(
     }
 
     /**
+     * Removes every copy but the oldest in each duplicate group, with the
+     * usual undo.
+     *
+     * The oldest because it is the one the reader subscribed to: it carries
+     * the read history, the time on screen and whatever the weighting learned.
+     * A newer copy came from an import, a restore or a server, and holds the
+     * same articles with none of that.
+     */
+    fun removeDuplicateCopies() {
+        val extra = _duplicateGroups.value.flatMap { it.ids.sorted().drop(1) }.toSet()
+        if (extra.isEmpty()) return
+        viewModelScope.launch {
+            feedsRepo.deleteSources(extra)
+            setDuplicatesOnly(false)
+        }
+    }
+
+    /**
      * Arms the loose filter: sources that look like the same publication.
      *
      * Catches what the exact filter cannot, which is most of what a list this
