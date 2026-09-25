@@ -105,7 +105,8 @@ class AccountViewModel(
     fun syncNow() {
         _state.value = _state.value.copy(busy = true, error = null)
         ioScope.launch {
-            val outcome = dispatcher.current().sync()
+            // "Sync now" is a request, so everything is fetched.
+            val outcome = dispatcher.current().sync(forceNetwork = true)
             _state.value = when (outcome) {
                 is SyncOutcome.Success -> read()
                 SyncOutcome.SignedOut -> {

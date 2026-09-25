@@ -59,7 +59,7 @@ class GoogleReaderService(
     private val api: GoogleReaderApi = GoogleReaderApi(account.serverUrl),
 ) : RssService() {
 
-    override suspend fun sync(): SyncOutcome {
+    override suspend fun sync(forceNetwork: Boolean): SyncOutcome {
         val auth = account.authToken
         if (auth.isEmpty()) return SyncOutcome.SignedOut
 
@@ -68,7 +68,7 @@ class GoogleReaderService(
             reconcileSubscriptions(remote)
 
             // Articles still come from the feeds themselves; see the note above.
-            syncFeeds(context = context, forceNetwork = true)
+            val feeds = syncFeeds(context = context, forceNetwork = forceNetwork)
 
             // Learn which of our articles the server knows about, then apply
             // what it says about them. The order matters: read state is
@@ -77,7 +77,7 @@ class GoogleReaderService(
             pullReadState(auth)
 
             account.lastSync = System.currentTimeMillis()
-            SyncOutcome.Success()
+            SyncOutcome.Success(feeds = feeds)
         } catch (t: Throwable) {
             Log.e(TAG, "Sync failed", t)
             // A 401 means the token has been revoked server-side, which needs

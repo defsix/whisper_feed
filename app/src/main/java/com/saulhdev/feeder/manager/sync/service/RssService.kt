@@ -49,7 +49,15 @@ abstract class RssService {
      * different job with the same name — and the reason it is the one method
      * nothing can be assumed about.
      */
-    abstract suspend fun sync(): SyncOutcome
+    abstract suspend fun sync(
+        /**
+         * Fetch every feed now, as a pull to refresh does. False for the syncs
+         * nobody asked for, so slow feeds rest and fresh ones are left alone;
+         * see syncFeeds. It was always true, so with an account signed in
+         * every scheduled sync fetched all of them.
+         */
+        forceNetwork: Boolean = false,
+    ): SyncOutcome
 
     /**
      * Whether this service can accept a change made offline.
@@ -78,7 +86,14 @@ abstract class RssService {
 
 /** What a sync did, in terms the interface can say out loud. */
 sealed interface SyncOutcome {
-    data class Success(val at: Long = System.currentTimeMillis()) : SyncOutcome
+    data class Success(
+        val at: Long = System.currentTimeMillis(),
+        /**
+         * What fetching the feeds did, for the sync history: an account sync
+         * fetches them too, and its line said only "ok".
+         */
+        val feeds: com.saulhdev.feeder.utils.SyncResult? = null,
+    ) : SyncOutcome
 
     /** The credential is no longer good. Distinct because it needs the reader. */
     data object SignedOut : SyncOutcome
