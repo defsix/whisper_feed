@@ -39,6 +39,11 @@ data class SyncResult(
     /** Due feeds whose server said nothing had changed (a 304, no body). */
     val unchanged: Int = 0,
     /**
+     * Due feeds that sent the whole feed, identical to last time: downloaded,
+     * but not read again. See FeedDigest.
+     */
+    val identical: Int = 0,
+    /**
      * What Whisper received over the network while the run lasted, or null
      * where Android does not say. Everything the app received, not the feeds
      * alone - images loading on screen at the same moment count too - which
@@ -85,6 +90,7 @@ fun syncOutcome(result: SyncResult, notes: List<String> = emptyList()): String {
         else -> "ok" to listOfNotNull(
             if (result.due == 1) "1 feed" else "${result.due} feeds",
             if (result.unchanged > 0) "${result.unchanged} unchanged" else null,
+            if (result.identical > 0) "${result.identical} identical" else null,
             if (result.failed > 0) "${result.failed} failed" else null,
             if (result.offline > 0) "${result.offline} without network" else null,
         )

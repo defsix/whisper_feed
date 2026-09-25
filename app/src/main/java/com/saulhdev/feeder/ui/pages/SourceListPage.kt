@@ -174,6 +174,7 @@ fun SourceListPage(
     val sameSite by viewModel.sameSite.collectAsState()
     val sameSiteGroupCount by viewModel.sameSiteGroupCount.collectAsState()
     val duplicateGroups by viewModel.duplicateGroups.collectAsState()
+    val duplicateCount by viewModel.duplicateCount.collectAsState()
     val articlesCleared by viewModel.articlesCleared.collectAsState()
     val sort by viewModel.sort.collectAsState()
     val ascending by viewModel.ascending.collectAsState()
@@ -637,6 +638,14 @@ fun SourceListPage(
                                 },
                             )
                         }
+                        if (!duplicatesOnly && duplicateCount > 0) {
+                            item(key = "duplicates-found") {
+                                DuplicatesFound(
+                                    count = duplicateCount,
+                                    onReview = { viewModel.setDuplicatesOnly(true) },
+                                )
+                            }
+                        }
                         if (duplicatesOnly) {
                             item {
                                 DuplicatesBanner(
@@ -944,6 +953,35 @@ private fun CategoryChips(
 }
 
 /**
+ * Says that some feeds are subscribed twice, before anybody thinks to ask.
+ *
+ * Each one is downloaded twice on every sync. The same shape as the banner
+ * below, because it is the way into what that banner explains.
+ */
+@Composable
+private fun DuplicatesFound(count: Int, onReview: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+        ) {
+            Text(
+                text = pluralStringResource(R.plurals.sources_duplicates_found, count, count),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onReview) {
+                Text(stringResource(R.string.sources_duplicates_review))
+            }
+        }
+    }
+}
+
+/**
  * Says why the list is short, while the duplicates filter is on.
  *
  * Without it the screen is indistinguishable from a search that matched
@@ -963,7 +1001,7 @@ private fun DuplicatesBanner(sameSite: Boolean, groupCount: Int, onClear: () -> 
         ) {
             Text(
                 // The two filters mean different things and the difference
-                // matters: one found identical addresses, the other made a
+                // matters: one found the same feed twice, the other made a
                 // guess. Saying which is on is what stops somebody deleting a
                 // Guardian section because the screen listed it.
                 text = if (sameSite) {

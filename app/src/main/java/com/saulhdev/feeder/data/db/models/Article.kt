@@ -367,6 +367,12 @@ data class DayCount(val day: String, val seen: Int, val opened: Int)
  * with a source that has published twice live in Kotlin, where they can be
  * argued with and tested, rather than inside a query.
  */
+/** Which source an article came through, and its address. See sameArticleGroups. */
+data class FeedLink(
+    val feedId: Long,
+    val link: String?,
+)
+
 data class SourcePace(
     val feedId: Long,
     val articles: Int,

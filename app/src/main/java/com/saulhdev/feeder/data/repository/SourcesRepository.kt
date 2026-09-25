@@ -51,6 +51,8 @@ import android.database.sqlite.SQLiteConstraintException
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.utils.preferringHttps
+import com.saulhdev.feeder.utils.joinPairs
+import com.saulhdev.feeder.utils.sameArticleGroups
 import org.koin.java.KoinJavaComponent.inject
 import java.net.URL
 
@@ -547,11 +549,21 @@ class SourcesRepository(db: NeoFeedDb) {
      * told about a list you then have to pair up yourself.
      */
     suspend fun duplicateGroups(): List<List<Feed>> = withContext(jcc) {
-        feedsDao.loadAllFeeds()
-            .groupBy { normalizeFeedUrl(it.url) }
-            .values
+        val feeds = feedsDao.loadAllFeeds()
+        val byId = feeds.associateBy(Feed::id)
+        // Two kinds of evidence, both conclusive. The same address, written
+        // differently; and the same articles, under addresses no rule could
+        // match — a subscription list had four feeds subscribed twice and
+        // the address check found none of them. See sameArticleGroups.
+        val sameAddress = feeds.groupBy { normalizeFeedUrl(it.url) }.values
             .filter { it.size > 1 }
-            .toList()
+            .flatMap { group -> group.zipWithNext { a, b -> a.id to b.id } }
+        val sameArticles = sameArticleGroups(articlesDao.loadFeedLinks().map { it.feedId to it.link })
+            .flatMap { group -> group.sorted().zipWithNext() }
+        joinPairs(sameAddress + sameArticles)
+            .map { group -> group.mapNotNull(byId::get).sortedBy { it.title.lowercase() } }
+            .filter { it.size > 1 }
+            .sortedBy { it.first().title.lowercase() }
     }
 }
 

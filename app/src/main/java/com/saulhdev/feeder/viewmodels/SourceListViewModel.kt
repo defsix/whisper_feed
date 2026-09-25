@@ -16,6 +16,9 @@ import com.saulhdev.feeder.utils.sloppyLinkToStrictURL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -121,6 +124,22 @@ class SourceListViewModel(
 
     private val _sameSiteGroupCount = MutableStateFlow(0)
     val sameSiteGroupCount: StateFlow<Int> = _sameSiteGroupCount.asStateFlow()
+
+    /**
+     * How many feeds are subscribed more than once, for the notice at the top
+     * of the list.
+     *
+     * Offered rather than waited for. "Find duplicates" sat in the overflow
+     * menu, and a list with four feeds subscribed twice never had it opened.
+     * Worked out again only when a source is added or removed: a sync writes
+     * to every source, and none of those writes changes the answer.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val duplicateCount: StateFlow<Int> = feedsRepo.getAllSourcesFlow()
+        .map { it.size }
+        .distinctUntilChanged()
+        .mapLatest { feedsRepo.duplicateGroups().size }
+        .stateIn(ioScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /**
      * How the list is ordered, read straight from the stored preference.

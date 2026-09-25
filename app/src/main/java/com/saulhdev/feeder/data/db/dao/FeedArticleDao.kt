@@ -35,6 +35,7 @@ import com.saulhdev.feeder.data.db.models.ReadingTime
 import com.saulhdev.feeder.data.db.models.SourceEngagement
 import com.saulhdev.feeder.data.db.models.SourcePace
 import com.saulhdev.feeder.data.db.models.SourceReadCount
+import com.saulhdev.feeder.data.db.models.FeedLink
 import com.saulhdev.feeder.data.db.models.Feed
 import com.saulhdev.feeder.data.db.models.FeedItem
 import kotlinx.coroutines.flow.Flow
@@ -270,6 +271,10 @@ interface FeedArticleDao {
         """
     )
     fun sourcePace(): Flow<List<SourcePace>>
+
+    /** Every article's source and address, for telling which sources are one feed. */
+    @Query("SELECT feedId, link FROM Article WHERE link IS NOT NULL AND link != ''")
+    suspend fun loadFeedLinks(): List<FeedLink>
 
     @Query("UPDATE Article SET readAt = 0 WHERE uuid IN (:ids)")
     suspend fun unmarkRead(ids: List<String>)

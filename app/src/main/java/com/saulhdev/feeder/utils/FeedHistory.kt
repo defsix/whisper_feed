@@ -24,7 +24,14 @@ import java.util.Date
 import java.util.Locale
 
 /** How one fetch of one feed went. */
-enum class FetchKind { New, Unchanged, Failed, NoNetwork }
+enum class FetchKind {
+    New,
+    Unchanged,
+    /** Sent in full, identical to the last download, so not read again. */
+    Same,
+    Failed,
+    NoNetwork,
+}
 
 /**
  * One fetch of one feed.
@@ -105,12 +112,13 @@ internal object FeedHistoryCodec {
         FeedFetch(at, kind, f[2], bytes)
     }.toList()
 
-    /** "12:00 new 3 45 KB", "11:30 unchanged", "11:00 failed 503". */
+    /** "12:00 new 3 45 KB", "11:45 same 137 KB", "11:30 unchanged", "11:00 failed 503". */
     fun describe(fetch: FeedFetch, clock: SimpleDateFormat): String {
         val time = clock.format(Date(fetch.at))
         val what = when (fetch.kind) {
             FetchKind.New -> "new ${fetch.detail}"
             FetchKind.Unchanged -> "unchanged"
+            FetchKind.Same -> "same"
             FetchKind.Failed -> "failed ${fetch.detail}"
             FetchKind.NoNetwork -> "no network"
         }
@@ -125,8 +133,12 @@ internal object FeedHistoryCodec {
      */
     fun summary(histories: List<Pair<String, List<FeedFetch>>>): List<String> {
         // A list, not a map: two sources can share a title.
+        // A download identical to the last is still a download: the feed
+        // costs what it sent, whether or not anything in it was new.
         val latest = histories.map { (title, fetches) ->
-            title to fetches.firstOrNull { it.kind == FetchKind.New && it.bytes >= 0 }?.bytes
+            title to fetches.firstOrNull {
+                (it.kind == FetchKind.New || it.kind == FetchKind.Same) && it.bytes >= 0
+            }?.bytes
         }
         val measured = latest.mapNotNull { it.second }
         val heaviest = latest

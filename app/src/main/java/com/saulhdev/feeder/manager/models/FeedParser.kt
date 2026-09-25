@@ -279,11 +279,19 @@ class FeedParser {
     suspend fun parseFeedResponse(
         url: URL,
         responseBody: ResponseBody,
+        /**
+         * Whether a feed that declares no icon should have its site's home
+         * page fetched to find one. Yes when a feed is being added; no from a
+         * sync, which keeps the icon it found the first time. It was yes on
+         * every sync of every such feed: a whole home page downloaded, each
+         * time, to learn what was already stored.
+         */
+        findIcon: Boolean = true,
     ): JsonFeed {
         try {
             val feed = when (responseBody.contentType()?.subtype?.contains("json")) {
                 true -> jsonFeedParser.parseJson(responseBody)
-                else -> parseRssAtom(url, responseBody)
+                else -> parseRssAtom(url, responseBody, findIcon)
             }
 
             return if (feed.feed_url == null) {
@@ -298,7 +306,7 @@ class FeedParser {
     }
 
     @Throws(FeedParsingError::class)
-    internal suspend fun parseRssAtom(baseUrl: URL, responseBody: ResponseBody): JsonFeed {
+    internal suspend fun parseRssAtom(baseUrl: URL, responseBody: ResponseBody, findIcon: Boolean = true): JsonFeed {
         try {
             responseBody.byteStream().use { bs ->
                 val feed = XmlReader(bs, true, responseBody.contentType()?.charset()?.name()).use {
@@ -309,7 +317,7 @@ class FeedParser {
                         .build(it)
                 }
                 return feed.asFeed(baseUrl = baseUrl) { siteUrl ->
-                    getFeedIconAtUrl(siteUrl)
+                    if (findIcon) getFeedIconAtUrl(siteUrl) else null
                 }
             }
         } catch (t: Throwable) {

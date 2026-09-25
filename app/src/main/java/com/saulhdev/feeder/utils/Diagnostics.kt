@@ -182,6 +182,13 @@ object Diagnostics : KoinComponent {
             val failing = sources.count { it.isEnabled && it.consecutiveFailures > 0 }
             appendLine("Never synced:      $never")
             appendLine("Currently failing: $failing")
+            // Each is downloaded once per subscription on every sync. Titles
+            // only, which the list below already carries.
+            val duplicates = get<SourcesRepository>().duplicateGroups()
+            appendLine("Subscribed twice:  ${duplicates.size}")
+            duplicates.forEach { group ->
+                appendLine("  " + group.joinToString(" = ") { it.title.take(28) })
+            }
 
             // Worst first: a report is read from the top, and the feeds that
             // are not working are the reason anybody is reading it.
@@ -220,6 +227,7 @@ object Diagnostics : KoinComponent {
         runCatching { withTimeout(SECTION_TIMEOUT_MS) {
             val sources = get<SourcesRepository>().getAllSourcesFlow().first()
             FeedHistory.keepOnly(context, sources.map { it.id }.toSet())
+            FeedDigest.keepOnly(context, sources.map { it.id }.toSet())
             val histories = sources.associateWith { FeedHistory.read(context, it.id) }
             FeedHistoryCodec.summary(histories.map { (feed, fetches) -> feed.title to fetches }).forEach(::appendLine)
             histories.entries

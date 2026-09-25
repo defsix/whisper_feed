@@ -70,6 +70,11 @@ import kotlinx.coroutines.flow.first
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import com.saulhdev.feeder.utils.FeedDigest
+import com.saulhdev.feeder.utils.IconLookup
+import com.saulhdev.feeder.utils.feedDigest
+import com.saulhdev.feeder.utils.parseSettingsKey
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.IOException
@@ -195,6 +200,7 @@ internal suspend fun syncFeeds(
     // And the ones the server said had not changed, which cost a few hundred
     // bytes instead of the whole feed. See syncHttpClient.
     val unchangedFeeds = AtomicInteger(0)
+    val identicalFeeds = AtomicInteger(0)
     // And those Whisper had no network to reach; see countsAgainstSource.
     val offlineFeeds = AtomicInteger(0)
     // And those left for a later sync because they rarely publish.
@@ -277,7 +283,7 @@ internal suspend fun syncFeeds(
                                 feedsRepo.setCurrentlySyncingOn(feedId = feed.id, syncing = true)
 
                                 val counter = ByteCounter()
-                                val newArticles = syncFeed(
+                                val fetched = syncFeed(
                                     context = context,
                                     feedsRepo = feedsRepo,
                                     articleRepo = articlesRepo,
@@ -288,14 +294,21 @@ internal suspend fun syncFeeds(
                                     downloadTime = downloadTime,
                                     counter = counter,
                                 )
-                                if (newArticles == null) unchangedFeeds.incrementAndGet()
+                                val at = Clock.System.now().toEpochMilliseconds()
                                 FeedHistory.record(
                                     context,
                                     feed.id,
-                                    if (newArticles == null) {
-                                        FeedFetch(Clock.System.now().toEpochMilliseconds(), FetchKind.Unchanged, bytes = counter.bytes)
-                                    } else {
-                                        FeedFetch(Clock.System.now().toEpochMilliseconds(), FetchKind.New, "$newArticles", counter.bytes)
+                                    when (fetched) {
+                                        FeedFetchResult.Unchanged -> {
+                                            unchangedFeeds.incrementAndGet()
+                                            FeedFetch(at, FetchKind.Unchanged, bytes = counter.bytes)
+                                        }
+                                        FeedFetchResult.Identical -> {
+                                            identicalFeeds.incrementAndGet()
+                                            FeedFetch(at, FetchKind.Same, bytes = counter.bytes)
+                                        }
+                                        is FeedFetchResult.Parsed ->
+                                            FeedFetch(at, FetchKind.New, "${fetched.newArticles}", counter.bytes)
                                     },
                                 )
 
@@ -376,6 +389,7 @@ internal suspend fun syncFeeds(
                     due = feedsToFetch.size,
                     failed = failedFeeds.get(),
                     unchanged = unchangedFeeds.get(),
+                    identical = identicalFeeds.get(),
                     offline = offlineFeeds.get(),
                     resting = restingFeeds,
                 )
@@ -408,45 +422,62 @@ private suspend fun syncFeed(
     forceNetwork: Boolean = false,
     downloadTime: Instant,
     counter: ByteCounter? = null,
-): Int? {
+): FeedFetchResult {
     Log.d(TAG, "Fetching ${feedSql.title}")
 
     val response: Response =
         syncHttpClient(context).getResponse(url = feedSql.url, forceNetwork = forceNetwork, byteCounter = counter)
 
-    // Nothing new: the parse, the article writes and the icon lookup all
-    // redo what the last sync did, and the parse is the part that fills the
-    // heap. Only when the source has articles, though - a source whose
-    // articles were cleared, or one removed and added back at the same
-    // address, would otherwise stay empty until the publisher next posted.
-    if (response.isSuccessful &&
-        servedUnchanged(response.networkResponse?.code, response.cacheResponse != null) &&
-        articleRepo.countInFeed(feedSql.id) > 0
-    ) {
-        response.close()
+    // Everything that reads the response happens inside one `use`, so it is
+    // closed whichever way this leaves - including a sync cancelled while
+    // the database is being asked below, which is how a response came to be
+    // reported as never closed.
+    val download = response.use {
+        // Nothing new: the parse, the article writes and the icon lookup all
+        // redo what the last sync did, and the parse is the part that fills
+        // the heap. Only when the source has articles, though - a source
+        // whose articles were cleared, or one removed and added back at the
+        // same address, would otherwise stay empty until the publisher next
+        // posted.
+        if (response.isSuccessful &&
+            servedUnchanged(response.networkResponse?.code, response.cacheResponse != null) &&
+            articleRepo.countInFeed(feedSql.id) > 0
+        ) {
+            null
+        } else {
+            if (!response.isSuccessful) {
+                throw ResponseFailure(response.code, "${response.code} when fetching ${feedSql.title}: ${feedSql.url}")
+            }
+            // Read whole, then fingerprinted: a feed that sends everything
+            // every time is most often sending exactly what it sent last
+            // time. See FeedDigest.
+            Triple(response.body.bytes(), response.body.contentType(), response.request.url.toUrl())
+        }
+    }
+    if (download == null) {
         Log.d(TAG, "Unchanged: ${feedSql.title}")
         cleanUpFeed(articleRepo, feedSql, filesDir)
-        return null
+        return FeedFetchResult.Unchanged
+    }
+    val (body, contentType, finalUrl) = download
+    val digest = feedDigest(
+        body,
+        parseSettingsKey(maxFeedItemCount, getSyncDays(prefs), prefs.blockedWords.getValue()),
+    )
+    // The same condition as the unchanged case above, for the same reason.
+    if (digest == FeedDigest.read(context, feedSql.id) && articleRepo.countInFeed(feedSql.id) > 0) {
+        Log.d(TAG, "Identical: ${feedSql.title}")
+        cleanUpFeed(articleRepo, feedSql, filesDir)
+        return FeedFetchResult.Identical
     }
 
     val feedParser = FeedParser()
-    val feed: JsonFeed = response.use {
-        response.body.let { responseBody ->
-            when {
-                !response.isSuccessful -> {
-                    throw ResponseFailure(response.code, "${response.code} when fetching ${feedSql.title}: ${feedSql.url}")
-                }
-
-                else                   -> {
-                    Log.d(TAG, "Fetching correct ${feedSql.title}")
-                    feedParser.parseFeedResponse(
-                        url = response.request.url.toUrl(),
-                        responseBody = responseBody
-                    )
-                }
-            }
-        }
-    }.let {
+    val feed: JsonFeed = feedParser.parseFeedResponse(
+        url = finalUrl,
+        responseBody = body.toResponseBody(contentType),
+        // The icon is settled below, from what is stored; see there.
+        findIcon = false,
+    ).let {
         when {
             it.icon?.startsWith("data") == true -> it.copy(icon = null)
             else                                -> it
@@ -506,9 +537,16 @@ private suspend fun syncFeed(
     val resolvedIcon = when {
         declaredIcon != null -> declaredIcon
         storedIcon != null -> storedIcon
+        // A site that offered nothing is asked again after a week, not on
+        // every sync. One source's home page redirected in a loop, twenty
+        // requests deep, every time its feed was read.
+        !IconLookup.due(context, feedSql.id) -> null
         else -> feed.home_page_url
             ?.let { runCatching { sloppyLinkToStrictURL(it) }.getOrNull() }
-            ?.let { feedParser.findSiteIcon(it) }
+            ?.let { site ->
+                IconLookup.tried(context, feedSql.id)
+                feedParser.findSiteIcon(site)
+            }
     }
 
     feedsRepo.updateSource(
@@ -527,9 +565,25 @@ private suspend fun syncFeed(
     }
 
     cleanUpFeed(articleRepo, syncedFeed, filesDir)
+    // Only now, with everything stored: a fingerprint written before a parse
+    // that then failed would skip the next download of the same bytes, and
+    // the feed would never be read at all.
+    FeedDigest.write(context, feedSql.id, digest)
     // New to Whisper, not merely changed: an article seen before keeps the
     // time it was first synced, and only this run's have this one.
-    return articles.count { (article, _) -> article.firstSyncedTime == downloadTime }
+    return FeedFetchResult.Parsed(articles.count { (article, _) -> article.firstSyncedTime == downloadTime })
+}
+
+/** How one feed's fetch went. */
+internal sealed interface FeedFetchResult {
+    /** The server said nothing had changed, and sent nothing. */
+    data object Unchanged : FeedFetchResult
+
+    /** The server sent the whole feed, byte for byte what it sent last time. */
+    data object Identical : FeedFetchResult
+
+    /** Read and stored; [newArticles] of its articles were new to Whisper. */
+    data class Parsed(val newArticles: Int) : FeedFetchResult
 }
 
 /**
