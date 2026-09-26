@@ -67,6 +67,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Done** — reader, offline caching, sync/filter/frame-path performance, accessibility, battery, and motion: feed items move rather than being replaced, and every animation in the app stops when the reader has told the system to stop animating |
 | — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
+| — | Tablets | **Done** (§20) — columns sized to the width, the article beside the feed, a two-column cap on lead stories, and tuning for a slower device. Proven on a Galaxy Tab S5e, Android 11 |
 
 The card **rhythm** (hero / card / compact) is what Cards does *within* one
 layout; the four layouts are what the user chooses between. Both exist now.
@@ -1807,6 +1808,59 @@ The natural moment is the same one §19d names for Coil: the first time the
 theme is opened for its own reasons. `ui/theme/Theme.kt` is the seam — two
 entry points, already passing `colorScheme`, `typography` and `shapes`
 explicitly, so a fourth argument has somewhere to go.
+
+### 20. Tablets and large screens
+
+Built, and proven on a **Samsung Galaxy Tab S5e** (SM-T720, Android 11,
+2560×1600, about 1280×800 dp) beside the Pixel 10 Pro. The tablet was set up
+from the phone's OPML backup and then signed in to the same FreshRSS account,
+so both devices carry the same 114 feeds and the same read state.
+
+**Columns.** The feed takes as many columns as the width holds, from the width
+itself rather than a phone/tablet switch:
+
+| Layout | Column width | On the S5e, landscape |
+|---|---|---|
+| Mosaic | 200 dp a lane, 2 to 4 | 4 |
+| Cards, Magazine, List | 360 dp a column, 1 to 3 | 3 |
+
+With an article open beside the feed, the feed keeps 360 dp and the article
+gets the rest. The first attempt checked the pane scaffold's own "detail is
+expanded" flag, which a tablet reports as true with nothing open, so nothing
+changed on the device; it now asks whether an article is actually selected.
+
+**Lead stories.** A Large story spans the row on a phone's two Mosaic lanes and
+nowhere wider. Across four lanes a full-width tile was a banner, and the
+staggered grid can only span one lane or all of them.
+
+**Speed on an older device.** The first tablet report had 18.3% of frames slow
+while photos were decoding and 0.9% while none were, with single WebP decodes
+at 100–240 ms. Android 11 and below, or a low-memory device, now decodes two
+photos at a time instead of Coil's four; slow frames while decoding fell to
+7.0%. Newer devices keep four, and Diagnostics says which is in force. Two
+ideas were not built: a different decoder (the app already uses BitmapFactory;
+the HEIF errors in the log were about eleven AVIF images Android 11 cannot open
+at all), and holding photos back during a fling.
+
+**Read articles keep their card.** The tablet showed a wall of thin rows where
+the phone showed cards for the same stories. Every one of the rows was an
+article already read — by sync from the phone, or by scrolling past three
+columns at a time — and reading dropped an article to the smallest size. A
+read article now keeps Medium if it would have earned Medium unread; reading
+still costs it the large slot. This changed the phone too, on purpose.
+
+**Found on the way, and fixed for both.**
+
+- Day headings — **Today**, **Yesterday**, then weekdays and dates — in
+  chronological order, not while searching.
+- "Updated 12m ago" sits at the right of the first day heading instead of on
+  a line of its own; it keeps its own line when the feed does not open on a
+  heading.
+- Share left the cards (it is in the ⋮ menu); save and the menu are drawn as
+  a pair at the card's edge.
+
+**Not done, on purpose.** No bottom navigation bar and no summaries on the lead
+cards: both were offered after a comparison with Feedly and declined.
 
 ### 17. Scroll parallax on the feed — parked, at the bottom
 
