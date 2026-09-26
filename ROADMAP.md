@@ -1630,6 +1630,24 @@ Accepting updates the feed **in place**. Every article, the read state, the
 categories and whatever the weighting has learned about that source survive —
 a subscription somebody has had for years is not worth losing to a URL change.
 
+**Proven on the device** for the common case: a feed whose address changed on
+the same site (a new path, `/rss` to `/feed`) was found and fixed in place
+several times.
+
+#### Still open: a site that moved completely
+
+When a publication changes domain, looking on the old site finds nothing, and
+the only way back today is to find the new address yourself and edit the feed.
+Wanted: a **search** from the broken-feed offer — type the publication's name,
+or accept its title as the query, and pick the new feed from the results.
+Accepting would still update the feed in place, so nothing is lost.
+
+The open question is where the results come from. Whisper has no server and no
+search engine of its own: the candidates are the bundled feed library (offline,
+but only the sites it already lists), a public feed directory, or a web search
+through one — each of which sends the name typed to somebody, and would have to
+be said so in `PRIVACY.md` before it is built.
+
 ---
 
 ### 19. The audit's leftovers, in order
@@ -1983,6 +2001,11 @@ nothing about any of them.
 
 Still local, still no account, and still never one reader's list compared
 against another's.
+
+**Under review, September 2026.** In daily use with 114 feeds the suggestions
+have been weak, and whether the screen stays in the long run is open. Nothing
+to build until that is decided; if it goes, it goes whole, with its weekly
+worker.
 
 ## Narrowing to one source — built, with two parts left
 
