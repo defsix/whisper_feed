@@ -332,7 +332,7 @@ private fun StarterSourcesStep(
                         scope.launch(Dispatchers.IO) {
                             prefs.backupFolder.setValue(uri.toString())
                         }
-                        BackupWorker.schedule(context)
+                        BackupWorker.schedule(context, uri.toString())
                         // Their own list is back; a starter list would be nine
                         // feeds they did not ask for on top of the ones they
                         // spent years choosing.

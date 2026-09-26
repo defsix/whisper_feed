@@ -496,11 +496,18 @@ Two interactions that had to be right, and are:
 
 #### Still open in this corner
 
-- ~~**"Mark all as read."**~~ **Built**, in Settings, with a choice of how far
-  back: **Everything**, **Older than an hour** or **Older than a day**, by the
-  article's own date. Each choice shows how many unread articles it would
-  mark, and one with nothing in it cannot be picked. Reads sync to the
-  account like any other.
+- ~~**"Mark all as read."**~~ **Built**, in the feed's filter sheet under its
+  own heading: **Everything**, or older than **1**, **24** or **48 hours**, by
+  the article's own date. Each shows how many unread articles it would mark,
+  one with nothing in it cannot be picked, and it acts at once rather than
+  waiting for Apply, which the heading says. Undo appears in the feed straight
+  away. It started as a Settings row; that row is gone, because the feed is
+  where you are when you want it, and its undo waited for half a minute of
+  stillness meant for scroll marks, so nobody saw it. Not in the launcher
+  panel yet: the panel has no undo for a batch of reads.
+- **The filter icon now opens more than filters.** Kept as the funnel for
+  now: the provided icons have no other pair with an "active" twin, and the
+  funnel's filled form is how the header says the feed is narrowed.
 - ~~**An undo window on a scroll-produced batch.**~~ **Built.** A run of scroll
   marks, or a mark-all, is offered back as one batch in the feed's snackbar.
 - **A debug readout of accrued dwell**, showing what each card banked as it
@@ -2002,10 +2009,11 @@ nothing about any of them.
 Still local, still no account, and still never one reader's list compared
 against another's.
 
-**Under review, September 2026.** In daily use with 114 feeds the suggestions
-have been weak, and whether the screen stays in the long run is open. Nothing
-to build until that is decided; if it goes, it goes whole, with its weekly
-worker.
+**Out of Settings, September 2026, for later development.** In daily use with
+114 feeds the suggestions were weak. The row is gone from Settings and the
+weekly pass is cancelled, so nothing is fetched for a screen nobody can reach.
+The code stays: the page, the worker and both mechanisms, ready to come back
+when there is a better signal to build them on.
 
 ## Narrowing to one source — built, with two parts left
 

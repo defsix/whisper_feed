@@ -85,15 +85,27 @@ class BackupWorker(
     companion object {
         private const val WORK_NAME = "WhisperBackup"
 
-        fun schedule(context: Context) {
+        /**
+         * Daily, for the folder at [folder].
+         *
+         * Wi-Fi only when the folder is in cloud storage: writing to somebody's
+         * Drive on their mobile data without being asked is not this app's
+         * decision. A folder on the phone itself sends nothing anywhere, so
+         * it has no network condition at all — it used to wait for Wi-Fi like
+         * the rest, which made no sense for a file that never leaves the
+         * phone.
+         *
+         * UPDATE rather than KEEP, so a schedule made under the old rule takes
+         * the new one without losing its place in the day.
+         */
+        fun schedule(context: Context, folder: String) {
             val request = PeriodicWorkRequestBuilder<BackupWorker>(1, TimeUnit.DAYS)
                 .setConstraints(
                     Constraints.Builder()
-                        // Unmetered rather than merely connected: an OPML file
-                        // is small, but writing to cloud storage on someone's
-                        // mobile data without being asked is not this app's
-                        // decision to make.
-                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .setRequiredNetworkType(
+                            if (backupFolderIsOnDevice(folder)) NetworkType.NOT_REQUIRED
+                            else NetworkType.UNMETERED
+                        )
                         .setRequiresBatteryNotLow(true)
                         .build()
                 )
@@ -101,7 +113,7 @@ class BackupWorker(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }
@@ -111,3 +123,19 @@ class BackupWorker(
         }
     }
 }
+
+/** The document providers that are storage on the phone itself. */
+private val ON_DEVICE_PROVIDERS = setOf(
+    "com.android.externalstorage.documents",
+    "com.android.providers.downloads.documents",
+)
+
+/**
+ * Whether a chosen backup folder is on the phone rather than in cloud storage.
+ *
+ * Read from the provider that granted the folder. Anything not known to be
+ * local — Drive, Dropbox, a provider nobody has heard of — counts as remote,
+ * so an unknown case keeps the Wi-Fi rule rather than losing it.
+ */
+fun backupFolderIsOnDevice(folder: String): Boolean =
+    runCatching { java.net.URI(folder).authority }.getOrNull() in ON_DEVICE_PROVIDERS

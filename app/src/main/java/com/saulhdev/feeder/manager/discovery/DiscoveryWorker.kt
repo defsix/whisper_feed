@@ -290,11 +290,23 @@ class DiscoveryWorker(
             )
         }
 
+        private const val PERIODIC_WORK = "whisper_discovery"
+
         /** Whether an on-demand pass is waiting or running. */
         fun runningNow(context: Context): Flow<Boolean> =
             WorkManager.getInstance(context)
                 .getWorkInfosForUniqueWorkFlow(NOW_WORK)
                 .map { infos -> infos.any { !it.state.isFinished } }
+
+        /**
+         * Stops the weekly pass. Suggestions are out of Settings until they
+         * are worth their screen (ROADMAP, "Suggestions, after the device
+         * report"), and a pass fetching home pages for a screen nobody can
+         * reach would be network use with nothing to show for it.
+         */
+        fun cancel(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
+        }
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<DiscoveryWorker>(7, TimeUnit.DAYS)
@@ -311,7 +323,7 @@ class DiscoveryWorker(
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                "whisper_discovery",
+                PERIODIC_WORK,
                 ExistingPeriodicWorkPolicy.KEEP,
                 request,
             )

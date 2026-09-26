@@ -114,6 +114,8 @@ they are not upgradeable to a real release and are not for distribution.
 - Search over headlines, sources and summaries, offline; tap a source's name
   to see only that source
 - Mark read on scroll, with read articles dimmed or hidden as you prefer
+- Mark as read from the filter sheet — everything, or only what is older than
+  1, 24 or 48 hours — with Undo straight away
 - Breaking stories: several sources on one story become one lead card, and it
   can stay at the top until you scroll past it
 - Bookmarks, pinning, and full article text fetched per-feed or globally, and
@@ -134,8 +136,6 @@ they are not upgradeable to a real release and are not for distribution.
   often you read that source, whether several sources are covering one story
 - More like this / less like this, and a screen showing exactly what the app
   has learned, per source, with a reset that actually resets
-- Weekly on-device suggestions drawn from what you read — never a server,
-  never someone else's recommendation
 - Chronological order is always available, and is the default
 
 **The glance row**

@@ -29,10 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
@@ -44,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
@@ -62,10 +57,7 @@ import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.ui.components.PreferenceGroup
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.dialog.BaseDialog
-import com.saulhdev.feeder.ui.components.dialog.MarkAllReadDialog
 import com.saulhdev.feeder.ui.components.dialog.StringSelectionPrefDialogUI
-import androidx.compose.runtime.DisposableEffect
-import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Row
 import com.saulhdev.feeder.NeoApp
@@ -76,7 +68,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
 import com.saulhdev.feeder.ui.icons.phosphor.Power
 import kotlinx.coroutines.launch
-import com.saulhdev.feeder.viewmodels.ArticleListViewModel
 import org.koin.compose.koinInject
 import com.saulhdev.feeder.data.content.asState
 
@@ -90,18 +81,6 @@ fun PreferencesPage(
     val navController = LocalNavController.current
     val backupStoppedAt by prefs.backupStoppedAt.get().collectAsState(initial = 0L)
     val title = stringResource(id = R.string.title_settings)
-    // The row acts on the feed, which lives in a view model this screen does
-    // not otherwise touch; see FeedPreferences.markEverythingRead.
-    val articles: ArticleListViewModel = koinNeoViewModel()
-    // The row asks how far back before it marks anything.
-    var markingRead by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val undoLabel = stringResource(R.string.action_undo)
-    val resources = LocalResources.current
-    DisposableEffect(articles) {
-        FeedPreferences.markEverythingRead = { markingRead = true }
-        onDispose { FeedPreferences.markEverythingRead = null }
-    }
 
     // Grouped by what the reader is trying to do, because one list of sixteen
     // rows called "Service" is a list nobody reads to the end of. Every group
@@ -142,7 +121,6 @@ fun PreferencesPage(
         prefs.articleOpenMode,
         prefs.readVisibility,
         prefs.markReadOnScroll,
-        prefs.markAllRead,
         prefs.volumeKeyScroll,
     )
 
@@ -167,7 +145,6 @@ fun PreferencesPage(
         prefs.sources,
         prefs.feedLibrary,
         prefs.importBookmarks,
-        prefs.suggestions,
     )
 
     /**
@@ -213,7 +190,6 @@ fun PreferencesPage(
     ViewWithActionBar(
         title = title,
         largeTitle = true,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -332,33 +308,6 @@ fun PreferencesPage(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
-        }
-
-        if (markingRead) {
-            MarkAllReadDialog(
-                counts = { now -> articles.unreadCounts(now) },
-                // Offered back here, straight away. The feed's own offer waits
-                // for half a minute of stillness, which is right for a run of
-                // scroll marks and meant this one was almost never seen.
-                onConfirm = { range, now ->
-                    articles.markAllRead(range, now) { count ->
-                        if (count == 0) return@markAllRead
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar(
-                                message = resources.getQuantityString(
-                                    R.plurals.articles_marked_read, count, count
-                                ),
-                                actionLabel = undoLabel,
-                                withDismissAction = true,
-                                duration = SnackbarDuration.Long,
-                            )
-                            if (result == SnackbarResult.ActionPerformed) articles.undoReads()
-                            else articles.forgetUndoableReads()
-                        }
-                    }
-                },
-                onDismiss = { markingRead = false },
-            )
         }
 
         if (openDialog.value) {

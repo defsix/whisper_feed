@@ -24,6 +24,7 @@ import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
 import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.data.repository.SourcesRepository
 import com.saulhdev.feeder.manager.discovery.DiscoveryWorker
+import com.saulhdev.feeder.manager.backup.BackupWorker
 import com.saulhdev.feeder.manager.service.OverlayBridge
 import com.saulhdev.feeder.utils.ApplicationCoroutineScope
 import com.saulhdev.feeder.utils.Diagnostics
@@ -61,7 +62,23 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
         stampOnboardingForExistingInstalls()
         purgeMisfiledFullText()
         sweepOrphanArticleFiles()
-        DiscoveryWorker.schedule(this)
+        // Off while suggestions are out of Settings; see DiscoveryWorker.cancel.
+        DiscoveryWorker.cancel(this)
+        refreshBackupSchedule()
+    }
+
+    /**
+     * Re-states the daily backup with the rules as they are now.
+     *
+     * A schedule keeps the conditions it was made with, so one set up while
+     * every folder waited for Wi-Fi would go on waiting until somebody chose a
+     * folder again. Nothing happens without a folder.
+     */
+    private fun refreshBackupSchedule() {
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            val folder = get<FeedPreferences>().backupFolder.getValue()
+            if (folder.isNotEmpty()) BackupWorker.schedule(this@NeoApp, folder)
+        }
     }
 
     /**

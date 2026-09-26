@@ -91,6 +91,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
@@ -230,6 +231,19 @@ fun ArticleListPage(
     // past them, or by marking the lot from Settings — are offered back. An
     // article they opened is not: they know they opened it.
     val undoableReads by viewModel.undoableReads.collectAsState()
+    val resources = LocalResources.current
+    // The one offer, whoever marked them. Mark as read calls it at once; a run
+    // of scroll marks calls it once the run has settled.
+    val offerReadsBack: suspend (Int) -> Unit = { count ->
+        val result = snackbarHostState.showSnackbar(
+            message = resources.getQuantityString(R.plurals.articles_marked_read, count, count),
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) viewModel.undoReads()
+        else viewModel.forgetUndoableReads()
+    }
     LaunchedEffect(undoableReads.size) {
         val count = undoableReads.size
         if (count < UNDO_MIN_COUNT) return@LaunchedEffect
@@ -237,16 +251,7 @@ fun ArticleListPage(
         // the run to finish rather than replacing the snackbar on every mark.
         delay(UNDO_SETTLE_MS)
         if (viewModel.undoableReads.value.size != count) return@LaunchedEffect
-        val result = snackbarHostState.showSnackbar(
-            message = context.resources.getQuantityString(
-                R.plurals.articles_marked_read, count, count
-            ),
-            actionLabel = undoLabel,
-            withDismissAction = true,
-            duration = SnackbarDuration.Long,
-        )
-        if (result == SnackbarResult.ActionPerformed) viewModel.undoReads()
-        else viewModel.forgetUndoableReads()
+        offerReadsBack(count)
     }
 
     var showBookmarks by remember { mutableStateOf(false) }
@@ -365,7 +370,14 @@ fun ArticleListPage(
                     sheetShape = MaterialTheme.shapes.extraSmall,
                     sheetContent = {
                         if (scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden) {
-                            SortFilterSheet {
+                            SortFilterSheet(
+                                markReadCounts = { now -> viewModel.unreadCounts(now) },
+                                onMarkRead = { range, now ->
+                                    viewModel.markAllRead(range, now) { count ->
+                                        if (count > 0) scope.launch { offerReadsBack(count) }
+                                    }
+                                },
+                            ) {
                                 scope.launch {
                                     scaffoldState.bottomSheetState.partialExpand()
                                 }

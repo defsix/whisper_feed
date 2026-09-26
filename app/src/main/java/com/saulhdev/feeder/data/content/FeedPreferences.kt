@@ -43,7 +43,6 @@ import com.saulhdev.feeder.ui.icons.phosphor.Browser
 import com.saulhdev.feeder.ui.icons.phosphor.Bug
 import com.saulhdev.feeder.ui.icons.phosphor.CaretDown
 import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
-import com.saulhdev.feeder.ui.icons.phosphor.CheckCircle
 import com.saulhdev.feeder.ui.icons.phosphor.Circle
 import com.saulhdev.feeder.ui.icons.phosphor.Clock
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
@@ -626,15 +625,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         }
     )
 
-    var markAllRead = StringPref(
-        titleId = R.string.pref_mark_all_read,
-        summaryId = R.string.pref_mark_all_read_summary,
-        icon = Phosphor.CheckCircle,
-        key = MARK_ALL_READ,
-        dataStore = dataStore,
-        onClick = { markEverythingRead?.invoke() }
-    )
-
     var markReadOnScroll = FloatPref(
         titleId = R.string.pref_mark_read_on_scroll,
         summaryId = R.string.pref_mark_read_on_scroll_summary,
@@ -1102,7 +1092,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val VOLUME_KEY_SCROLL = booleanPreferencesKey("pref_volume_key_scroll")
         val READ_VISIBILITY = stringPreferencesKey("pref_read_visibility")
         val MARK_READ_ON_SCROLL = floatPreferencesKey("pref_mark_read_dwell_seconds")
-        val MARK_ALL_READ = stringPreferencesKey("pref_mark_all_read")
         val LEARNED = stringPreferencesKey("pref_learned")
         val STATISTICS = stringPreferencesKey("pref_statistics")
         val ACCOUNT = stringPreferencesKey("pref_account")
@@ -1131,14 +1120,6 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val BREAKING_NEWS = booleanPreferencesKey("pref_breaking_news")
         val DIM_SKIPPED = booleanPreferencesKey("pref_dim_skipped")
 
-        /**
-         * Set once by the app so a preference row can reach the view model.
-         *
-         * A preference is a data object with no dependencies; the alternative
-         * was giving every preference a repository it does not want, to serve
-         * the one row that acts rather than stores.
-         */
-        var markEverythingRead: (() -> Unit)? = null
         val FULL_TEXT_ALL_FEEDS = booleanPreferencesKey("pref_full_text_all_feeds")
         val FULL_TEXT_ON_MOBILE = booleanPreferencesKey("pref_full_text_on_mobile")
         val SHOW_BOOKMARKS = booleanPreferencesKey("pref_show_bookmarks")

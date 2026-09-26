@@ -26,7 +26,8 @@ package com.saulhdev.feeder.viewmodels
 enum class MarkReadRange(private val olderThanMs: Long?) {
     Everything(null),
     OlderThanHour(60 * 60 * 1000L),
-    OlderThanDay(24 * 60 * 60 * 1000L);
+    OlderThanDay(24 * 60 * 60 * 1000L),
+    OlderThanTwoDays(48 * 60 * 60 * 1000L);
 
     /**
      * The cut-off: articles dated before this are marked. Everything has none,

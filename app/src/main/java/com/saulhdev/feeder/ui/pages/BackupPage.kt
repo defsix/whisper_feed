@@ -55,6 +55,7 @@ import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.manager.backup.BackupStore
 import com.saulhdev.feeder.manager.backup.BackupWorker
+import com.saulhdev.feeder.manager.backup.backupFolderIsOnDevice
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
 import com.saulhdev.feeder.ui.components.SwitchPreference
@@ -110,7 +111,7 @@ fun BackupPage(
         // and the launcher callback arrives on the main thread.
         scope.launch(Dispatchers.IO) {
             prefs.backupFolder.setValue(uri.toString())
-            BackupWorker.schedule(context)
+            BackupWorker.schedule(context, uri.toString())
             // Written immediately rather than waiting for the first scheduled
             // run: somebody who has just chosen a folder wants to see a file
             // appear in it, and a day of nothing happening reads as a setting
@@ -200,17 +201,24 @@ fun BackupPage(
                                 // about subscriptions; as a section name it
                                 // would say nothing about what is happening.
                                 text = stringResource(
-                                    if (folder.isEmpty()) R.string.backup_off
-                                    else R.string.backup_on
+                                    when {
+                                        folder.isEmpty() -> R.string.backup_off
+                                        backupFolderIsOnDevice(folder) -> R.string.backup_on_device
+                                        else -> R.string.backup_on_cloud
+                                    }
                                 ),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.backup_only_time),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                        // Only while nothing is on: it says no folder is chosen,
+                        // which stopped being true the moment one was.
+                        if (folder.isEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.backup_only_time),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }
