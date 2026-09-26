@@ -63,7 +63,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out, and pinned sources at the top of the list — which is what reorder became; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
-| 6 | Sync | **Done, and proven on FreshRSS** — backup (§14) and Google Reader sync (§7), both ways: subscriptions, read and unread, saves, with a summary of what each sync did. Running against a live FreshRSS since 25 September 2026, 114 feeds. Removals made on the server are deliberately not applied here. Miniflux, Inoreader and BazQux are untried |
+| 6 | Sync | **Done, and proven on FreshRSS** — backup (§14) and Google Reader sync (§7), both ways: subscriptions, read and unread, saves, with a summary of what each sync did. Running against a live FreshRSS since 25 September 2026, 114 feeds. Removals made on the server are deliberately not applied here. FreshRSS is the one supported service; others are not planned |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Done** — reader, offline caching, sync/filter/frame-path performance, accessibility, battery, and motion: feed items move rather than being replaced, and every animation in the app stops when the reader has told the system to stop animating |
 | — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
@@ -883,9 +883,10 @@ one sent, 216 received on the first morning.
 
 #### Still open
 
-- **Miniflux, Inoreader and BazQux are untried.** They speak the same
-  protocol, and `docs/FRESHRSS_TEST_SERVER.md` has the Miniflux half of a test
-  setup.
+- **Miniflux, Inoreader and BazQux: not planned.** They speak the same
+  protocol and may well work, but FreshRSS is the one service tested and
+  supported; one is enough. `docs/FRESHRSS_TEST_SERVER.md` keeps the Miniflux
+  notes for anyone who wants to try.
 - **Changes wait for the next sync.** A read made here reaches the server at
   the next hourly sync, or at once with Sync now or pull to refresh. Sending
   them within a minute was offered and declined: the hourly schedule is
