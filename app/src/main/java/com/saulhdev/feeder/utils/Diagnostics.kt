@@ -18,6 +18,8 @@
 package com.saulhdev.feeder.utils
 
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.manager.sync.greader.MissingKind
+import com.saulhdev.feeder.manager.sync.service.refusalCode
 import com.saulhdev.feeder.data.content.SyncAccount
 import com.saulhdev.feeder.manager.sync.AUTOMATIC_SYNC_WORK
 import androidx.work.WorkInfo
@@ -367,7 +369,14 @@ object Diagnostics : KoinComponent {
         if (get<SyncAccount>().isSignedIn) {
             runCatching { GoogleReaderState.notOnServer(context) }.getOrDefault(emptyList()).let { missing ->
                 if (missing.isNotEmpty()) appendLine("Not on the server: ${missing.size}")
-                missing.forEach { (title, why) -> appendLine("  ${title.take(28).padEnd(28)} $why") }
+                missing.forEach { feed ->
+                    val why = when (feed.kind) {
+                        MissingKind.REFUSED -> "refused by the server" + refusalCode(feed.status) + ", kept on this phone"
+                        MissingKind.REMOVED_THERE -> "removed on the server, kept here"
+                        MissingKind.NO_WRITE -> "not sent, no write access"
+                    }
+                    appendLine("  ${feed.title.take(28).padEnd(28)} $why")
+                }
             }
         }
     }

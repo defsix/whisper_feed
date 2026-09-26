@@ -359,7 +359,13 @@
     <string name="account_tally_sent">Sent: %1$d read, %2$d unread, %3$d saved, %4$d unsaved</string>
     <string name="account_tally_kept">Not accepted, sent again next time: %1$d</string>
     <string name="account_tally_received">Received: %1$d read, %2$d unread, %3$d saved</string>
-    <string name="account_tally_missing">Not on the server: %1$d</string>
+    <string name="account_phone_only_title">On this phone only: %1$d</string>
+    <string name="account_phone_only_explained">Your server could not fetch these feeds, usually because the site blocks servers. They still update here as normal, but reading them will not sync to your other devices. Whisper tries again once a week, and whenever you tap Sync now.</string>
+    <string name="account_phone_only_admin">If you run the server, giving it a browser-like user agent usually fixes this.</string>
+    <string name="account_removed_there_title">Removed on the server: %1$d</string>
+    <string name="account_removed_there_explained">These were removed from the server but are kept here. Remove them here too if you no longer want them.</string>
+    <string name="account_no_write_title">Not sent to the server: %1$d</string>
+    <string name="account_no_write_explained">The server did not allow changes, so these were not added. Check the account has permission to edit subscriptions.</string>
     <string name="account_server_hint">The address you open in your browser. For FreshRSS, Whisper adds /api/greader.php if it is needed.</string>
     <string name="account_server_upgraded">Changed to https, so your password is not sent in the clear. Plain http will not connect.</string>
     <string name="account_password_hint">Most services offer an application password for this. Use one if yours does — it can be revoked without changing your real password.</string>

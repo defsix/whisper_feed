@@ -166,7 +166,10 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             result = if (wholeFeed && service !is LocalRssService) {
                 // An account says only whether it worked, so its line has no
                 // feed count; see SyncResult.counted.
-                when (val outcome = service.sync(forceNetwork = forceNetwork)) {
+                when (val outcome = service.sync(
+                    forceNetwork = forceNetwork,
+                    retryRefused = origin == SyncLog.ORIGIN_ACCOUNT,
+                )) {
                     is SyncOutcome.Success -> outcome.feeds ?: SyncResult.uncounted
                     SyncOutcome.SignedOut -> {
                         // The token is gone, and retrying will not bring it

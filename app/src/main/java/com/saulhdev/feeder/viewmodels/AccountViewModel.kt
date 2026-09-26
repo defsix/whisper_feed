@@ -33,6 +33,7 @@ import com.saulhdev.feeder.manager.sync.greader.AccountTally
 import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.manager.sync.greader.MissingFeed
 import com.saulhdev.feeder.manager.sync.greader.serverCandidates
 import com.saulhdev.feeder.manager.sync.greader.signInAtAny
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
@@ -52,7 +53,7 @@ data class AccountState(
     val lastSync: Long = 0L,
     /** What the last sync did with the server, and which feeds it would not take. */
     val tally: AccountTally? = null,
-    val notOnServer: List<Pair<String, String>> = emptyList(),
+    val notOnServer: List<MissingFeed> = emptyList(),
     val busy: Boolean = false,
     /**
      * Set when something went wrong, cleared when the reader changes anything.

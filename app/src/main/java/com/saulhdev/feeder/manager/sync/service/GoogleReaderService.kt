@@ -34,6 +34,10 @@ import com.saulhdev.feeder.utils.isUnmetered
 import com.saulhdev.feeder.manager.sync.greader.AccountTally
 import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
+import com.saulhdev.feeder.manager.sync.greader.MissingFeed
+import com.saulhdev.feeder.manager.sync.greader.MissingKind
+import com.saulhdev.feeder.manager.sync.greader.Refusal
+import com.saulhdev.feeder.manager.sync.greader.refusedDueForRetry
 import com.saulhdev.feeder.manager.sync.greader.planSubscriptions
 import com.saulhdev.feeder.manager.sync.greader.matchFeeds
 import com.saulhdev.feeder.manager.sync.greader.readChanges
@@ -76,7 +80,7 @@ class GoogleReaderService(
     private val api: GoogleReaderApi = GoogleReaderApi(account.serverUrl),
 ) : RssService() {
 
-    override suspend fun sync(forceNetwork: Boolean): SyncOutcome {
+    override suspend fun sync(forceNetwork: Boolean, retryRefused: Boolean): SyncOutcome {
         val auth = account.authToken
         if (auth.isEmpty()) return SyncOutcome.SignedOut
 
@@ -85,10 +89,10 @@ class GoogleReaderService(
         // feed lists at once, each adding what the others were adding, and
         // one feed came out four times. The feed fetching already had a lock
         // of its own; the account half did not.
-        return accountLock.withLock { syncLocked(auth, forceNetwork) }
+        return accountLock.withLock { syncLocked(auth, forceNetwork, retryRefused) }
     }
 
-    private suspend fun syncLocked(auth: String, forceNetwork: Boolean): SyncOutcome {
+    private suspend fun syncLocked(auth: String, forceNetwork: Boolean, retryRefused: Boolean): SyncOutcome {
         return try {
             // The order is the design. Feeds first, both ways, so the
             // articles fetched next come from the right list. Then the
@@ -98,7 +102,7 @@ class GoogleReaderService(
             // by the server's older answer, which is what happened to every
             // read in the first version of this.
             val token = api.writeToken(auth)
-            var tally = syncSubscriptions(auth, token)
+            var tally = syncSubscriptions(auth, token, retryRefused)
 
             // Articles still come from the feeds themselves; see the note above.
             // ID_ALL rather than the default, so a feed fetched in the last
@@ -152,7 +156,7 @@ class GoogleReaderService(
      * Folders from the server win for a feed both sides have: they are what
      * the reader set on whichever device they set it.
      */
-    private suspend fun syncSubscriptions(auth: String, token: String?): AccountTally {
+    private suspend fun syncSubscriptions(auth: String, token: String?, retryRefused: Boolean): AccountTally {
         val remote = api.subscriptions(auth)
         val local = sources.getAllSubscriptions()
         val localByKey = local.associateBy { normalizeFeedUrl(it.url) }
@@ -198,16 +202,28 @@ class GoogleReaderService(
         // and the plan is simply made again next time.
         val subscribed = mutableSetOf<String>()
         val unsubscribed = mutableSetOf<String>()
-        // The server's answer to each refused one, for the report: FreshRSS
-        // refuses a feed it cannot fetch or read, and says so only in its log.
-        val refusedWith = mutableMapOf<String, Int>()
+        // What the server refused before, and what it answered: FreshRSS
+        // refuses a feed its server cannot fetch, and says why only in its
+        // log. One refused within the week is not offered again unless the
+        // reader asks, with Sync now; it keeps updating on the phone.
+        val now = System.currentTimeMillis()
+        val refusals = GoogleReaderState.refusals(context)
+            .filterKeys { it in plan.subscribe }
+            .toMutableMap()
         if (token != null) {
-            plan.subscribe.forEach { key ->
-                val feed = localByKey.getValue(key)
-                val folder = feed.tags.firstOrNull { it.isNotBlank() }
-                val status = api.editSubscriptionStatus(auth, token, "subscribe", feed.url.toString(), feed.title, folder)
-                if (status in 200..299) subscribed += key else refusedWith[key] = status
-            }
+            plan.subscribe
+                .filter { refusedDueForRetry(refusals[it], now, retryRefused) }
+                .forEach { key ->
+                    val feed = localByKey.getValue(key)
+                    val folder = feed.tags.firstOrNull { it.isNotBlank() }
+                    val status = api.editSubscriptionStatus(auth, token, "subscribe", feed.url.toString(), feed.title, folder)
+                    if (status in 200..299) {
+                        subscribed += key
+                        refusals.remove(key)
+                    } else {
+                        refusals[key] = Refusal(now, status)
+                    }
+                }
             plan.unsubscribe.forEach { key ->
                 // By the server's own id for it, which every server accepts.
                 val sub = remoteAs.getValue(key)
@@ -224,18 +240,19 @@ class GoogleReaderService(
             )
         }
 
-        // Ours that the server still lacks, and why, for the report: a count
-        // alone said four were missing and nothing about which.
-        GoogleReaderState.setNotOnServer(
-            context,
-            (localKeys - remoteAs.keys - subscribed).map { key ->
-                localByKey.getValue(key).title to when {
-                    key !in plan.subscribe -> "removed on the server, kept here"
-                    token == null -> "not sent, no write access"
-                    else -> "the server refused it" + refusalCode(refusedWith[key])
-                }
-            },
-        )
+        GoogleReaderState.setRefusals(context, refusals)
+
+        // Ours that the server still lacks, and why: a count alone said four
+        // were missing and nothing about which.
+        val missing = (localKeys - remoteAs.keys - subscribed).map { key ->
+            val title = localByKey.getValue(key).title
+            when {
+                key !in plan.subscribe -> MissingFeed(title, MissingKind.REMOVED_THERE)
+                token == null -> MissingFeed(title, MissingKind.NO_WRITE)
+                else -> MissingFeed(title, MissingKind.REFUSED, refusals[key]?.status ?: 0)
+            }
+        }
+        GoogleReaderState.setNotOnServer(context, missing)
 
         // Feeds both sides have: the server's folders.
         remote.forEach { sub ->
@@ -265,7 +282,7 @@ class GoogleReaderService(
         return AccountTally(
             serverFeeds = (remoteAs.keys + subscribed - unsubscribed).size,
             feedsSent = subscribed.size,
-            feedsRefused = plan.subscribe.size - subscribed.size,
+            feedsRefused = missing.count { it.kind == MissingKind.REFUSED },
             feedsRemoved = unsubscribed.size,
             feedsAdded = plan.addLocal.size,
         )

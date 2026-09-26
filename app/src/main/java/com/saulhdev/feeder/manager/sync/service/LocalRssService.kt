@@ -33,7 +33,7 @@ class LocalRssService(
     private val articles: ArticleRepository,
 ) : RssService() {
 
-    override suspend fun sync(forceNetwork: Boolean): SyncOutcome =
+    override suspend fun sync(forceNetwork: Boolean, retryRefused: Boolean): SyncOutcome =
         runCatching { syncFeeds(context = context, forceNetwork = forceNetwork) }
             .fold(
                 onSuccess = { SyncOutcome.Success(feeds = it) },

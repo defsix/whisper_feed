@@ -57,7 +57,7 @@ class AccountTallyTest {
     @Test
     fun `the sync counts what it did and keeps it for the account screen`() {
         val service = source("manager/sync/service/GoogleReaderService.kt")
-        assertTrue(service.contains("feedsRefused = plan.subscribe.size - subscribed.size,"))
+        assertTrue(service.contains("feedsRefused = missing.count { it.kind == MissingKind.REFUSED },"))
         assertTrue(service.contains("serverFeeds = (remoteAs.keys + subscribed - unsubscribed).size,"))
         assertTrue(service.contains("if (done) accepted[i] += chunk.size else ok = false"))
         assertTrue(service.contains("AccountTallyStore.write(context, tally, account.lastSync)"))
@@ -86,5 +86,54 @@ class SourceSearchFocusTest {
         assertTrue(pane.contains("LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { focusManager.clearFocus() }"))
         assertTrue(pane.contains("if (sourceId.longValue != -1L) focusManager.clearFocus()"))
         assertTrue(pane.contains("DisposableEffect(Unit) { onDispose { focusManager.clearFocus() } }"))
+    }
+}
+
+/**
+ * A feed the site keeps from the server stays on the phone, said plainly,
+ * and is offered to the server once a week rather than on every sync.
+ */
+class RefusedFeedTest {
+    private val now = 1_000_000_000_000L
+    private val day = 24 * 60 * 60_000L
+
+    @Test
+    fun `a feed never refused is sent`() {
+        assertTrue(com.saulhdev.feeder.manager.sync.greader.refusedDueForRetry(null, now, asked = false))
+    }
+
+    @Test
+    fun `a refused feed waits a week`() {
+        val r = com.saulhdev.feeder.manager.sync.greader.Refusal(at = now - 6 * day, status = 400)
+        assertFalse(com.saulhdev.feeder.manager.sync.greader.refusedDueForRetry(r, now, asked = false))
+        assertTrue(com.saulhdev.feeder.manager.sync.greader.refusedDueForRetry(r, now + day, asked = false))
+    }
+
+    @Test
+    fun `Sync now tries it straight away, so a fix on the server can be tested`() {
+        val r = com.saulhdev.feeder.manager.sync.greader.Refusal(at = now, status = 400)
+        assertTrue(com.saulhdev.feeder.manager.sync.greader.refusedDueForRetry(r, now, asked = true))
+    }
+
+    private fun source(path: String) = File("src/main/java/com/saulhdev/feeder/$path").readText()
+
+    @Test
+    fun `only the account screen's Sync now asks`() {
+        val worker = source("manager/sync/FeedSyncer.kt")
+        assertTrue(worker.contains("retryRefused = origin == SyncLog.ORIGIN_ACCOUNT,"))
+        val service = source("manager/sync/service/GoogleReaderService.kt")
+        assertTrue(service.contains(".filter { refusedDueForRetry(refusals[it], now, retryRefused) }"))
+        assertTrue("forgotten once taken", service.contains("subscribed += key\n                        refusals.remove(key)"))
+        assertTrue("and once on the server or gone", service.contains(".filterKeys { it in plan.subscribe }"))
+    }
+
+    @Test
+    fun `the screen explains it, not in the error colour`() {
+        val page = source("ui/pages/AccountPage.kt")
+        val group = page.substring(page.indexOf("private fun MissingGroup(")).substringBefore("\n}\n")
+        assertFalse(group.contains("colorScheme.error"))
+        assertTrue(page.contains("heading = R.string.account_phone_only_title,"))
+        val strings = File("src/main/res/values/strings.xml").readText()
+        assertTrue(strings.contains("They still update here as normal, but reading them will not sync to your other devices."))
     }
 }

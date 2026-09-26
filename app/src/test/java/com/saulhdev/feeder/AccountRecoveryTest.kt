@@ -108,11 +108,12 @@ class AccountRecoveryTest {
 
     @Test
     fun `the report says which feeds the server lacks, and why`() {
-        assertTrue(service.contains("(localKeys - remoteAs.keys - subscribed).map { key ->"))
-        assertTrue(service.contains("key !in plan.subscribe -> \"removed on the server, kept here\""))
-        assertTrue(service.contains("else -> \"the server refused it\""))
+        assertTrue(service.contains("val missing = (localKeys - remoteAs.keys - subscribed).map { key ->"))
+        assertTrue(service.contains("key !in plan.subscribe -> MissingFeed(title, MissingKind.REMOVED_THERE)"))
+        assertTrue(service.contains("else -> MissingFeed(title, MissingKind.REFUSED, refusals[key]?.status ?: 0)"))
         val diagnostics = source("utils/Diagnostics.kt")
         assertTrue(diagnostics.contains("appendLine(\"Not on the server: \${missing.size}\")"))
+        assertTrue(diagnostics.contains("MissingKind.REFUSED -> \"refused by the server\" + refusalCode(feed.status) + \", kept on this phone\""))
     }
 
     @Test
@@ -132,7 +133,7 @@ class AccountRecoveryTest {
 
     @Test
     fun `one account sync at a time`() {
-        assertTrue(service.contains("return accountLock.withLock { syncLocked(auth, forceNetwork) }"))
+        assertTrue(service.contains("return accountLock.withLock { syncLocked(auth, forceNetwork, retryRefused) }"))
         assertTrue(service.contains("private val accountLock = Mutex()"))
     }
 

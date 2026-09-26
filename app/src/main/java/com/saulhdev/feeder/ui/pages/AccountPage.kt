@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.sync.greader.AccountProblem
 import com.saulhdev.feeder.manager.sync.greader.AccountTally
+import com.saulhdev.feeder.manager.sync.greader.MissingFeed
+import com.saulhdev.feeder.manager.sync.greader.MissingKind
 import com.saulhdev.feeder.manager.sync.greader.normalisedServerUrl
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
@@ -345,7 +347,7 @@ private fun accountProblemText(problem: AccountProblem, detail: String?): String
  * zeros, because "0 sent" is itself the confirmation.
  */
 @Composable
-private fun SyncTally(tally: AccountTally, notOnServer: List<Pair<String, String>>) {
+private fun SyncTally(tally: AccountTally, notOnServer: List<MissingFeed>) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             stringResource(R.string.account_tally_title),
@@ -361,23 +363,56 @@ private fun SyncTally(tally: AccountTally, notOnServer: List<Pair<String, String
             if (tally.changesKept > 0) stringResource(R.string.account_tally_kept, tally.changesKept) else null,
             stringResource(R.string.account_tally_received, tally.readHere, tally.unreadHere, tally.savedHere),
         )
-        lines.forEach {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (notOnServer.isNotEmpty()) {
-            Text(
-                stringResource(R.string.account_tally_missing, notOnServer.size),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            notOnServer.forEach { (title, why) ->
-                Text(
-                    "$title - $why",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        lines.forEach { TallyLine(it) }
+        MissingGroup(
+            feeds = notOnServer.filter { it.kind == MissingKind.REFUSED },
+            heading = R.string.account_phone_only_title,
+            explanation = R.string.account_phone_only_explained,
+            footnote = R.string.account_phone_only_admin,
+        )
+        MissingGroup(
+            feeds = notOnServer.filter { it.kind == MissingKind.REMOVED_THERE },
+            heading = R.string.account_removed_there_title,
+            explanation = R.string.account_removed_there_explained,
+        )
+        MissingGroup(
+            feeds = notOnServer.filter { it.kind == MissingKind.NO_WRITE },
+            heading = R.string.account_no_write_title,
+            explanation = R.string.account_no_write_explained,
+        )
     }
+}
+
+/**
+ * Feeds the server lacks, for one reason, said once for all of them.
+ *
+ * Not in the error colour. A feed the site keeps from the server is not
+ * something the reader did wrong or can fix from here: it keeps updating on
+ * the phone, and the only thing it does not do is sync.
+ */
+@Composable
+private fun MissingGroup(
+    feeds: List<MissingFeed>,
+    heading: Int,
+    explanation: Int,
+    footnote: Int? = null,
+) {
+    if (feeds.isEmpty()) return
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(top = 8.dp),
+    ) {
+        Text(
+            stringResource(heading, feeds.size),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        TallyLine(stringResource(explanation))
+        feeds.forEach { Text("\u2022 ${it.title}", style = MaterialTheme.typography.bodySmall) }
+        footnote?.let { TallyLine(stringResource(it)) }
+    }
+}
+
+@Composable
+private fun TallyLine(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

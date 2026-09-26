@@ -236,7 +236,8 @@ object GoogleReaderState {
     private const val EVER_ON_SERVER = "ever_on_server"
     private const val MAPPED_AT = "mapped_at"
     private const val ALIASES = "aliases"
-    private const val NOT_ON_SERVER = "not_on_server"
+    private const val NOT_ON_SERVER = "not_on_server_v2"
+    private const val REFUSED = "refused"
 
     private val lock = Any()
 
@@ -288,16 +289,35 @@ object GoogleReaderState {
     }
 
     /**
-     * Whisper's feeds the server did not have at the last sync, as (title,
-     * why), for the diagnostics report. Titles only, never addresses.
+     * Whisper's feeds the server did not have at the last sync, for the
+     * account screen and the report. Titles only, never addresses.
      */
-    fun notOnServer(context: Context): List<Pair<String, String>> =
-        prefs(context).getStringSet(NOT_ON_SERVER, null).orEmpty().map { entry ->
-            entry.substringBefore('\t') to entry.substringAfter('\t', "")
-        }.sortedBy { it.first.lowercase() }
+    fun notOnServer(context: Context): List<MissingFeed> =
+        prefs(context).getStringSet(NOT_ON_SERVER, null).orEmpty().mapNotNull { entry ->
+            val parts = entry.split('\t')
+            val kind = parts.getOrNull(1)?.let { k -> MissingKind.entries.firstOrNull { it.name == k } }
+                ?: return@mapNotNull null
+            MissingFeed(parts[0], kind, parts.getOrNull(2)?.toIntOrNull() ?: 0)
+        }.sortedBy { it.title.lowercase() }
 
-    fun setNotOnServer(context: Context, feeds: List<Pair<String, String>>) {
-        prefs(context).edit { putStringSet(NOT_ON_SERVER, feeds.mapTo(HashSet()) { (t, why) -> "$t\t$why" }) }
+    fun setNotOnServer(context: Context, feeds: List<MissingFeed>) {
+        prefs(context).edit {
+            putStringSet(NOT_ON_SERVER, feeds.mapTo(HashSet()) { "${it.title}\t${it.kind.name}\t${it.status}" })
+        }
+    }
+
+    /** Feeds the server refused, by key: when, and with what status. */
+    fun refusals(context: Context): Map<String, Refusal> =
+        prefs(context).getStringSet(REFUSED, null).orEmpty().mapNotNull { entry ->
+            val parts = entry.split('\t')
+            val at = parts.getOrNull(1)?.toLongOrNull() ?: return@mapNotNull null
+            parts[0] to Refusal(at, parts.getOrNull(2)?.toIntOrNull() ?: 0)
+        }.toMap()
+
+    fun setRefusals(context: Context, refusals: Map<String, Refusal>) {
+        prefs(context).edit {
+            putStringSet(REFUSED, refusals.mapTo(HashSet()) { (key, r) -> "$key\t${r.at}\t${r.status}" })
+        }
     }
 
     /** When articles were last matched to the server's, or 0 for never. */
@@ -314,3 +334,38 @@ object GoogleReaderState {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 }
+
+/** Why one of Whisper's feeds is not on the server. */
+enum class MissingKind {
+    /** Sent, and the server would not take it: usually the site blocks the server. */
+    REFUSED,
+
+    /** The server had it and dropped it; kept here, because removals there are never applied. */
+    REMOVED_THERE,
+
+    /** Not sent: the server gave no permission to change anything. */
+    NO_WRITE,
+}
+
+data class MissingFeed(val title: String, val kind: MissingKind, val status: Int = 0)
+
+/** The last time the server refused a feed, and what it answered. */
+data class Refusal(val at: Long, val status: Int)
+
+/**
+ * A week between tries at a feed the server refused.
+ *
+ * FreshRSS refuses a feed its server cannot fetch - most often a site that
+ * blocks servers, and that answers the same way tomorrow. Asked on every sync,
+ * four such feeds were four failing fetches for the server each time, with
+ * the phone's copy of each working the whole while.
+ */
+const val REFUSED_RETRY_MS = 7 * 24 * 60 * 60_000L
+
+/**
+ * Whether to offer the server a feed again. Always when the reader asked,
+ * with Sync now - that is how a fix on the server gets tried - and otherwise
+ * once the week is up.
+ */
+fun refusedDueForRetry(last: Refusal?, nowMs: Long, asked: Boolean): Boolean =
+    asked || last == null || nowMs - last.at >= REFUSED_RETRY_MS

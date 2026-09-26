@@ -57,6 +57,11 @@ abstract class RssService {
          * every scheduled sync fetched all of them.
          */
         forceNetwork: Boolean = false,
+        /**
+         * Offer the server again every feed it refused, however recently.
+         * Only Sync now on the account screen: see refusedDueForRetry.
+         */
+        retryRefused: Boolean = false,
     ): SyncOutcome
 
     /**

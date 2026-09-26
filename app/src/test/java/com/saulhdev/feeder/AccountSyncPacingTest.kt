@@ -38,7 +38,7 @@ class AccountSyncPacingTest {
         val local = source("manager/sync/service/LocalRssService.kt")
         assertTrue(local.contains("syncFeeds(context = context, forceNetwork = forceNetwork)"))
         val base = source("manager/sync/service/RssService.kt")
-        assertTrue("nobody asking means not forced", base.contains("forceNetwork: Boolean = false,\n    ): SyncOutcome"))
+        assertTrue("nobody asking means not forced", base.contains("forceNetwork: Boolean = false,\n        /**"))
     }
 
     @Test
@@ -52,7 +52,7 @@ class AccountSyncPacingTest {
 
     @Test
     fun `the worker passes on what was asked, and Sync now asks for everything`() {
-        assertTrue(source("manager/sync/FeedSyncer.kt").contains("service.sync(forceNetwork = forceNetwork)"))
+        assertTrue(source("manager/sync/FeedSyncer.kt").contains("service.sync(\n                    forceNetwork = forceNetwork,"))
         assertTrue(source("viewmodels/AccountViewModel.kt").contains("requestFeedSync(feedId = ID_ALL, forceNetwork = true, origin = SyncLog.ORIGIN_ACCOUNT)"))
     }
 
