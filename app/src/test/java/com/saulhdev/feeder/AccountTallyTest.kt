@@ -75,3 +75,16 @@ class AccountTallyTest {
         assertTrue(page.contains("onBackAction = if (selecting) viewModel::clearSelection else null,"))
     }
 }
+
+/** Coming back to Data sources brought the keyboard back with it. */
+class SourceSearchFocusTest {
+    private val page = File("src/main/java/com/saulhdev/feeder/ui/pages/SourceListPage.kt").readText()
+
+    @Test
+    fun `the search field lets go of focus whenever the list is left`() {
+        val pane = page.substring(page.indexOf("listPane = {")).substringBefore("ViewWithActionBar(")
+        assertTrue(pane.contains("LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { focusManager.clearFocus() }"))
+        assertTrue(pane.contains("if (sourceId.longValue != -1L) focusManager.clearFocus()"))
+        assertTrue(pane.contains("DisposableEffect(Unit) { onDispose { focusManager.clearFocus() } }"))
+    }
+}

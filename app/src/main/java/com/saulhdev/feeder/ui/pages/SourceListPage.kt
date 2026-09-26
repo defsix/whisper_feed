@@ -52,6 +52,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -346,6 +349,16 @@ fun SourceListPage(
         listPane = {
             AnimatedPane {
                 val selecting = selection.isNotEmpty()
+                // The search field lets go of focus whenever the list is left:
+                // for a source, a child screen, or another app. Kept, it was
+                // handed back on the way in and brought the keyboard up over
+                // a list the reader had come back to look at.
+                val focusManager = LocalFocusManager.current
+                LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { focusManager.clearFocus() }
+                LaunchedEffect(sourceId.longValue) {
+                    if (sourceId.longValue != -1L) focusManager.clearFocus()
+                }
+                DisposableEffect(Unit) { onDispose { focusManager.clearFocus() } }
                 ViewWithActionBar(
                     // The app bar becomes the selection's own bar while one is
                     // running: count on the left, close where the back arrow
