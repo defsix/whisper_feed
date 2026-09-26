@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +97,7 @@ fun PreferencesPage(
     var markingRead by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.action_undo)
+    val resources = LocalResources.current
     DisposableEffect(articles) {
         FeedPreferences.markEverythingRead = { markingRead = true }
         onDispose { FeedPreferences.markEverythingRead = null }
@@ -343,7 +345,7 @@ fun PreferencesPage(
                         if (count == 0) return@markAllRead
                         scope.launch {
                             val result = snackbarHostState.showSnackbar(
-                                message = context.resources.getQuantityString(
+                                message = resources.getQuantityString(
                                     R.plurals.articles_marked_read, count, count
                                 ),
                                 actionLabel = undoLabel,
