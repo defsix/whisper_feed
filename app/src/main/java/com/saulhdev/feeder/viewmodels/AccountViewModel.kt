@@ -18,22 +18,24 @@
 package com.saulhdev.feeder.viewmodels
 
 import android.app.Application
+import androidx.work.WorkManager
+import com.saulhdev.feeder.data.db.ID_ALL
+import com.saulhdev.feeder.manager.sync.ACCOUNT_DETAIL_KEY
+import com.saulhdev.feeder.manager.sync.ACCOUNT_PROBLEM_KEY
+import com.saulhdev.feeder.manager.sync.oneTimeSyncName
+import com.saulhdev.feeder.manager.sync.requestFeedSync
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.lifecycle.viewModelScope
-import com.saulhdev.feeder.manager.sync.service.toSyncResult
 import com.saulhdev.feeder.utils.SyncLog
-import com.saulhdev.feeder.utils.bytesSince
-import com.saulhdev.feeder.utils.receivedBytes
-import com.saulhdev.feeder.utils.syncOutcome
-import kotlin.coroutines.cancellation.CancellationException
 import com.saulhdev.feeder.data.content.SyncAccount
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
-import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
-import com.saulhdev.feeder.manager.sync.service.SyncOutcome
+import com.saulhdev.feeder.manager.sync.greader.serverCandidates
+import com.saulhdev.feeder.manager.sync.greader.signInAtAny
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.saulhdev.feeder.manager.sync.greader.AccountProblem
-import com.saulhdev.feeder.manager.sync.greader.problemFrom
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -61,7 +63,6 @@ class AccountViewModel(
     /** The application, never a screen: this outlives the account screen's own. */
     private val app: Application,
     private val account: SyncAccount,
-    private val dispatcher: RssServiceDispatcher,
 ) : NeoViewModel() {
     private val ioScope = viewModelScope.plus(Dispatchers.IO)
 
@@ -89,9 +90,12 @@ class AccountViewModel(
     fun signIn(server: String, username: String, password: String) {
         _state.value = _state.value.copy(busy = true, error = null)
         ioScope.launch {
-            when (val result = GoogleReaderApi(server).signIn(username, password)) {
+            val (address, result) = signInAtAny(serverCandidates(server)) {
+                GoogleReaderApi(it).signIn(username, password)
+            }
+            when (result) {
                 is GoogleReaderApi.AuthResult.Success -> {
-                    account.signIn(server, username, result.token)
+                    account.signIn(address, username, result.token)
                     _state.value = read().copy(busy = true)
                     syncNow()
                 }
@@ -111,42 +115,55 @@ class AccountViewModel(
         _state.value = read()
     }
 
+    /**
+     * Asks the sync worker for a full sync, as pull to refresh does.
+     *
+     * This ran on the screen itself, and Android takes the network from an
+     * app the moment it leaves the screen: switching apps mid-sync came back
+     * to "No server was found at that address", on Wi-Fi, with the server
+     * fine. The worker runs it as a foreground task, which keeps the network,
+     * writes the history line and says what went wrong; this screen watches.
+     */
     fun syncNow() {
         _state.value = _state.value.copy(busy = true, error = null)
-        ioScope.launch {
-            // Written to the sync history like every other sync. It ran
-            // straight from this screen rather than through the worker, and
-            // so left no line: two syncs on the night the account was first
-            // tried were visible only in what they had fetched.
-            val run = SyncLog.started(app, SyncLog.ORIGIN_ACCOUNT)
-            val receivedBefore = receivedBytes()
-            // "Sync now" is a request, so everything is fetched.
-            val outcome = try {
-                dispatcher.current().sync(forceNetwork = true)
-            } catch (e: CancellationException) {
-                SyncLog.finished(app, run, "stopped: left the screen")
-                throw e
-            }
-            SyncLog.finished(
-                app,
-                run,
-                syncOutcome(outcome.toSyncResult().copy(bytes = bytesSince(receivedBefore))),
-            )
-            _state.value = when (outcome) {
-                is SyncOutcome.Success -> read()
-                SyncOutcome.SignedOut -> {
-                    account.signOut()
-                    read().copy(error = AccountProblem.SIGNED_OUT)
-                }
+        requestFeedSync(feedId = ID_ALL, forceNetwork = true, origin = SyncLog.ORIGIN_ACCOUNT)
+    }
 
-                // The same translation as a failed sign-in, because it is the
-                // same set of causes: a certificate, a name, a port, a server
-                // that has gone away since the credential was stored.
-                is SyncOutcome.Failed -> read().copy(
-                    error = problemFrom(outcome.cause),
-                    detail = outcome.cause?.message,
-                )
-            }
+    init {
+        watchSync()
+    }
+
+    /**
+     * Busy while a full sync is queued or running, and its problem once it
+     * ends - including one started before this screen opened, so coming back
+     * mid-sync shows the spinner rather than an idle screen. A sync that had
+     * already ended before the screen saw it running says nothing: its
+     * result is old news, and the history has it.
+     */
+    private fun watchSync() {
+        viewModelScope.launch {
+            var seenActive = false
+            WorkManager.getInstance(app)
+                .getWorkInfosForUniqueWorkFlow(oneTimeSyncName(ID_ALL))
+                .map { works -> works.firstOrNull { !it.state.isFinished } ?: works.lastOrNull() }
+                .distinctUntilChanged()
+                .collect { info ->
+                    if (info == null) return@collect
+                    if (!info.state.isFinished) {
+                        seenActive = true
+                        _state.value = _state.value.copy(busy = true, error = null)
+                        return@collect
+                    }
+                    if (!seenActive) return@collect
+                    seenActive = false
+                    val problem = info.outputData.getString(ACCOUNT_PROBLEM_KEY)
+                        ?.let { name -> AccountProblem.entries.firstOrNull { it.name == name } }
+                    if (problem == AccountProblem.SIGNED_OUT) account.signOut()
+                    _state.value = read().copy(
+                        error = problem,
+                        detail = info.outputData.getString(ACCOUNT_DETAIL_KEY),
+                    )
+                }
         }
     }
 }

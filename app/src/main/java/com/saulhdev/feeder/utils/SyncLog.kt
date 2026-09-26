@@ -73,6 +73,12 @@ object SyncLog {
      */
     val AUTOMATIC_ORIGINS = setOf(ORIGIN_SCHEDULED, ORIGIN_PANEL, ORIGIN_OPENED)
 
+    /**
+     * Syncs the reader asked for with a gesture or a button, which run as a
+     * foreground task so they keep the network when the reader leaves.
+     */
+    val ASKED_ORIGINS = setOf(ORIGIN_PULL, ORIGIN_PULL_PANEL, ORIGIN_ACCOUNT)
+
     private const val FILE = "sync_log"
     private const val KEY = "entries"
     private val lock = Any()

@@ -28,6 +28,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.saulhdev.feeder.utils.SyncLog
 import java.io.File
 import java.io.IOException
 
@@ -63,14 +64,31 @@ class AccountHistoryTest {
     private fun source(path: String) = File("src/main/java/com/saulhdev/feeder/$path").readText()
 
     @Test
-    fun `Sync now writes a line, however it ends`() {
+    fun `Sync now goes through the worker, which keeps the network and writes the line`() {
+        // Run on the screen, it lost the network when the reader switched
+        // apps and said no server could be found.
         val vm = source("viewmodels/AccountViewModel.kt")
-        val sync = vm.substring(vm.indexOf("fun syncNow()"))
-        val started = sync.indexOf("SyncLog.started(app, SyncLog.ORIGIN_ACCOUNT)")
-        assertTrue(started >= 0)
-        assertTrue("before the sync", started < sync.indexOf("dispatcher.current().sync(forceNetwork = true)"))
-        assertTrue(sync.contains("SyncLog.finished(app, run, \"stopped: left the screen\")"))
-        assertTrue(sync.contains("syncOutcome(outcome.toSyncResult().copy(bytes = bytesSince(receivedBefore)))"))
+        val sync = vm.substring(vm.indexOf("fun syncNow()"), vm.indexOf("init {"))
+        assertTrue(sync.contains("requestFeedSync(feedId = ID_ALL, forceNetwork = true, origin = SyncLog.ORIGIN_ACCOUNT)"))
+        assertFalse(vm.contains("dispatcher"))
+        assertTrue(SyncLog.ORIGIN_ACCOUNT in SyncLog.ASKED_ORIGINS)
+        assertFalse("Battery Saver does not hold it", SyncLog.ORIGIN_ACCOUNT in SyncLog.AUTOMATIC_ORIGINS)
+        val worker = source("manager/sync/FeedSyncer.kt")
+        assertTrue(worker.contains("val foreground = origin in SyncLog.ASKED_ORIGINS || dataBlocked"))
+    }
+
+    @Test
+    fun `the worker tells the account screen what went wrong`() {
+        val worker = source("manager/sync/FeedSyncer.kt")
+        assertTrue(worker.contains("output = accountProblemData(problemFrom(outcome.cause), outcome.cause?.message)"))
+        assertTrue(worker.contains("output = accountProblemData(AccountProblem.SIGNED_OUT, null)"))
+        assertTrue(worker.contains("true  -> Result.success(output)"))
+        assertTrue(worker.contains("false -> Result.failure(output)"))
+        val vm = source("viewmodels/AccountViewModel.kt")
+        assertTrue(vm.contains("getWorkInfosForUniqueWorkFlow(oneTimeSyncName(ID_ALL))"))
+        assertTrue(vm.contains("info.outputData.getString(ACCOUNT_PROBLEM_KEY)"))
+        assertTrue("an old result stays quiet", vm.contains("if (!seenActive) return@collect"))
+        assertTrue(worker.contains("oneTimeSyncName(feedId),"))
     }
 
     @Test

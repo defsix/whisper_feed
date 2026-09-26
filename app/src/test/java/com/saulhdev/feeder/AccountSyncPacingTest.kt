@@ -53,7 +53,7 @@ class AccountSyncPacingTest {
     @Test
     fun `the worker passes on what was asked, and Sync now asks for everything`() {
         assertTrue(source("manager/sync/FeedSyncer.kt").contains("service.sync(forceNetwork = forceNetwork)"))
-        assertTrue(source("viewmodels/AccountViewModel.kt").contains("dispatcher.current().sync(forceNetwork = true)"))
+        assertTrue(source("viewmodels/AccountViewModel.kt").contains("requestFeedSync(feedId = ID_ALL, forceNetwork = true, origin = SyncLog.ORIGIN_ACCOUNT)"))
     }
 
     @Test

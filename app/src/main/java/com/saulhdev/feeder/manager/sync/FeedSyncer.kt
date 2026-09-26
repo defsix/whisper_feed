@@ -19,6 +19,9 @@ import kotlinx.coroutines.CancellationException
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
+import androidx.work.Data
+import com.saulhdev.feeder.manager.sync.greader.AccountProblem
+import com.saulhdev.feeder.manager.sync.greader.problemFrom
 import androidx.work.CoroutineWorker
 import com.saulhdev.feeder.manager.sync.service.LocalRssService
 import com.saulhdev.feeder.manager.sync.service.RssServiceDispatcher
@@ -57,6 +60,8 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
 
     override suspend fun doWork(): Result {
         var result: SyncResult
+        // What went wrong with the account, for the account screen to say.
+        var output = Data.EMPTY
         // Written before anything else can fail, so even a run that dies
         // immediately leaves a line saying it started. See SyncLog.
         val origin = inputData.getString(SyncLog.ORIGIN_KEY) ?: "unlabelled"
@@ -93,6 +98,9 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         }
 
         // A sync the reader asked for keeps its network when they leave.
+        // Sync now on the account screen too: run from the screen itself, it
+        // lost the network the moment the reader switched apps, and said the
+        // server could not be found.
         //
         // Every pull to refresh in one day's reports was cut off the moment
         // Whisper left the screen - "stopped: network changed or dropped",
@@ -105,7 +113,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
         // never shows it at all. Asked while the app is still on screen,
         // which is when a pull starts; if Android refuses, the sync simply
         // runs as it did before.
-        val foreground = origin == SyncLog.ORIGIN_PULL || origin == SyncLog.ORIGIN_PULL_PANEL || dataBlocked
+        val foreground = origin in SyncLog.ASKED_ORIGINS || dataBlocked
         var inForeground = false
         if (foreground) {
             try {
@@ -165,11 +173,13 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
                         // back. Reported as success so WorkManager does not
                         // back off and retry a thing that needs the reader.
                         Log.w(TAG, "Account signed out; scheduled sync stopped")
+                        output = accountProblemData(AccountProblem.SIGNED_OUT, null)
                         SyncResult(due = 0, error = "signed out")
                     }
 
                     is SyncOutcome.Failed -> {
                         Log.e(TAG, "Account sync failed", outcome.cause)
+                        output = accountProblemData(problemFrom(outcome.cause), outcome.cause?.message)
                         outcome.cause?.let(SyncResult::broken) ?: SyncResult(due = 0, error = "error")
                     }
                 }
@@ -229,8 +239,8 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
             }
         }
         return when (success) {
-            true  -> Result.success()
-            false -> Result.failure()
+            true  -> Result.success(output)
+            false -> Result.failure(output)
         }
     }
 }
@@ -282,6 +292,15 @@ fun createForegroundInfo(
     )
 }
 
+const val ACCOUNT_PROBLEM_KEY = "account_problem"
+const val ACCOUNT_DETAIL_KEY = "account_detail"
+
+private fun accountProblemData(problem: AccountProblem, detail: String?): Data =
+    workDataOf(ACCOUNT_PROBLEM_KEY to problem.name, ACCOUNT_DETAIL_KEY to detail)
+
+/** The unique name one-time syncs of [feedId] are queued under. */
+fun oneTimeSyncName(feedId: Long) = "feeder_sync_onetime_$feedId"
+
 fun requestFeedSync(
     feedId: Long = ID_UNSET,
     feedTag: String = "",
@@ -315,7 +334,7 @@ fun requestFeedSync(
         .build()
 
     workManager.enqueueUniqueWork(
-        "feeder_sync_onetime_$feedId",
+        oneTimeSyncName(feedId),
         ExistingWorkPolicy.REPLACE,
         workRequest
     )

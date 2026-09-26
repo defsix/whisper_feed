@@ -35,9 +35,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -165,12 +169,25 @@ fun AccountPage(
                             viewModel.clearError()
                         },
                         label = { Text(stringResource(R.string.account_server)) },
-                        placeholder = { Text("https://freshrss.example.com/api/greader.php") },
+                        // One line, like the field: a placeholder that wrapped sat on two
+                        // lines with the cursor alone on the first.
+                        placeholder = {
+                            Text(
+                                "https://freshrss.example.com",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
-                        supportingText = if (corrected) {
-                            { Text(stringResource(R.string.account_server_upgraded)) }
-                        } else null,
+                        supportingText = {
+                            Text(
+                                stringResource(
+                                    if (corrected) R.string.account_server_upgraded
+                                    else R.string.account_server_hint,
+                                ),
+                            )
+                        },
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.None,
                             autoCorrectEnabled = false,
@@ -204,7 +221,12 @@ fun AccountPage(
                             autoCorrectEnabled = false,
                             imeAction = ImeAction.Next,
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        // Named for autofill, so a password manager puts the
+                        // username here and the password below rather than
+                        // guessing from the order of the fields.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.Username },
                     )
                 }
                 item {
@@ -220,7 +242,9 @@ fun AccountPage(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done,
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.Password },
                     )
                 }
                 item {

@@ -3,6 +3,7 @@ package com.saulhdev.feeder
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.saulhdev.feeder.utils.SyncLog
 import java.io.File
 
 /**
@@ -61,7 +62,7 @@ class SyncEfficiencyTest {
         val worker = syncer.substringAfter("override suspend fun doWork()")
         assertTrue(
             "only the reader's own syncs",
-            worker.contains("val foreground = origin == SyncLog.ORIGIN_PULL || origin == SyncLog.ORIGIN_PULL_PANEL"),
+            worker.contains("val foreground = origin in SyncLog.ASKED_ORIGINS") && SyncLog.ASKED_ORIGINS.none { it in SyncLog.AUTOMATIC_ORIGINS },
         )
         assertTrue(worker.contains("setForeground(getForegroundInfo())"))
         assertTrue("before the sync, while the app is still on screen", worker.indexOf("setForeground(") < worker.indexOf("syncFeeds("))
