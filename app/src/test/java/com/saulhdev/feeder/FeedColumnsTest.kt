@@ -3,7 +3,9 @@ package com.saulhdev.feeder
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.LAYOUT_MOSAIC
 import com.saulhdev.feeder.ui.overlay.feedColumns
+import com.saulhdev.feeder.ui.overlay.leadSpansRow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -56,8 +58,12 @@ class FeedColumnsTest {
     }
 
     @Test
-    fun `a lead story spans the lanes only in Mosaic`() {
-        assertTrue(page.contains("if (feedLayoutIsGrid(layout) &&\n                                                            emphasis.getOrNull(index) =="))
+    fun `a lead story is never more than two wide`() {
+        assertTrue("Mosaic on a phone: both lanes", leadSpansRow(LAYOUT_MOSAIC, 2))
+        assertFalse("Mosaic on a tablet: one lane of four", leadSpansRow(LAYOUT_MOSAIC, 4))
+        assertFalse(leadSpansRow(LAYOUT_MOSAIC, 3))
+        assertFalse("cards keep to their column", leadSpansRow(LAYOUT_CARDS, 2))
+        assertTrue(page.contains("if (leadSpansRow(layout, columns) &&"))
     }
 
     @Test

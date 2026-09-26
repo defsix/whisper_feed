@@ -59,6 +59,7 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import com.saulhdev.feeder.ui.overlay.feedColumns
+import com.saulhdev.feeder.ui.overlay.leadSpansRow
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
@@ -699,13 +700,17 @@ fun ArticleListPage(
                                                         feedContentType(index, item, layout, emphasis)
                                                     },
                                                     // A lead story spans Mosaic's
-                                                    // lanes. In the other layouts,
-                                                    // columned only for the width,
-                                                    // it keeps to its column: across
-                                                    // a whole tablet it was the
-                                                    // oversized card this is for.
+                                                    // two lanes on a phone, and no
+                                                    // more than two anywhere: the
+                                                    // grid spans one lane or all of
+                                                    // them, and across a tablet's
+                                                    // four it was too big, and left
+                                                    // a hole in the row above it.
+                                                    // In the other layouts, columned
+                                                    // only for the width, it keeps
+                                                    // to its column.
                                                     span = { index, _ ->
-                                                        if (feedLayoutIsGrid(layout) &&
+                                                        if (leadSpansRow(layout, columns) &&
                                                             emphasis.getOrNull(index) ==
                                                             FeedEmphasis.Large
                                                         ) StaggeredGridItemSpan.FullLine

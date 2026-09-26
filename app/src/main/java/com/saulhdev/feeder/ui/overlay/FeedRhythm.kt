@@ -150,6 +150,14 @@ fun feedColumns(layout: String, widthDp: Int): Int =
     if (feedLayoutIsGrid(layout)) (widthDp / MOSAIC_LANE_DP).coerceIn(2, 4)
     else (widthDp / CARD_COLUMN_DP).coerceIn(1, 3)
 
+/**
+ * Whether a lead story spans the whole row: in Mosaic, and only while the row
+ * is two lanes. A staggered grid spans one lane or all of them, so "at most
+ * two wide" means one lane once there are more than two.
+ */
+fun leadSpansRow(layout: String, columns: Int): Boolean =
+    feedLayoutIsGrid(layout) && columns <= 2
+
 /** About a phone's width: a card never gets narrower than it is on one. */
 const val CARD_COLUMN_DP = 360
 
