@@ -147,6 +147,14 @@ at once. If one is still refused, add it in FreshRSS by hand, under
 **Subscription management → Add a feed**. The message and **Check FreshRSS
 logs** will say why.
 
+The log line says which of three things it is:
+
+| The log says | What it means | Fix |
+|---|---|---|
+| status code `202` or `403` | The site blocks servers | Step 3 usually fixes it. A `403` with a Cloudflare challenge can't be passed by any server: look for the site's newer feed address, and change the address in Whisper |
+| "A feed could not be found", status `200` | The download worked, but the site labels it oddly (Slate sends `text/rss+xml`) | Add it in FreshRSS with `#force_feed` on the end of the address. Whisper ignores that part when it compares addresses |
+| anything else | The feed may have moved or broken | Check the address in a browser |
+
 **Locked out of the web interface**
 
 If the authentication method was changed to HTTP and the login page is now a
