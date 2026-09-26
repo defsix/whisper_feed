@@ -120,6 +120,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.ListDashes
 import com.saulhdev.feeder.ui.icons.phosphor.Power
 import com.saulhdev.feeder.ui.icons.phosphor.Prohibit
 import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
+import com.saulhdev.feeder.ui.icons.phosphor.ArrowLeft
 import com.saulhdev.feeder.ui.icons.phosphor.X
 import com.saulhdev.feeder.viewmodels.SourceSort
 
@@ -360,10 +361,13 @@ fun SourceListPage(
                         stringResource(id = R.string.title_sources)
                     },
                     largeTitle = true,
-                    showBackButton = selecting,
-                    backIcon = Phosphor.X,
-                    backDescription = R.string.sources_clear_selection,
-                    onBackAction = viewModel::clearSelection,
+                    // Always a way back. The arrow showed only during a
+                    // selection, from when this was a tab of its own; reached
+                    // from Settings, the screen had no way out but a swipe.
+                    showBackButton = true,
+                    backIcon = if (selecting) Phosphor.X else Phosphor.ArrowLeft,
+                    backDescription = if (selecting) R.string.sources_clear_selection else R.string.go_back,
+                    onBackAction = if (selecting) viewModel::clearSelection else null,
                     snackbarHost = { SnackbarHost(snackbarHostState) },
                     floatingActionButton = {
                         // Adding a source in the middle of picking sources to

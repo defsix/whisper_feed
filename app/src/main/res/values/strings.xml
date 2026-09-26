@@ -352,6 +352,14 @@
     <string name="account_problem_signed_out">The server no longer accepts that sign-in. Sign in again.</string>
     <string name="account_problem_unknown">Could not reach that server. %1$s</string>
     <string name="account_problem_unknown_bare">Could not reach that server.</string>
+    <string name="account_tally_title">Last sync with the server</string>
+    <string name="account_tally_feeds">Feeds on the server: %1$d</string>
+    <string name="account_tally_feed_changes">Feeds changed: %1$d sent, %2$d removed from the server, %3$d added here</string>
+    <string name="account_tally_matched">Articles the server knows: %1$d</string>
+    <string name="account_tally_sent">Sent: %1$d read, %2$d unread, %3$d saved, %4$d unsaved</string>
+    <string name="account_tally_kept">Not accepted, sent again next time: %1$d</string>
+    <string name="account_tally_received">Received: %1$d read, %2$d unread, %3$d saved</string>
+    <string name="account_tally_missing">Not on the server: %1$d</string>
     <string name="account_server_hint">The address you open in your browser. For FreshRSS, Whisper adds /api/greader.php if it is needed.</string>
     <string name="account_server_upgraded">Changed to https, so your password is not sent in the clear. Plain http will not connect.</string>
     <string name="account_password_hint">Most services offer an application password for this. Use one if yours does — it can be revoked without changing your real password.</string>

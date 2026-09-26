@@ -59,6 +59,6 @@ class AccountSyncPacingTest {
     @Test
     fun `an account sync's history line carries the feed counts`() {
         assertTrue(source("manager/sync/FeedSyncer.kt").contains("is SyncOutcome.Success -> outcome.feeds ?: SyncResult.uncounted"))
-        assertTrue(source("manager/sync/service/GoogleReaderService.kt").contains("SyncOutcome.Success(feeds = feeds)"))
+        assertTrue(source("manager/sync/service/GoogleReaderService.kt").contains("SyncOutcome.Success(feeds = feeds.copy(account = tally))"))
     }
 }

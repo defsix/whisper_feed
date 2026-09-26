@@ -31,6 +31,8 @@ import com.saulhdev.feeder.data.db.ID_ALL
 import com.saulhdev.feeder.utils.isSameFeedUrl
 import com.saulhdev.feeder.utils.normalizeFeedUrl
 import com.saulhdev.feeder.utils.isUnmetered
+import com.saulhdev.feeder.manager.sync.greader.AccountTally
+import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import com.saulhdev.feeder.manager.sync.greader.planSubscriptions
 import com.saulhdev.feeder.manager.sync.greader.matchFeeds
@@ -96,7 +98,7 @@ class GoogleReaderService(
             // by the server's older answer, which is what happened to every
             // read in the first version of this.
             val token = api.writeToken(auth)
-            syncSubscriptions(auth, token)
+            var tally = syncSubscriptions(auth, token)
 
             // Articles still come from the feeds themselves; see the note above.
             // ID_ALL rather than the default, so a feed fetched in the last
@@ -105,16 +107,22 @@ class GoogleReaderService(
             val feeds = syncFeeds(context = context, feedId = ID_ALL, forceNetwork = forceNetwork)
 
             mapRemoteIds(auth)
-            val sent = pushChanges(auth, token)
-            if (sent) {
-                pullReadState(auth)
-                pullStars(auth)
+            val push = pushChanges(auth, token)
+            tally = tally.copy(
+                readSent = push.read, unreadSent = push.unread,
+                savedSent = push.saved, unsavedSent = push.unsaved, changesKept = push.kept,
+            )
+            if (push.ok) {
+                val (read, unread) = pullReadState(auth)
+                tally = tally.copy(readHere = read, unreadHere = unread, savedHere = pullStars(auth))
             } else {
                 Log.w(TAG, "Changes not sent; the server's read state waits for the next sync")
             }
+            tally = tally.copy(matched = articles.mappedArticles().size)
 
             account.lastSync = System.currentTimeMillis()
-            SyncOutcome.Success(feeds = feeds)
+            AccountTallyStore.write(context, tally, account.lastSync)
+            SyncOutcome.Success(feeds = feeds.copy(account = tally))
         } catch (e: CancellationException) {
             // Android stopping the work, or the reader leaving: not a failure.
             // Caught as one, it read "failed: pd2" - the obfuscated name of
@@ -144,7 +152,7 @@ class GoogleReaderService(
      * Folders from the server win for a feed both sides have: they are what
      * the reader set on whichever device they set it.
      */
-    private suspend fun syncSubscriptions(auth: String, token: String?) {
+    private suspend fun syncSubscriptions(auth: String, token: String?): AccountTally {
         val remote = api.subscriptions(auth)
         val local = sources.getAllSubscriptions()
         val localByKey = local.associateBy { normalizeFeedUrl(it.url) }
@@ -190,13 +198,15 @@ class GoogleReaderService(
         // and the plan is simply made again next time.
         val subscribed = mutableSetOf<String>()
         val unsubscribed = mutableSetOf<String>()
+        // The server's answer to each refused one, for the report: FreshRSS
+        // refuses a feed it cannot fetch or read, and says so only in its log.
+        val refusedWith = mutableMapOf<String, Int>()
         if (token != null) {
             plan.subscribe.forEach { key ->
                 val feed = localByKey.getValue(key)
                 val folder = feed.tags.firstOrNull { it.isNotBlank() }
-                if (api.editSubscription(auth, token, "subscribe", feed.url.toString(), feed.title, folder)) {
-                    subscribed += key
-                }
+                val status = api.editSubscriptionStatus(auth, token, "subscribe", feed.url.toString(), feed.title, folder)
+                if (status in 200..299) subscribed += key else refusedWith[key] = status
             }
             plan.unsubscribe.forEach { key ->
                 // By the server's own id for it, which every server accepts.
@@ -222,7 +232,7 @@ class GoogleReaderService(
                 localByKey.getValue(key).title to when {
                     key !in plan.subscribe -> "removed on the server, kept here"
                     token == null -> "not sent, no write access"
-                    else -> "the server refused it"
+                    else -> "the server refused it" + refusalCode(refusedWith[key])
                 }
             },
         )
@@ -252,6 +262,13 @@ class GoogleReaderService(
             unsubscribed = unsubscribed,
         )
         GoogleReaderState.rememberSubscriptions(context, nextLocal, nextEver)
+        return AccountTally(
+            serverFeeds = (remoteAs.keys + subscribed - unsubscribed).size,
+            feedsSent = subscribed.size,
+            feedsRefused = plan.subscribe.size - subscribed.size,
+            feedsRemoved = unsubscribed.size,
+            feedsAdded = plan.addLocal.size,
+        )
     }
 
     /**
@@ -340,10 +357,10 @@ class GoogleReaderService(
      * the next sync, and the server's read state is not applied this time,
      * because it would be older than what is still waiting to go.
      */
-    private suspend fun pushChanges(auth: String, token: String?): Boolean {
+    private suspend fun pushChanges(auth: String, token: String?): PushResult {
         val outbox = GoogleReaderState.outbox(context)
-        if (outbox.isEmpty) return true
-        if (token == null) return false
+        if (outbox.isEmpty) return PushResult(ok = true)
+        if (token == null) return PushResult(ok = false, kept = outbox.pending.size)
         val remoteIds = articles.mappedArticles().associate { it.uuid to it.remoteId }
         val batches = listOf(
             Triple(outbox.read, GoogleReaderIds.TAG_READ, true),
@@ -352,7 +369,8 @@ class GoogleReaderService(
             Triple(outbox.unstar, GoogleReaderIds.TAG_STARRED, false),
         )
         var ok = true
-        batches.forEach { (ids, tag, add) ->
+        val accepted = IntArray(batches.size)
+        batches.forEachIndexed { i, (ids, tag, add) ->
             ids.mapNotNull(remoteIds::get).chunked(EDIT_BATCH).forEach { chunk ->
                 val done = api.editTag(
                     auth = auth,
@@ -361,7 +379,7 @@ class GoogleReaderService(
                     addTag = if (add) tag else null,
                     removeTag = if (add) null else tag,
                 )
-                if (!done) ok = false
+                if (done) accepted[i] += chunk.size else ok = false
             }
         }
         if (ok) {
@@ -371,8 +389,22 @@ class GoogleReaderService(
             GoogleReaderState.updateOutbox(context) { it.without(outbox) }
         }
         Log.i(TAG, "Sent ${outbox.pending.count { it in remoteIds }} changes; ${if (ok) "all accepted" else "some refused, kept"}")
-        return ok
+        return PushResult(
+            ok = ok,
+            read = accepted[0], unread = accepted[1], saved = accepted[2], unsaved = accepted[3],
+            kept = if (ok) 0 else outbox.pending.size - accepted.sum(),
+        )
     }
+
+    /** What went up, by kind, and what the server did not take. */
+    private data class PushResult(
+        val ok: Boolean,
+        val read: Int = 0,
+        val unread: Int = 0,
+        val saved: Int = 0,
+        val unsaved: Int = 0,
+        val kept: Int = 0,
+    )
 
     /**
      * Brings read state down from the server and applies it.
@@ -390,7 +422,7 @@ class GoogleReaderService(
      * Nothing still waiting in the outbox is touched: what the reader did
      * here is newer than anything the server can say.
      */
-    private suspend fun pullReadState(auth: String) {
+    private suspend fun pullReadState(auth: String): Pair<Int, Int> {
         val page = api.allItemIds(
             auth = auth,
             stream = GoogleReaderIds.STREAM_READING_LIST,
@@ -405,6 +437,7 @@ class GoogleReaderService(
             "Read state applied: ${change.first.size} read, ${change.second.size} unread, " +
                 "${unread.size} unread on the server${if (page.complete) "" else " (partial)"}"
         )
+        return change.first.size to change.second.size
     }
 
     /**
@@ -412,15 +445,16 @@ class GoogleReaderService(
      * partial list must not unsave anything, and a save is the one thing the
      * reader would least forgive losing. Unsaving here does reach the server.
      */
-    private suspend fun pullStars(auth: String) {
+    private suspend fun pullStars(auth: String): Int {
         val starred = api.allItemIds(auth = auth, stream = GoogleReaderIds.STREAM_STARRED).items.toHashSet()
-        if (starred.isEmpty()) return
+        if (starred.isEmpty()) return 0
         val waiting = GoogleReaderState.outbox(context).pending
         val toSave = articles.mappedArticles()
             .filter { !it.bookmarked && it.remoteId in starred && it.uuid !in waiting }
             .map { it.uuid }
         if (toSave.isNotEmpty()) articles.applyServerStars(toSave)
         Log.i(TAG, "Stars applied: ${toSave.size} saved")
+        return toSave.size
     }
 
     override suspend fun setRead(articleId: String, read: Boolean) {
@@ -482,4 +516,11 @@ class GoogleReaderService(
         const val MAP_PAGE_SIZE = 250
         const val MAP_MAX_PAGES = 8
     }
+}
+
+/** The status a refusal came with, when there was one to report. */
+internal fun refusalCode(status: Int?): String = when {
+    status == null -> ""
+    status <= 0 -> " (no answer)"
+    else -> " ($status)"
 }

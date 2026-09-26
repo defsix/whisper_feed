@@ -29,7 +29,10 @@ import kotlinx.coroutines.flow.map
 import androidx.lifecycle.viewModelScope
 import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.data.content.SyncAccount
+import com.saulhdev.feeder.manager.sync.greader.AccountTally
+import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
+import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import com.saulhdev.feeder.manager.sync.greader.serverCandidates
 import com.saulhdev.feeder.manager.sync.greader.signInAtAny
 import com.saulhdev.feeder.utils.extensions.NeoViewModel
@@ -47,6 +50,9 @@ data class AccountState(
     val serverUrl: String = "",
     val username: String = "",
     val lastSync: Long = 0L,
+    /** What the last sync did with the server, and which feeds it would not take. */
+    val tally: AccountTally? = null,
+    val notOnServer: List<Pair<String, String>> = emptyList(),
     val busy: Boolean = false,
     /**
      * Set when something went wrong, cleared when the reader changes anything.
@@ -74,6 +80,8 @@ class AccountViewModel(
         serverUrl = account.serverUrl,
         username = account.username,
         lastSync = account.lastSync,
+        tally = if (account.isSignedIn) AccountTallyStore.read(app) else null,
+        notOnServer = if (account.isSignedIn) GoogleReaderState.notOnServer(app) else emptyList(),
     )
 
     fun clearError() {

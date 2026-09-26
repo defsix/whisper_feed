@@ -17,6 +17,7 @@
  */
 package com.saulhdev.feeder.data.content
 
+import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -86,6 +87,7 @@ class SyncAccount(context: Context) {
         // Another account's memory of which feeds it had would decide what
         // happens to this one's. Starts empty, which is a first sync.
         GoogleReaderState.clear(appContext)
+        AccountTallyStore.clear(appContext)
     }
 
     /**
@@ -99,6 +101,7 @@ class SyncAccount(context: Context) {
     fun signOut() {
         prefs.edit().clear().apply()
         GoogleReaderState.clear(appContext)
+        AccountTallyStore.clear(appContext)
     }
 
     private companion object {

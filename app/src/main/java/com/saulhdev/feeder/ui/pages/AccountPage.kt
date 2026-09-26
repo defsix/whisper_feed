@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.sync.greader.AccountProblem
+import com.saulhdev.feeder.manager.sync.greader.AccountTally
 import com.saulhdev.feeder.manager.sync.greader.normalisedServerUrl
 import com.saulhdev.feeder.ui.components.ActionButton
 import com.saulhdev.feeder.ui.components.OutlinedActionButton
@@ -133,6 +134,9 @@ fun AccountPage(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+                state.tally?.let { tally ->
+                    item { SyncTally(tally, state.notOnServer) }
                 }
                 item {
                     ActionButton(
@@ -333,4 +337,47 @@ private fun accountProblemText(problem: AccountProblem, detail: String?): String
     AccountProblem.UNKNOWN ->
         if (detail.isNullOrBlank()) stringResource(R.string.account_problem_unknown_bare)
         else stringResource(R.string.account_problem_unknown, detail)
+}
+
+/**
+ * What the last sync did with the server, line by line: the answer to "did it
+ * all get there?" without a shell on the server. Every line is shown with its
+ * zeros, because "0 sent" is itself the confirmation.
+ */
+@Composable
+private fun SyncTally(tally: AccountTally, notOnServer: List<Pair<String, String>>) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.account_tally_title),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        val lines = listOfNotNull(
+            stringResource(R.string.account_tally_feeds, tally.serverFeeds),
+            if (tally.feedsSent + tally.feedsRemoved + tally.feedsAdded > 0) {
+                stringResource(R.string.account_tally_feed_changes, tally.feedsSent, tally.feedsRemoved, tally.feedsAdded)
+            } else null,
+            stringResource(R.string.account_tally_matched, tally.matched),
+            stringResource(R.string.account_tally_sent, tally.readSent, tally.unreadSent, tally.savedSent, tally.unsavedSent),
+            if (tally.changesKept > 0) stringResource(R.string.account_tally_kept, tally.changesKept) else null,
+            stringResource(R.string.account_tally_received, tally.readHere, tally.unreadHere, tally.savedHere),
+        )
+        lines.forEach {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (notOnServer.isNotEmpty()) {
+            Text(
+                stringResource(R.string.account_tally_missing, notOnServer.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            notOnServer.forEach { (title, why) ->
+                Text(
+                    "$title - $why",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }

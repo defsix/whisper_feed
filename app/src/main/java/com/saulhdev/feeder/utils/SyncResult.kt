@@ -17,6 +17,9 @@
  */
 package com.saulhdev.feeder.utils
 
+import com.saulhdev.feeder.manager.sync.greader.AccountTally
+import com.saulhdev.feeder.manager.sync.greader.accountSummary
+
 /**
  * What one sync did: how many feeds were due, how many of those failed, and
  * the error that stopped the whole run, if one did.
@@ -57,6 +60,8 @@ data class SyncResult(
     val offline: Int = 0,
     /** Feeds left for a later sync because they rarely publish; see dueByPace. */
     val resting: Int = 0,
+    /** What an account sync did with the server; see AccountTally. */
+    val account: AccountTally? = null,
 ) {
     /** Not broken. Nothing due is fine; some feeds failing is still a sync. */
     val ok: Boolean get() = error == null
@@ -98,7 +103,8 @@ fun syncOutcome(result: SyncResult, notes: List<String> = emptyList()): String {
     val data = result.bytes?.let(::formatBytes)
     val resting = if (result.resting > 0 && result.error == null) "${result.resting} not due yet" else null
     val all = details + listOfNotNull(resting, data) + notes
-    return if (all.isEmpty()) head else "$head (${all.joinToString(", ")})"
+    val line = if (all.isEmpty()) head else "$head (${all.joinToString(", ")})"
+    return result.account?.takeIf { result.error == null }?.let { "$line; ${accountSummary(it)}" } ?: line
 }
 
 /**

@@ -274,9 +274,23 @@ class GoogleReaderApi(
         title: String? = null,
         addLabel: String? = null,
         removeLabel: String? = null,
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Boolean = editSubscriptionStatus(auth, token, action, feedUrl, title, addLabel, removeLabel) in 200..299
+
+    /**
+     * [editSubscription], with the server's status: 0 when there was no
+     * answer at all. The report says which, so a refused feed is not a mystery.
+     */
+    suspend fun editSubscriptionStatus(
+        auth: String,
+        token: String,
+        action: String,
+        feedUrl: String,
+        title: String? = null,
+        addLabel: String? = null,
+        removeLabel: String? = null,
+    ): Int = withContext(Dispatchers.IO) {
         val url = base?.newBuilder()?.addPathSegments("reader/api/0/subscription/edit")?.build()
-            ?: return@withContext false
+            ?: return@withContext 0
 
         val body = FormBody.Builder().apply {
             add("T", token)
@@ -289,8 +303,8 @@ class GoogleReaderApi(
 
         runCatching {
             client.newCall(authorised(auth, url).post(body).build()).execute()
-                .use { it.isSuccessful }
-        }.getOrDefault(false)
+                .use { it.code }
+        }.getOrDefault(0)
     }
 
     private fun authorised(auth: String, url: HttpUrl) = Request.Builder()

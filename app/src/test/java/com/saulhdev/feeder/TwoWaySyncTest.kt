@@ -228,11 +228,11 @@ class TwoWaySyncTest {
             "syncSubscriptions(auth, token)",
             "syncFeeds(context = context, feedId = ID_ALL, forceNetwork = forceNetwork)",
             "mapRemoteIds(auth)",
-            "val sent = pushChanges(auth, token)",
+            "val push = pushChanges(auth, token)",
             "pullReadState(auth)",
         ).map { sync.indexOf(it) }
         assertTrue(order.toString(), order.all { it >= 0 } && order == order.sorted())
-        assertTrue("only once they are sent", sync.contains("if (sent) {\n                pullReadState(auth)"))
+        assertTrue("only once they are sent", sync.contains("if (push.ok) {\n                val (read, unread) = pullReadState(auth)"))
     }
 
     @Test
