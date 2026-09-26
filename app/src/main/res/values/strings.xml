@@ -390,7 +390,7 @@
     <string name="covered_by_sources">Covered by %1$d sources</string>
     <string name="learned_reset_all_desc">Clears every More/Less score, restarts the reading counts from zero, and shows any hidden sources again. Your subscriptions, saved articles and what you have already read are not touched.</string>
     <string name="pref_mark_all_read">Mark all as read</string>
-    <string name="pref_mark_all_read_summary">Everything, or only what is older than an hour or a day. The feed offers it back until you leave it.</string>
+    <string name="pref_mark_all_read_summary">Everything, or only what is older than an hour or a day. You can undo it straight after.</string>
     <string name="mark_read_title">Mark as read</string>
     <string name="mark_read_everything">Everything</string>
     <string name="mark_read_older_hour">Older than an hour</string>

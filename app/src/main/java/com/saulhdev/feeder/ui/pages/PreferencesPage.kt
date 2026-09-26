@@ -29,6 +29,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
@@ -90,6 +94,8 @@ fun PreferencesPage(
     val articles: ArticleListViewModel = koinNeoViewModel()
     // The row asks how far back before it marks anything.
     var markingRead by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undoLabel = stringResource(R.string.action_undo)
     DisposableEffect(articles) {
         FeedPreferences.markEverythingRead = { markingRead = true }
         onDispose { FeedPreferences.markEverythingRead = null }
@@ -205,6 +211,7 @@ fun PreferencesPage(
     ViewWithActionBar(
         title = title,
         largeTitle = true,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -328,7 +335,26 @@ fun PreferencesPage(
         if (markingRead) {
             MarkAllReadDialog(
                 counts = { now -> articles.unreadCounts(now) },
-                onConfirm = { range, now -> articles.markAllRead(range, now) },
+                // Offered back here, straight away. The feed's own offer waits
+                // for half a minute of stillness, which is right for a run of
+                // scroll marks and meant this one was almost never seen.
+                onConfirm = { range, now ->
+                    articles.markAllRead(range, now) { count ->
+                        if (count == 0) return@markAllRead
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.resources.getQuantityString(
+                                    R.plurals.articles_marked_read, count, count
+                                ),
+                                actionLabel = undoLabel,
+                                withDismissAction = true,
+                                duration = SnackbarDuration.Long,
+                            )
+                            if (result == SnackbarResult.ActionPerformed) articles.undoReads()
+                            else articles.forgetUndoableReads()
+                        }
+                    }
+                },
                 onDismiss = { markingRead = false },
             )
         }

@@ -385,12 +385,22 @@ class ArticleListViewModel(
      * Marks everything unread in [range], offering the whole batch back.
      *
      * [nowMs] is the instant the counts were shown for, so what is marked is
-     * what the dialog said would be.
+     * what the dialog said would be. [onMarked] hears how many were marked,
+     * so the screen that asked can offer them back at once.
      */
-    fun markAllRead(range: MarkReadRange = MarkReadRange.Everything, nowMs: Long = System.currentTimeMillis()) {
+    fun markAllRead(
+        range: MarkReadRange = MarkReadRange.Everything,
+        nowMs: Long = System.currentTimeMillis(),
+        onMarked: (Int) -> Unit = {},
+    ) {
         viewModelScope.launch {
             val marked = articleRepo.markAllRead(range.before(nowMs))
-            if (marked.isNotEmpty()) _undoableReads.value = _undoableReads.value + marked
+            // Replaces rather than adds to what scrolling had banked: the offer
+            // names this batch's count, so Undo must put back this batch and
+            // no more. Anything scrolled past before it was in the range and
+            // is read either way.
+            if (marked.isNotEmpty()) _undoableReads.value = marked
+            onMarked(marked.size)
         }
     }
 

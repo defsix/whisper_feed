@@ -46,7 +46,12 @@ class MarkAllReadTest {
     fun `the settings row asks before it marks`() {
         val page = File("src/main/java/com/saulhdev/feeder/ui/pages/PreferencesPage.kt").readText()
         assertTrue(page.contains("FeedPreferences.markEverythingRead = { markingRead = true }"))
-        assertTrue(page.contains("onConfirm = { range, now -> articles.markAllRead(range, now) }"))
+        assertTrue(page.contains("articles.markAllRead(range, now) { count ->"))
+        // Offered back on the same screen, not left to the feed's delayed offer,
+        // which a reader coming back from Settings almost never saw.
+        assertTrue(page.contains("snackbarHost = { SnackbarHost(snackbarHostState) }"))
+        assertTrue(page.contains("if (result == SnackbarResult.ActionPerformed) articles.undoReads()"))
+        assertTrue(page.contains("else articles.forgetUndoableReads()"))
         // The dialog passes on the moment it counted at, so what is marked is
         // what it showed.
         val dialog = File("src/main/java/com/saulhdev/feeder/ui/components/dialog/MarkAllReadDialog.kt").readText()
