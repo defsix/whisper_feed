@@ -93,6 +93,7 @@ object Diagnostics : KoinComponent {
         appendLine("== Device ==")
         appendLine("Model:       ${Build.MANUFACTURER} ${Build.MODEL}")
         appendLine("Android:     ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+        appendLine("Photo decodes: ${imageDecodeSummary(imageDecodeLimit(context))}")
         appendLine()
 
         appendLine("== State ==")

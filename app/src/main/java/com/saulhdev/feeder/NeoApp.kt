@@ -30,6 +30,7 @@ import com.saulhdev.feeder.utils.Diagnostics
 import com.saulhdev.feeder.utils.FEED_TRACE_WINDOW_MS
 import com.saulhdev.feeder.utils.FeedTrace
 import com.saulhdev.feeder.utils.ImageTrace
+import com.saulhdev.feeder.utils.imageDecodeLimit
 import coil.imageLoader
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -304,6 +305,9 @@ class NeoApp : MultiDexApplication(), KoinStartup, ImageLoaderFactory {
                 .onlyPublicHttps()
                 .build()
         }
+        // Two at a time on an older device, Coil's four elsewhere. See
+        // imageDecodeLimit.
+        .bitmapFactoryMaxParallelism(imageDecodeLimit(this))
         .memoryCache {
             MemoryCache.Builder(this)
                 // Raised from 0.20 on measurement, not preference.
