@@ -173,22 +173,12 @@ class SyncWatchdog(context: Context, params: WorkerParameters) :
                 SyncProblem.None -> Unit
                 SyncProblem.SyncStuck -> {
                     if (!mayRenotifyStuck(now, state.getLong(KEY_STUCK_AT, 0L))) return
-                    val power = powerState(context)
-                    val reasons = stuckReasons(
-                        requiresCharging = prefs.syncOnlyWhenCharging.getValue(),
-                        pluggedIn = power.pluggedIn,
-                        wifiOnly = prefs.syncOnlyOnWifi.getValue(),
-                        unmetered = isUnmetered(context),
-                        batterySaver = isPowerSaveMode(context),
-                        batteryLow = power.low,
-                    )
                     val age = articleAge(now, newest ?: now).format(context)
                     notify(
                         context,
                         STUCK_NOTIFICATION_ID,
                         title = context.getString(R.string.sync_stuck_title, age),
-                        text = (reasons.map { context.getString(it.text) } +
-                            context.getString(R.string.sync_stuck_hint)).joinToString(" "),
+                        text = stuckText(context, prefs),
                         tap = Intent(context, MainActivity::class.java),
                     )
                     state.edit { putLong(KEY_STUCK_AT, now) }
@@ -207,6 +197,56 @@ class SyncWatchdog(context: Context, params: WorkerParameters) :
                     state.edit { putInt(KEY_SOURCES_COUNT, stopped) }
                 }
             }
+        }
+
+        /**
+         * The stuck-sync notice, now, so it can be seen without waiting three
+         * hours for a real one.
+         *
+         * The same builder, the same channel, the same reasons read from the
+         * phone as it is, and the same tap: what this shows is what the real
+         * one would. Only the title is marked as a test, and the age is a
+         * stand-in, since the feed has probably just updated.
+         *
+         * Nothing is recorded. A test must not count as having told the
+         * reader, or the real notice would be held back for a day afterwards.
+         *
+         * False when notifications are off, so the button can say why nothing
+         * appeared instead of appearing to do nothing.
+         */
+        fun sendTest(context: Context, prefs: FeedPreferences): Boolean {
+            if (!canNotify(context)) return false
+            val now = System.currentTimeMillis()
+            val age = articleAge(now, now - TEST_AGE_MS).format(context)
+            notify(
+                context,
+                STUCK_NOTIFICATION_ID,
+                title = context.getString(
+                    R.string.sync_stuck_test_title,
+                    context.getString(R.string.sync_stuck_title, age),
+                ),
+                text = stuckText(context, prefs),
+                tap = Intent(context, MainActivity::class.java),
+            )
+            return true
+        }
+
+        /** Three hours: the age at which an hourly schedule first counts as stuck. */
+        private const val TEST_AGE_MS = 3 * 60 * 60 * 1000L
+
+        /** Why it is stuck, as far as the phone can tell right now, and what to do. */
+        private fun stuckText(context: Context, prefs: FeedPreferences): String {
+            val power = powerState(context)
+            val reasons = stuckReasons(
+                requiresCharging = prefs.syncOnlyWhenCharging.getValue(),
+                pluggedIn = power.pluggedIn,
+                wifiOnly = prefs.syncOnlyOnWifi.getValue(),
+                unmetered = isUnmetered(context),
+                batterySaver = isPowerSaveMode(context),
+                batteryLow = power.low,
+            )
+            return (reasons.map { context.getString(it.text) } +
+                context.getString(R.string.sync_stuck_hint)).joinToString(" ")
         }
 
         private val StuckReason.text: Int

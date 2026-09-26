@@ -158,8 +158,11 @@ fun PreferencesPage(
         prefs.backupFolder,
     )
 
+    // The test notice sits under the debugging switch, and only while it is on.
+    val debugging by prefs.debugging.asState()
+
     /** Everything that explains the app rather than changing it. */
-    val helpPrefs = listOf(
+    val helpPrefs = listOfNotNull(
         prefs.showTour,
         prefs.launcherSetup,
         prefs.about,
@@ -168,6 +171,7 @@ fun PreferencesPage(
         // Last row of the last group. It was defined and in no list at all, so
         // the switch existed and could not be reached from anywhere.
         prefs.debugging,
+        prefs.testSyncNotice.takeIf { debugging },
     )
 
     // Turning the global switch on should start downloading now, not at the

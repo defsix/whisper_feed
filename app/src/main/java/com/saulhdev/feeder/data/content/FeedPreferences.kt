@@ -67,6 +67,7 @@ import com.saulhdev.feeder.ui.icons.phosphor.Power
 import com.saulhdev.feeder.ui.icons.phosphor.WifiHigh
 import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.utils.Diagnostics
+import com.saulhdev.feeder.manager.sync.SyncWatchdog
 import com.saulhdev.feeder.utils.getItemsPerFeed
 import com.saulhdev.feeder.utils.getSortingOptions
 import com.saulhdev.feeder.utils.getSyncFrequency
@@ -859,6 +860,26 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         dataStore = dataStore,
     )
 
+    /**
+     * Shows the stuck-sync notice on demand. Listed only while [debugging] is
+     * on: it is for checking the notice, not something to find by accident.
+     */
+    var testSyncNotice = StringPref(
+        titleId = R.string.pref_test_sync_notice,
+        summaryId = R.string.pref_test_sync_notice_summary,
+        icon = Phosphor.Megaphone,
+        key = TEST_SYNC_NOTICE,
+        dataStore = dataStore,
+        onClick = {
+            CoroutineScope(Dispatchers.IO).launch {
+                val shown = SyncWatchdog.sendTest(context, this@FeedPreferences)
+                if (!shown) withContext(Dispatchers.Main) {
+                    Toast.makeText(context, R.string.test_notice_blocked, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    )
+
     /* Sort & Filter */
     /**
      * Categories the feed is narrowed to — an INCLUDE list, empty meaning "All".
@@ -1132,6 +1153,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val PLUGINS = stringSetPreferencesKey("pref_enabled_plugins")
         val ABOUT = stringPreferencesKey("pref_about")
         val DEBUG = booleanPreferencesKey("pref_debugging")
+        val TEST_SYNC_NOTICE = stringPreferencesKey("pref_test_sync_notice")
 
         // Filter & Sort
         val FILTER_SOURCES = stringSetPreferencesKey("filter_sources")
