@@ -4,7 +4,8 @@ Status against the milestones in the handoff, what is left, and the order it
 should be done in.
 
 Last reviewed against the tree, not from memory: every "done" below was checked
-in the code.
+in the code. Sync (§7) updated 26 September 2026, after two days against a live
+server.
 
 ---
 
@@ -62,7 +63,7 @@ That was refused on CORS, which has nothing to do with what the app is for.
 | 3 | Remaining layouts | **Done** — Cards, Magazine, List and Mosaic, chosen in Settings; Mosaic swaps the container for a staggered grid |
 | 4 | Source management | **Done** — add, autodiscovery, duplicate detection, edit, remove with undo, multi-select bulk editing, a category screen, search, sort, broken feeds surfaced, OPML in/out, and pinned sources at the top of the list — which is what reorder became; see §2 |
 | 5 | Personalisation | **Done** — weighting drives Cards and Mosaic, reads back More/Less and reading habits, two structural diversity rules, read-on-scroll with a tunable dwell, three read-visibility settings, bulk mark with undo, a per-article explanation and a transparency-and-reset screen |
-| 6 | Sync | **Done bar removals, and unverified** — backup (§14) and the Google Reader protocol (§7): client, account, sign-in, subscription reconcile, the id mapping, read state both ways, background sync. Removals are deliberately not applied. **None of §7 has met a live server** |
+| 6 | Sync | **Done, and proven on FreshRSS** — backup (§14) and Google Reader sync (§7), both ways: subscriptions, read and unread, saves, with a summary of what each sync did. Running against a live FreshRSS since 25 September 2026, 114 feeds. Removals made on the server are deliberately not applied here. Miniflux, Inoreader and BazQux are untried |
 | 7 | Glance row | **Done** — weather, sunrise/sunset, feed status. Calendar deferred, as the spec says |
 | 8 | Reader / offline / polish | **Done** — reader, offline caching, sync/filter/frame-path performance, accessibility, battery, and motion: feed items move rather than being replaced, and every animation in the app stops when the reader has told the system to stop animating |
 | — | Onboarding | **Done** (§15) — welcome panes, a six-stop guided tour, starter sources, a first-run restore, and a launcher-page setup screen |
@@ -238,10 +239,9 @@ three people on builds handed to them directly, which does not scale and does
 not produce the feedback that finds the remaining problems. A release signing
 key and a GitHub release are a day's work and change who can find the app.
 
-Finishing §7 is the other candidate and is the larger one: the read-state
-mapping is the piece that makes an account worth having, and until it lands
-the account screen syncs subscriptions and nothing else. It is honest about
-that today, which is why it can wait.
+**§7 is done.** Sync runs both ways against a live FreshRSS server, and the
+account screen says what each sync did. That leaves §8 as the one large thing
+between the app and the people who would use it.
 
 ### 1. Adding a feed should be forgiving
 
@@ -743,11 +743,10 @@ that is a property of `stickyHeader` and not of the condition.
 
 ### 7. Sync and backup (Milestone 6)
 
-What exists today: OPML import and export, bookmark import and export, both
-manual, both through the file picker. That is a working backup story, just not
-an automatic one.
-
-What is missing: any account, any cloud, any cross-device state.
+**Done, and proven on a live server.** Since 25 September 2026 Whisper has
+synced both ways with a FreshRSS server: subscriptions, read and unread, and
+saves. The setup is `docs/SYNC_SERVER_FRESHRSS.md`; what the first two days
+against it found is under *Proven on a live server* below.
 
 **Decided: Google Reader protocol.** Recorded in `docs/REFERENCES.md` §2 —
 Feedly's own API turned out to be enterprise-gated, but the Google Reader
@@ -777,7 +776,23 @@ sync is genuinely additive rather than a mode.
   default rather than a stub.
 - **`SyncAccount`** — one account, in `EncryptedSharedPreferences` rather than
   DataStore because it holds a credential.
-- **The account screen** — Settings → Account. Sign in, sync, sign out.
+- **The account screen** — Settings → Account. Sign in at the server's web
+  address (the API path is found for it), Sync now, sign out. Below the
+  account: what the last sync did and what today's syncs did, as counts —
+  feeds on the server, articles it knows, reads and saves sent and received —
+  and any feeds the server lacks, grouped by why.
+- **`SyncOutbox`** — reads, unreads, saves and unsaves made here, kept until a
+  sync sends them, so a change made offline is not lost and one undone before
+  the sync cancels out.
+- **Two-way subscriptions** — `planSubscriptions` with two memories, the feeds
+  here at the last sync and every feed ever seen on the server, which is what
+  tells "removed here" from "new there". `matchFeeds` pairs the two lists by
+  address, then a remembered pairing, then title, because a server keeps a
+  feed under the address it settled on and that is often not the one Whisper
+  was given.
+- **Sync now runs in the worker**, as a foreground task, so it keeps the
+  network when the reader switches apps. One account sync at a time, whoever
+  asked.
 
 #### The division of labour, which is the design decision
 
@@ -815,14 +830,13 @@ any of this, and it should be built before the rest of it.
   Read state pushes back too, through the same mapping — `setRead` tells the
   server when it knows the article and does nothing when it does not.
 
-  **Unverified against a real server.** The id shapes and the mapping are
-  tested as pure logic; the `stream/contents` response shape is written from
-  the protocol and has not met a live FreshRSS or Miniflux. That is the next
-  thing to do with it, and it needs an account rather than a compiler.
-- **Removals are not applied.** A feed the server does not mention is left
-  alone rather than deleted. Deleting somebody's subscriptions because of a
-  partial response or the wrong account is unrecoverable, and those are exactly
-  the failure modes a first version meets.
+  ~~**Unverified against a real server.**~~ Proven on FreshRSS; see below.
+- **Removals on the server are not applied here.** A feed the server no
+  longer lists is kept, and listed as removed on the server so the reader can
+  decide. Deleting somebody's subscriptions because of a partial response or
+  the wrong account is unrecoverable, and those are exactly the failure modes a
+  first version meets. A feed removed *here* is removed from the server: that
+  is what the reader did, on purpose.
 - ~~**No background sync.**~~ Built. `FeedSyncer` dispatches through the
   active service now, so a scheduled run reconciles subscriptions, maps ids and
   applies read state rather than only fetching RSS. It used to call `syncFeeds`
@@ -835,6 +849,47 @@ any of this, and it should be built before the rest of it.
   has a notion of syncing part of an account. A signed-out account reports
   success rather than failure, so WorkManager does not back off and retry
   something that needs the reader rather than another attempt.
+
+#### Proven on a live server
+
+A FreshRSS server in Docker, 114 feeds, from the night of 25 September 2026.
+Every fix below came from a diagnostics report or a screenshot of the
+account screen, and each has tests.
+
+- **Account syncs forced a fetch of every feed**, and the panel's and the
+  app's syncs never reached the account at all (they asked for "all feeds" in
+  a form the dispatcher did not count).
+- **Being stopped read as failing.** Android cancelling a sync was logged as
+  `failed: pd2` and retried at once, with 15–50 MB downloads each time. Three
+  syncs ran at once and added one feed four times; there is a lock now.
+- **The first match of articles was unbounded.** It is two days and eight
+  pages, kept page by page.
+- **29 feeds went both ways twice**, because the server kept them under
+  different addresses. Matching by title, remembered once found, fixed it.
+- **Sync now lost the network on an app switch** and said no server could be
+  found. It runs in the worker now.
+- **Four feeds the server would not take.** Two were sites blocking servers,
+  fixed for every feed by giving FreshRSS a reader's user agent; one had moved
+  behind a Cloudflare challenge and was moved to its new address; one sent an
+  unusual content type and needed FreshRSS's `#force_feed`. Whisper now keeps
+  a refused feed on the phone, says so in plain words, and offers it again
+  weekly rather than every sync. The fixes are in the setup guide.
+- **Nothing said whether a sync had worked.** The account screen and the sync
+  history now carry the counts, and Today keeps them in view after a quiet
+  sync.
+
+Result: every feed on the server, and reads confirmed in both directions —
+one sent, 216 received on the first morning.
+
+#### Still open
+
+- **Miniflux, Inoreader and BazQux are untried.** They speak the same
+  protocol, and `docs/FRESHRSS_TEST_SERVER.md` has the Miniflux half of a test
+  setup.
+- **Changes wait for the next sync.** A read made here reaches the server at
+  the next hourly sync, or at once with Sync now or pull to refresh. Sending
+  them within a minute was offered and declined: the hourly schedule is
+  enough.
 
 #### ~~Sync only when charging — asked for, not yet built~~ Built
 

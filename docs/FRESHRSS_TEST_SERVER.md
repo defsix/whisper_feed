@@ -2,6 +2,11 @@
 
 *FreshRSS first, then Miniflux. Both are covered here.*
 
+> **Status, 26 September 2026:** the FreshRSS half is done. Sync has run both
+> ways against a live FreshRSS server since 25 September; see `ROADMAP.md` §7.
+> For setting one up to use, rather than to test, see
+> [`SYNC_SERVER_FRESHRSS.md`](SYNC_SERVER_FRESHRSS.md). Miniflux is still untried.
+
 **Handover note.** This is written for a Claude instance working on the
 reader's own server, with no context on the Android app. It has one job:
 stand up a FreshRSS instance that the Whisper app can sign in to, so that a
