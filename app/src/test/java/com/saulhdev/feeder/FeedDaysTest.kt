@@ -85,3 +85,16 @@ class FeedDaysTest {
         assertTrue(source("ui/overlay/ArticleMenu.kt").contains("MenuEntry(R.string.share, Phosphor.ShareNetwork)"))
     }
 }
+
+/** Save and the menu sat a whole button apart, and a button's padding in from the edge. */
+class CardActionsTest {
+    private val card = File("src/main/java/com/saulhdev/feeder/ui/overlay/ArticleCard.kt").readText()
+
+    @Test
+    fun `every byline pair is drawn together and out to the edge`() {
+        assertEquals("hero, card, text row and tile", 4, Regex("CardActions \\{").findAll(card).count())
+        assertTrue(card.contains("horizontalArrangement = Arrangement.spacedBy(-CARD_ACTIONS_OVERLAP),"))
+        assertTrue(card.contains("modifier = Modifier.offset(x = CARD_ACTIONS_EDGE),"))
+        assertTrue("drawn, not shrunk: targets keep 48dp", !card.substring(card.indexOf("fun CardActions(")).contains("size("))
+    }
+}

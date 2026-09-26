@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -272,14 +273,16 @@ fun ArticleHeroCard(
                         iconUrl = item.feedIconUrl,
                         onImage = true,
                     )
-                    SaveButton(
-                        saved = item.bookmarked,
-                        onSavedChange = onBookmark,
-                        onImage = true,
-                    )
-                    // Share lives in the menu beside it. Two ways to one
-                    // action on every card was a button the card did not need.
-                    menu(Color.White)
+                    // Share lives in the menu. Two ways to one action on
+                    // every card was a button the card did not need.
+                    CardActions {
+                        SaveButton(
+                            saved = item.bookmarked,
+                            onSavedChange = onBookmark,
+                            onImage = true,
+                        )
+                        menu(Color.White)
+                    }
                 }
             }
         }
@@ -386,9 +389,11 @@ fun ArticleCard(
                     iconUrl = item.feedIconUrl,
                 )
 
-                SaveButton(saved = item.bookmarked, onSavedChange = onBookmark)
                 // Share is in the menu; see the hero above.
-                menu(null)
+                CardActions {
+                    SaveButton(saved = item.bookmarked, onSavedChange = onBookmark)
+                    menu(null)
+                }
             }
         }
         ArticleDivider()
@@ -546,12 +551,14 @@ fun ArticleTextRow(
                     iconUrl = item.feedIconUrl,
                 )
             }
-            SaveButton(
-                saved = item.bookmarked,
-                onSavedChange = onBookmark,
-                size = 20.dp,
-            )
-            menu(null)
+            CardActions {
+                SaveButton(
+                    saved = item.bookmarked,
+                    onSavedChange = onBookmark,
+                    size = 20.dp,
+                )
+                menu(null)
+            }
         }
         ArticleDivider()
     }
@@ -715,12 +722,14 @@ fun ArticleMosaicTile(
                 // keep their full 48dp targets either way — the fix was to
                 // stop them claiming a row of their own, not to shrink them.
                 if (!hasImage) {
-                    SaveButton(
-                        saved = item.bookmarked,
-                        onSavedChange = onBookmark,
-                        size = 18.dp,
-                    )
-                    menu(null)
+                    CardActions {
+                        SaveButton(
+                            saved = item.bookmarked,
+                            onSavedChange = onBookmark,
+                            size = 18.dp,
+                        )
+                        menu(null)
+                    }
                 }
             }
         }
@@ -938,3 +947,28 @@ private fun CoverageLine(
  */
 internal fun isCardFaded(faded: Boolean, pinned: Boolean): Boolean =
     faded && !pinned
+
+/**
+ * Save and the menu, as one pair at the end of a byline.
+ *
+ * Each is a 48dp touch target around a 22dp glyph, so side by side the glyphs
+ * sat a whole button apart, and the menu's dots a button's padding in from
+ * the edge - while the source icon at the other end sat right on it. Drawn
+ * [CARD_ACTIONS_OVERLAP] closer together and [CARD_ACTIONS_EDGE] further out,
+ * the dots line up with the edge the source icon starts from. Only drawn
+ * there: both targets keep their full size, and overlap where they meet.
+ */
+@Composable
+fun CardActions(content: @Composable () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(-CARD_ACTIONS_OVERLAP),
+        modifier = Modifier.offset(x = CARD_ACTIONS_EDGE),
+    ) { content() }
+}
+
+/** Half a button's spare width: where a 22dp glyph's box meets a 48dp target's edge. */
+val CARD_ACTIONS_EDGE = 13.dp
+
+/** How much closer the two glyphs sit than two buttons side by side would put them. */
+val CARD_ACTIONS_OVERLAP = 12.dp
