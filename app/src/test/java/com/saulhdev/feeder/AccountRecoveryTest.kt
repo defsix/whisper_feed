@@ -18,6 +18,7 @@
 package com.saulhdev.feeder
 
 import com.saulhdev.feeder.manager.sync.greader.matchFeeds
+import com.saulhdev.feeder.manager.sync.greader.planSubscriptions
 import com.saulhdev.feeder.manager.sync.greader.titleKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -59,27 +60,27 @@ class AccountRecoveryTest {
     }
 
     @Test
-    fun `a second copy of a matched feed is left alone on either side`() {
+    fun `a feed with the same title as a matched one is still sent up`() {
+        // The live server was missing the second of two Guardian feeds: taken
+        // for a copy of the first and held back, when it was another section.
         val m = matchFeeds(
-            local = mapOf("npr/1" to "NPR", "npr/local-copy" to "NPR"),
-            server = mapOf("npr/1" to "NPR", "npr/server-copy" to "NPR", "npr/third" to "NPR"),
+            local = mapOf("guardian/world" to "The Guardian", "guardian/uk" to "The Guardian"),
+            server = mapOf("guardian/world" to "The Guardian"),
             aliases = emptyMap(),
         )
-        assertEquals("npr/1", m.serverAs["npr/1"])
-        // One server copy pairs with the spare local one, one to one; the rest is left.
-        assertEquals(2, m.serverAs.values.filterNotNull().toSet().size)
-        assertEquals("left alone, not copied down", 1, m.serverAs.values.count { it == null })
-        assertTrue(m.localIgnored.isEmpty())
+        assertEquals(mapOf("guardian/world" to "guardian/world"), m.serverAs)
+        val plan = planSubscriptions(setOf("guardian/world", "guardian/uk"), m.serverAs.values.toSet(), emptySet(), emptySet())
+        assertEquals(setOf("guardian/uk"), plan.subscribe)
     }
 
     @Test
-    fun `a local second copy is not sent up`() {
+    fun `a spare server feed with a matched title comes down, rather than vanishing`() {
         val m = matchFeeds(
-            local = mapOf("bbc/1" to "BBC News", "bbc/2" to "BBC News"),
-            server = mapOf("bbc/1" to "BBC News"),
+            local = mapOf("npr/1" to "NPR"),
+            server = mapOf("npr/1" to "NPR", "npr/2" to "NPR"),
             aliases = emptyMap(),
         )
-        assertEquals(setOf("bbc/2"), m.localIgnored)
+        assertEquals(mapOf("npr/1" to "npr/1", "npr/2" to "npr/2"), m.serverAs)
     }
 
     @Test
@@ -91,7 +92,27 @@ class AccountRecoveryTest {
         )
         assertEquals("guardian/europe", m.serverAs["guardian/europe"])
         assertEquals("guardian/world", m.serverAs["feeds.guardian/world"])
-        assertTrue(m.localIgnored.isEmpty())
+    }
+
+    @Test
+    fun `among feeds with one title, the address that ends alike is the pair`() {
+        // Sorted order alone would pair the server's world feed with the
+        // Europe one, which sorts first.
+        val m = matchFeeds(
+            local = mapOf("theguardian.com/europe/rss" to "The Guardian", "theguardian.com/world/rss" to "The Guardian"),
+            server = mapOf("feeds.theguardian.com/theguardian/world/rss" to "The Guardian"),
+            aliases = emptyMap(),
+        )
+        assertEquals("theguardian.com/world/rss", m.serverAs["feeds.theguardian.com/theguardian/world/rss"])
+    }
+
+    @Test
+    fun `the report says which feeds the server lacks, and why`() {
+        assertTrue(service.contains("(localKeys - remoteAs.keys - subscribed).map { key ->"))
+        assertTrue(service.contains("key !in plan.subscribe -> \"removed on the server, kept here\""))
+        assertTrue(service.contains("else -> \"the server refused it\""))
+        val diagnostics = source("utils/Diagnostics.kt")
+        assertTrue(diagnostics.contains("appendLine(\"Not on the server: \${missing.size}\")"))
     }
 
     @Test
@@ -137,7 +158,7 @@ class AccountRecoveryTest {
     @Test
     fun `feeds are compared in Whisper's keys, with the pairings kept`() {
         assertTrue(service.contains("val plan = planSubscriptions(localKeys, remoteAs.keys, lastLocal, everOnServer)"))
-        assertTrue(service.contains("val localKeys = localByKey.keys - match.localIgnored"))
+        assertTrue(service.contains("val localKeys = localByKey.keys\n"))
         assertTrue(service.contains("(oldAliases + match.newAliases).filterKeys { it in remoteByKey }"))
     }
 

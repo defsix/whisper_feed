@@ -364,6 +364,12 @@ object Diagnostics : KoinComponent {
         }
         appendLine("Problems:     " + SyncWatchdog.describe(context))
         appendLine("Account:      " + accountLine(context))
+        if (get<SyncAccount>().isSignedIn) {
+            runCatching { GoogleReaderState.notOnServer(context) }.getOrDefault(emptyList()).let { missing ->
+                if (missing.isNotEmpty()) appendLine("Not on the server: ${missing.size}")
+                missing.forEach { (title, why) -> appendLine("  ${title.take(28).padEnd(28)} $why") }
+            }
+        }
     }
 
     /**

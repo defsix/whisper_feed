@@ -160,11 +160,10 @@ class GoogleReaderService(
             aliases = oldAliases,
         )
         // In Whisper's keys from here on: a server feed matched to one of
-        // ours goes by our key, and a second copy is not counted at all.
+        // ours goes by our key.
         val remoteAs = match.serverAs.entries
-            .mapNotNull { (serverKey, localKey) -> localKey?.let { it to remoteByKey.getValue(serverKey) } }
-            .toMap()
-        val localKeys = localByKey.keys - match.localIgnored
+            .associate { (serverKey, localKey) -> localKey to remoteByKey.getValue(serverKey) }
+        val localKeys = localByKey.keys
         GoogleReaderState.setAliases(
             context,
             (oldAliases + match.newAliases).filterKeys { it in remoteByKey },
@@ -214,6 +213,19 @@ class GoogleReaderService(
                     "${unsubscribed.size} of ${plan.unsubscribe.size} removed, ${plan.addLocal.size} added here"
             )
         }
+
+        // Ours that the server still lacks, and why, for the report: a count
+        // alone said four were missing and nothing about which.
+        GoogleReaderState.setNotOnServer(
+            context,
+            (localKeys - remoteAs.keys - subscribed).map { key ->
+                localByKey.getValue(key).title to when {
+                    key !in plan.subscribe -> "removed on the server, kept here"
+                    token == null -> "not sent, no write access"
+                    else -> "the server refused it"
+                }
+            },
+        )
 
         // Feeds both sides have: the server's folders.
         remote.forEach { sub ->

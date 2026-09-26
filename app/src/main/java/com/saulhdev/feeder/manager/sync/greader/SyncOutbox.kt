@@ -109,19 +109,21 @@ fun planSubscriptions(
  * ([aliases]); then the same title, one to one, which is what both sides take
  * from the feed itself. A pairing found by title is returned in
  * [FeedMatch.newAliases] to be remembered, so a rename later does not undo it.
+ * When several feeds share a title - a paper's sections are often all called
+ * "The Guardian" - the one whose address ends the most alike is taken.
  *
- * What is left is new, except a second copy of a feed already matched - the
- * same title again - which is left alone on whichever side it is, rather than
- * copied across to make the duplicate a pair of duplicates.
+ * What is left is new on its side. A feed is never left out for having the
+ * same title as one already matched: that held back a second Guardian feed
+ * from the server as a supposed copy, when it was a different section. Real
+ * copies are for "Subscribed twice" to find, and removing one here then
+ * removes it from the server too.
  *
  * @param local Whisper's feeds, key to title.
  * @param server the server's feeds, key to title.
  */
 data class FeedMatch(
-    /** Each server feed's key, as the key it is here; null for a second copy, left alone. */
-    val serverAs: Map<String, String?>,
-    /** Whisper feeds that are a second copy of one already matched, left alone. */
-    val localIgnored: Set<String>,
+    /** Each server feed's key, as the key it is here: its own when it is new. */
+    val serverAs: Map<String, String>,
     val newAliases: Map<String, String>,
 )
 
@@ -130,7 +132,7 @@ fun matchFeeds(
     server: Map<String, String>,
     aliases: Map<String, String>,
 ): FeedMatch {
-    val serverAs = LinkedHashMap<String, String?>()
+    val serverAs = LinkedHashMap<String, String>()
     val claimed = HashSet<String>()
     server.keys.sorted().forEach { s ->
         if (s in local) {
@@ -146,24 +148,24 @@ fun matchFeeds(
         }
     }
     val newAliases = LinkedHashMap<String, String>()
-    val unclaimedByTitle = local.keys.sorted().filter { it !in claimed }
-        .groupBy { titleKey(local.getValue(it)) }
+    val byTitle = local.keys.sorted().groupBy { titleKey(local.getValue(it)) }
     server.keys.sorted().filter { it !in serverAs }.forEach { s ->
         val t = titleKey(server.getValue(s))
         if (t.isEmpty()) return@forEach
-        val pick = unclaimedByTitle[t]?.firstOrNull { it !in claimed } ?: return@forEach
+        val pick = byTitle[t].orEmpty().filter { it !in claimed }
+            .maxByOrNull { commonSuffixLength(it, s) } ?: return@forEach
         serverAs[s] = pick
         claimed += pick
         newAliases[s] = pick
     }
-    val matchedTitles = claimed.mapTo(HashSet()) { titleKey(local.getValue(it)) }
-    server.keys.sorted().filter { it !in serverAs }.forEach { s ->
-        val t = titleKey(server.getValue(s))
-        serverAs[s] = if (t.isNotEmpty() && t in matchedTitles) null else s
-    }
-    val localIgnored = local.keys.filter { it !in claimed }
-        .filterTo(HashSet()) { titleKey(local.getValue(it)).let { t -> t.isNotEmpty() && t in matchedTitles } }
-    return FeedMatch(serverAs, localIgnored, newAliases)
+    server.keys.sorted().filter { it !in serverAs }.forEach { serverAs[it] = it }
+    return FeedMatch(serverAs, newAliases)
+}
+
+private fun commonSuffixLength(a: String, b: String): Int {
+    var n = 0
+    while (n < a.length && n < b.length && a[a.length - 1 - n] == b[b.length - 1 - n]) n++
+    return n
 }
 
 /** A title as both sides would agree on it: case, spacing and trailing marks aside. */
@@ -234,6 +236,7 @@ object GoogleReaderState {
     private const val EVER_ON_SERVER = "ever_on_server"
     private const val MAPPED_AT = "mapped_at"
     private const val ALIASES = "aliases"
+    private const val NOT_ON_SERVER = "not_on_server"
 
     private val lock = Any()
 
@@ -282,6 +285,19 @@ object GoogleReaderState {
 
     fun setAliases(context: Context, aliases: Map<String, String>) {
         prefs(context).edit { putStringSet(ALIASES, aliases.mapTo(HashSet()) { (s, k) -> "$s\t$k" }) }
+    }
+
+    /**
+     * Whisper's feeds the server did not have at the last sync, as (title,
+     * why), for the diagnostics report. Titles only, never addresses.
+     */
+    fun notOnServer(context: Context): List<Pair<String, String>> =
+        prefs(context).getStringSet(NOT_ON_SERVER, null).orEmpty().map { entry ->
+            entry.substringBefore('\t') to entry.substringAfter('\t', "")
+        }.sortedBy { it.first.lowercase() }
+
+    fun setNotOnServer(context: Context, feeds: List<Pair<String, String>>) {
+        prefs(context).edit { putStringSet(NOT_ON_SERVER, feeds.mapTo(HashSet()) { (t, why) -> "$t\t$why" }) }
     }
 
     /** When articles were last matched to the server's, or 0 for never. */
