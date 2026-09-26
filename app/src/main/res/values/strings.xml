@@ -303,13 +303,13 @@
     <string name="empty_filtered_hint">Every article is filtered out by the category or filter you have chosen. Tap All, or open the filter to change it.</string>
     <string name="pref_backup">Backup and Restore</string>
     <string name="pref_backup_summary">Your subscriptions and your settings, kept somewhere you choose. All off until you turn something on \u2014 the only part of Whisper that can send your data anywhere.</string>
-    <string name="backup_explanation">Two things here are worth keeping: the subscription list you spent a long time building, and the settings you arranged to suit you. Both exist only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day. A folder in cloud storage, such as Google Drive, is written only over Wi-Fi.</string>
+    <string name="backup_explanation">Two things here are worth keeping: the subscription list you spent a long time building, and the settings you arranged to suit you. Both exist only on this phone. Choose somewhere to keep a copy and Whisper will write it there once a day.</string>
     <string name="backup_only_time">Nothing on this screen happens unless you ask for it.\n\nWhisper has no server and no account of its own, so this is the only part of the app that can send your data anywhere. Everything here is off until you turn it on: no folder is chosen, and Android\u2019s own backup hands over nothing. Turn on what suits you \u2014 and nothing else will leave this phone.</string>
     <string name="backup_stopped_title">Backups have stopped</string>
     <string name="backup_stopped_body">Whisper could not reach the folder you chose, so the daily backup stopped on %1$s. Choose a folder again to start it.</string>
     <string name="backup_off">Everything here is off. Nothing is leaving this phone.</string>
     <string name="backup_on_device">Your subscriptions and settings are copied to the folder below once a day, unless the battery is low. It is on this phone, so nothing leaves it.</string>
-    <string name="backup_on_cloud">Your subscriptions and settings are copied to the folder below once a day, when the phone is on Wi-Fi and the battery is not low.</string>
+    <string name="backup_on_cloud">Your subscriptions and settings are copied to the folder below once a day, unless the battery is low. The two files are only a few kilobytes.</string>
     <string name="pref_platform_device">Include in phone-to-phone transfer</string>
     <string name="pref_platform_device_summary">When you set up a new phone next to this one. A direct copy \u2014 no server involved.</string>
     <string name="pref_platform_cloud">Include in Google cloud backup</string>

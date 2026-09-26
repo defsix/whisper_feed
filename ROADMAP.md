@@ -1394,7 +1394,11 @@ picker. In order:
    be ceremony protecting nothing. The folder is also kept as the backup
    destination: they have just told the app where their backups live, and
    asking again later would be asking a question already answered.
-4. **Automatic, daily, on unmetered Wi-Fi.** Built. A manual export is not a
+4. **Automatic, daily.** Built. It waited for unmetered Wi-Fi until September
+   2026; that rule is gone, because the two files are a few kilobytes and a
+   folder on the phone never touched the network at all. A cloud folder waits
+   for a connection of any kind, a local one for nothing but a battery that is
+   not low. A manual export is not a
    backup, it is a thing people mean to do, so the scheduled version is the
    feature and the button is the reassurance. Daily rather than hourly: a
    subscription list changes a few times a month, and rewriting an identical

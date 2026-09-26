@@ -88,12 +88,11 @@ class BackupWorker(
         /**
          * Daily, for the folder at [folder].
          *
-         * Wi-Fi only when the folder is in cloud storage: writing to somebody's
-         * Drive on their mobile data without being asked is not this app's
-         * decision. A folder on the phone itself sends nothing anywhere, so
-         * it has no network condition at all — it used to wait for Wi-Fi like
-         * the rest, which made no sense for a file that never leaves the
-         * phone.
+         * No Wi-Fi rule. It used to wait for unmetered Wi-Fi, which made no
+         * sense for a folder on the phone and little for cloud storage: the
+         * two files are a few kilobytes, less than one article's photo. A
+         * folder in cloud storage needs a connection of some kind to reach
+         * it; a folder on the phone needs none at all.
          *
          * UPDATE rather than KEEP, so a schedule made under the old rule takes
          * the new one without losing its place in the day.
@@ -104,7 +103,7 @@ class BackupWorker(
                     Constraints.Builder()
                         .setRequiredNetworkType(
                             if (backupFolderIsOnDevice(folder)) NetworkType.NOT_REQUIRED
-                            else NetworkType.UNMETERED
+                            else NetworkType.CONNECTED
                         )
                         .setRequiresBatteryNotLow(true)
                         .build()
@@ -135,7 +134,7 @@ private val ON_DEVICE_PROVIDERS = setOf(
  *
  * Read from the provider that granted the folder. Anything not known to be
  * local — Drive, Dropbox, a provider nobody has heard of — counts as remote,
- * so an unknown case keeps the Wi-Fi rule rather than losing it.
+ * so an unknown case waits for a connection rather than failing without one.
  */
 fun backupFolderIsOnDevice(folder: String): Boolean =
     runCatching { java.net.URI(folder).authority }.getOrNull() in ON_DEVICE_PROVIDERS

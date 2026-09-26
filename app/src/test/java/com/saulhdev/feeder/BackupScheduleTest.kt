@@ -15,7 +15,7 @@ class BackupScheduleTest {
     }
 
     @Test
-    fun `cloud storage and anything unknown keep the Wi-Fi rule`() {
+    fun `cloud storage and anything unknown count as remote`() {
         assertFalse(backupFolderIsOnDevice("content://com.google.android.apps.docs.storage/tree/acc%3D1%3Bdoc%3Dabc"))
         assertFalse(backupFolderIsOnDevice("content://com.dropbox.android.document/tree/x"))
         assertFalse(backupFolderIsOnDevice(""))
@@ -23,10 +23,11 @@ class BackupScheduleTest {
     }
 
     @Test
-    fun `the schedule asks for Wi-Fi only for a remote folder, and replaces an old one`() {
+    fun `no Wi-Fi rule, a connection only for a remote folder, and an old schedule replaced`() {
         val worker = File("src/main/java/com/saulhdev/feeder/manager/backup/BackupWorker.kt").readText()
         assertTrue(worker.contains("if (backupFolderIsOnDevice(folder)) NetworkType.NOT_REQUIRED"))
-        assertTrue(worker.contains("else NetworkType.UNMETERED"))
+        assertTrue(worker.contains("else NetworkType.CONNECTED"))
+        assertFalse("backups wait for Wi-Fi again", worker.contains("NetworkType.UNMETERED"))
         assertTrue(worker.contains("ExistingPeriodicWorkPolicy.UPDATE"))
         // Restated at start, so a schedule made under the old rule is not
         // left waiting for Wi-Fi until a folder is chosen again.
