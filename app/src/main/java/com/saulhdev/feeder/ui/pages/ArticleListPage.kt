@@ -261,9 +261,13 @@ fun ArticleListPage(
     val windowWidthDp = with(LocalDensity.current) {
         LocalWindowInfo.current.containerSize.width.toDp().value.toInt()
     }
-    val articleOpenBeside =
-        paneNavigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded &&
-            paneNavigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    // An article actually open, not merely room for one: on a wide screen the
+    // scaffold reports the detail pane expanded with nothing in it, which
+    // read as "article open" and kept the tablet in one column.
+    val articleSelected = paneNavigator.currentDestination
+        ?.takeIf { it.pane == ListDetailPaneScaffoldRole.Detail }?.contentKey != null
+    val articleOpenBeside = articleSelected &&
+        paneNavigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val feedWidthDp = if (articleOpenBeside) FEED_BESIDE_ARTICLE_DP else windowWidthDp
     val columns = feedColumns(layout, feedWidthDp)
     val isGridLayout = columns > 1

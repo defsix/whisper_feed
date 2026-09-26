@@ -47,6 +47,12 @@ class FeedColumnsTest {
         assertTrue(page.contains("val feedWidthDp = if (articleOpenBeside) FEED_BESIDE_ARTICLE_DP else windowWidthDp"))
         assertTrue(page.contains("columns = columns,"))
         assertTrue("reading still tracked in columns", page.contains("isGrid = isGridLayout,"))
+        // The first build asked whether the detail pane was expanded, which a
+        // wide screen reports with no article in it: the tablet stayed in one
+        // column. It is the selected article that counts.
+        assertTrue(page.contains("?.takeIf { it.pane == ListDetailPaneScaffoldRole.Detail }?.contentKey != null"))
+        assertTrue(page.contains("val articleOpenBeside = articleSelected &&"))
+        assertTrue(!page.contains("scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded"))
     }
 
     @Test
