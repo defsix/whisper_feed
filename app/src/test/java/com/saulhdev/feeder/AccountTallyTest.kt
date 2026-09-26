@@ -178,9 +178,10 @@ class DayTotalsTest {
     }
 
     @Test
-    fun `the screen shows today under the last sync, only once something moved`() {
+    fun `the screen shows today under the last sync whenever there was one today`() {
         val page = File("src/main/java/com/saulhdev/feeder/ui/pages/AccountPage.kt").readText()
-        assertTrue(page.contains("today?.takeIf { it.sentAny || it.receivedAny || it.feedsChanged }?.let { day ->"))
+        assertTrue(page.contains("today?.let { day ->"))
+        assertFalse("shown with zeros too", page.contains("today?.takeIf"))
         val store = File("src/main/java/com/saulhdev/feeder/manager/sync/greader/AccountTally.kt").readText()
         assertTrue(store.contains("val totals = today(context, at).plus(tally, dayKey(at))"))
         assertTrue("yesterday's is not today's", store.contains("?.takeIf { it == dayKey(nowMs) } ?: return@runCatching null"))

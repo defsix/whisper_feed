@@ -365,7 +365,9 @@ private fun SyncTally(tally: AccountTally, today: DayTotals?, notOnServer: List<
             stringResource(R.string.account_tally_received, tally.readHere, tally.unreadHere, tally.savedHere),
         )
         lines.forEach { TallyLine(it) }
-        today?.takeIf { it.sentAny || it.receivedAny || it.feedsChanged }?.let { day ->
+        // Whenever there has been a sync today, zeros and all: hidden until
+        // something moved, it looked like a feature that had not arrived.
+        today?.let { day ->
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(top = 8.dp),
