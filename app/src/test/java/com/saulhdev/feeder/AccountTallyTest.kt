@@ -2,6 +2,7 @@ package com.saulhdev.feeder
 
 import com.saulhdev.feeder.manager.sync.greader.AccountTally
 import com.saulhdev.feeder.manager.sync.greader.accountSummary
+import com.saulhdev.feeder.manager.sync.greader.plus
 import com.saulhdev.feeder.manager.sync.service.refusalCode
 import com.saulhdev.feeder.utils.SyncResult
 import com.saulhdev.feeder.utils.syncOutcome
@@ -135,5 +136,53 @@ class RefusedFeedTest {
         assertTrue(page.contains("heading = R.string.account_phone_only_title,"))
         val strings = File("src/main/res/values/strings.xml").readText()
         assertTrue(strings.contains("They still update here as normal, but reading them will not sync to your other devices."))
+    }
+}
+
+/**
+ * 163 reads came down at five past eleven; two quiet syncs later the screen
+ * said nothing had happened. Today's totals keep it in view.
+ */
+class DayTotalsTest {
+    private val t = AccountTally(readSent = 1, readHere = 28, savedHere = 2, feedsSent = 1)
+
+    @Test
+    fun `syncs on one day add up`() {
+        val day = null.plus(t, "2026-09-26")
+            .plus(AccountTally(readHere = 163), "2026-09-26")
+            .plus(AccountTally(), "2026-09-26")
+        assertEquals(1, day.readSent)
+        assertEquals(191, day.readHere)
+        assertEquals(2, day.savedHere)
+        assertEquals(1, day.feedsSent)
+        assertTrue(day.sentAny && day.receivedAny && day.feedsChanged)
+    }
+
+    @Test
+    fun `a new day starts from nothing`() {
+        val next = null.plus(t, "2026-09-26").plus(AccountTally(readHere = 3), "2026-09-27")
+        assertEquals("2026-09-27", next.day)
+        assertEquals(3, next.readHere)
+        assertEquals(0, next.readSent)
+    }
+
+    @Test
+    fun `a quiet day shows nothing`() {
+        val quiet = null.plus(AccountTally(serverFeeds = 114, matched = 1575), "2026-09-26")
+        assertFalse(quiet.sentAny || quiet.receivedAny || quiet.feedsChanged)
+    }
+
+    @Test
+    fun `the day is the local date`() {
+        assertTrue(Regex("\\d{4}-\\d{2}-\\d{2}").matches(com.saulhdev.feeder.manager.sync.greader.dayKey(0L)))
+    }
+
+    @Test
+    fun `the screen shows today under the last sync, only once something moved`() {
+        val page = File("src/main/java/com/saulhdev/feeder/ui/pages/AccountPage.kt").readText()
+        assertTrue(page.contains("today?.takeIf { it.sentAny || it.receivedAny || it.feedsChanged }?.let { day ->"))
+        val store = File("src/main/java/com/saulhdev/feeder/manager/sync/greader/AccountTally.kt").readText()
+        assertTrue(store.contains("val totals = today(context, at).plus(tally, dayKey(at))"))
+        assertTrue("yesterday's is not today's", store.contains("?.takeIf { it == dayKey(nowMs) } ?: return@runCatching null"))
     }
 }

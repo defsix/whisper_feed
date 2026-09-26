@@ -78,19 +78,93 @@ fun accountSummary(t: AccountTally): String {
 private fun counts(vararg parts: Pair<Int, String>): String? =
     parts.filter { it.first > 0 }.joinToString(", ") { "${it.first} ${it.second}" }.ifEmpty { null }
 
-/** The last sync's tally, for the account screen. */
+/**
+ * What the account's syncs moved in one day, added up.
+ *
+ * The screen showed the last sync alone, and a sync with nothing new to move
+ * is all zeros: 163 reads came down at five past eleven, two more syncs ran,
+ * and the screen said nothing had ever happened. Today's totals keep the
+ * confirmation in view until midnight.
+ */
+data class DayTotals(
+    /** The local date these are for, as yyyy-MM-dd. */
+    val day: String,
+    val feedsSent: Int = 0,
+    val feedsRemoved: Int = 0,
+    val feedsAdded: Int = 0,
+    val readSent: Int = 0,
+    val unreadSent: Int = 0,
+    val savedSent: Int = 0,
+    val unsavedSent: Int = 0,
+    val readHere: Int = 0,
+    val unreadHere: Int = 0,
+    val savedHere: Int = 0,
+) {
+    val sentAny: Boolean get() = readSent + unreadSent + savedSent + unsavedSent > 0
+    val receivedAny: Boolean get() = readHere + unreadHere + savedHere > 0
+    val feedsChanged: Boolean get() = feedsSent + feedsRemoved + feedsAdded > 0
+}
+
+/** [tally] added to the day's totals, starting the day afresh when it has changed. */
+fun DayTotals?.plus(tally: AccountTally, day: String): DayTotals {
+    val base = this?.takeIf { it.day == day } ?: DayTotals(day)
+    return base.copy(
+        feedsSent = base.feedsSent + tally.feedsSent,
+        feedsRemoved = base.feedsRemoved + tally.feedsRemoved,
+        feedsAdded = base.feedsAdded + tally.feedsAdded,
+        readSent = base.readSent + tally.readSent,
+        unreadSent = base.unreadSent + tally.unreadSent,
+        savedSent = base.savedSent + tally.savedSent,
+        unsavedSent = base.unsavedSent + tally.unsavedSent,
+        readHere = base.readHere + tally.readHere,
+        unreadHere = base.unreadHere + tally.unreadHere,
+        savedHere = base.savedHere + tally.savedHere,
+    )
+}
+
+/** The local date of [ms], as the day totals key it. */
+fun dayKey(ms: Long): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(ms))
+
+/** The last sync's tally and today's totals, for the account screen. */
 object AccountTallyStore {
     private const val FILE = "greader_tally"
     private const val AT = "at"
+    private const val DAY = "day"
+    private const val DAY_PREFIX = "day_"
 
     fun write(context: Context, tally: AccountTally, at: Long = System.currentTimeMillis()) {
         runCatching {
+            val totals = today(context, at).plus(tally, dayKey(at))
             prefs(context).edit {
                 putLong(AT, at)
                 fields(tally).forEach { (key, value) -> putInt(key, value) }
+                putString(DAY, totals.day)
+                dayFields(totals).forEach { (key, value) -> putInt(DAY_PREFIX + key, value) }
             }
         }
     }
+
+    /** Today's totals, or null when nothing has synced today. */
+    fun today(context: Context, nowMs: Long = System.currentTimeMillis()): DayTotals? = runCatching {
+        val p = prefs(context)
+        val day = p.getString(DAY, null)?.takeIf { it == dayKey(nowMs) } ?: return@runCatching null
+        fun i(key: String) = p.getInt(DAY_PREFIX + key, 0)
+        DayTotals(
+            day = day,
+            feedsSent = i("feeds_sent"), feedsRemoved = i("feeds_removed"), feedsAdded = i("feeds_added"),
+            readSent = i("read_sent"), unreadSent = i("unread_sent"), savedSent = i("saved_sent"),
+            unsavedSent = i("unsaved_sent"), readHere = i("read_here"), unreadHere = i("unread_here"),
+            savedHere = i("saved_here"),
+        )
+    }.getOrNull()
+
+    private fun dayFields(t: DayTotals) = listOf(
+        "feeds_sent" to t.feedsSent, "feeds_removed" to t.feedsRemoved, "feeds_added" to t.feedsAdded,
+        "read_sent" to t.readSent, "unread_sent" to t.unreadSent, "saved_sent" to t.savedSent,
+        "unsaved_sent" to t.unsavedSent, "read_here" to t.readHere, "unread_here" to t.unreadHere,
+        "saved_here" to t.savedHere,
+    )
 
     fun read(context: Context): AccountTally? = runCatching {
         val p = prefs(context)

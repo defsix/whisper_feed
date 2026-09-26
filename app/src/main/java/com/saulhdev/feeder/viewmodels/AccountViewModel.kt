@@ -31,6 +31,7 @@ import com.saulhdev.feeder.utils.SyncLog
 import com.saulhdev.feeder.data.content.SyncAccount
 import com.saulhdev.feeder.manager.sync.greader.AccountTally
 import com.saulhdev.feeder.manager.sync.greader.AccountTallyStore
+import com.saulhdev.feeder.manager.sync.greader.DayTotals
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderApi
 import com.saulhdev.feeder.manager.sync.greader.GoogleReaderState
 import com.saulhdev.feeder.manager.sync.greader.MissingFeed
@@ -53,6 +54,7 @@ data class AccountState(
     val lastSync: Long = 0L,
     /** What the last sync did with the server, and which feeds it would not take. */
     val tally: AccountTally? = null,
+    val today: DayTotals? = null,
     val notOnServer: List<MissingFeed> = emptyList(),
     val busy: Boolean = false,
     /**
@@ -82,6 +84,7 @@ class AccountViewModel(
         username = account.username,
         lastSync = account.lastSync,
         tally = if (account.isSignedIn) AccountTallyStore.read(app) else null,
+        today = if (account.isSignedIn) AccountTallyStore.today(app) else null,
         notOnServer = if (account.isSignedIn) GoogleReaderState.notOnServer(app) else emptyList(),
     )
 

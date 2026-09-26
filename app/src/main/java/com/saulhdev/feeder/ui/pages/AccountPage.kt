@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.manager.sync.greader.AccountProblem
 import com.saulhdev.feeder.manager.sync.greader.AccountTally
+import com.saulhdev.feeder.manager.sync.greader.DayTotals
 import com.saulhdev.feeder.manager.sync.greader.MissingFeed
 import com.saulhdev.feeder.manager.sync.greader.MissingKind
 import com.saulhdev.feeder.manager.sync.greader.normalisedServerUrl
@@ -138,7 +139,7 @@ fun AccountPage(
                     }
                 }
                 state.tally?.let { tally ->
-                    item { SyncTally(tally, state.notOnServer) }
+                    item { SyncTally(tally, state.today, state.notOnServer) }
                 }
                 item {
                     ActionButton(
@@ -347,7 +348,7 @@ private fun accountProblemText(problem: AccountProblem, detail: String?): String
  * zeros, because "0 sent" is itself the confirmation.
  */
 @Composable
-private fun SyncTally(tally: AccountTally, notOnServer: List<MissingFeed>) {
+private fun SyncTally(tally: AccountTally, today: DayTotals?, notOnServer: List<MissingFeed>) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             stringResource(R.string.account_tally_title),
@@ -364,6 +365,19 @@ private fun SyncTally(tally: AccountTally, notOnServer: List<MissingFeed>) {
             stringResource(R.string.account_tally_received, tally.readHere, tally.unreadHere, tally.savedHere),
         )
         lines.forEach { TallyLine(it) }
+        today?.takeIf { it.sentAny || it.receivedAny || it.feedsChanged }?.let { day ->
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.account_today_title), style = MaterialTheme.typography.titleSmall)
+                if (day.feedsChanged) {
+                    TallyLine(stringResource(R.string.account_tally_feed_changes, day.feedsSent, day.feedsRemoved, day.feedsAdded))
+                }
+                TallyLine(stringResource(R.string.account_tally_sent, day.readSent, day.unreadSent, day.savedSent, day.unsavedSent))
+                TallyLine(stringResource(R.string.account_tally_received, day.readHere, day.unreadHere, day.savedHere))
+            }
+        }
         MissingGroup(
             feeds = notOnServer.filter { it.kind == MissingKind.REFUSED },
             heading = R.string.account_phone_only_title,
