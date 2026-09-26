@@ -59,6 +59,11 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import com.saulhdev.feeder.ui.overlay.feedColumns
+import com.saulhdev.feeder.data.entity.SORT_CHRONOLOGICAL
+import com.saulhdev.feeder.ui.overlay.feedSegments
+import com.saulhdev.feeder.ui.overlay.feedDayBreaks
+import com.saulhdev.feeder.ui.overlay.dayHeadingKey
+import com.saulhdev.feeder.ui.overlay.DayHeading
 import com.saulhdev.feeder.ui.overlay.leadSpansRow
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
@@ -298,6 +303,14 @@ fun ArticleListPage(
         listState.isScrollInProgress || gridState.isScrollInProgress
     }
 
+    // Day headings, in date order only: sorted by title or by source, a
+    // heading per day would be scattered through the list. See FeedDays.
+    val sort by prefs.sortingFilter.get().collectAsState(initial = SORT_CHRONOLOGICAL)
+    val dayBreaks = remember(frame.articles, sort, searching) {
+        if (sort == SORT_CHRONOLOGICAL && !searching) feedDayBreaks(frame.articles) else emptyList()
+    }
+    val segments = remember(frame.articles, dayBreaks) { feedSegments(frame.articles.size, dayBreaks) }
+
     // Tapping a source narrows the feed to it, and backing out widens it
     // again; both land on the article the tap came from. See FocusAnchor.
     AnchorFeedOnFocusChange(
@@ -307,6 +320,7 @@ fun ArticleListPage(
         isGrid = isGridLayout,
         listState = listState,
         gridState = gridState,
+        breaks = dayBreaks,
     )
 
     BackHandler(scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
@@ -693,11 +707,20 @@ fun ArticleListPage(
                                                     key = FEED_HEADER_KEY,
                                                     span = StaggeredGridItemSpan.FullLine,
                                                 ) { header() }
+                                                segments.forEach { segment ->
+                                                segment.day?.let { day ->
+                                                    item(
+                                                        key = dayHeadingKey(day),
+                                                        span = StaggeredGridItemSpan.FullLine,
+                                                        contentType = "day",
+                                                    ) { DayHeading(day) }
+                                                }
+                                                val offset = segment.from
                                                 itemsIndexed(
-                                                    frame.articles,
+                                                    frame.articles.subList(segment.from, segment.until),
                                                     key = { _, item -> item.id },
-                                                    contentType = { index, item ->
-                                                        feedContentType(index, item, layout, emphasis)
+                                                    contentType = { i, item ->
+                                                        feedContentType(i + offset, item, layout, emphasis)
                                                     },
                                                     // A lead story spans Mosaic's
                                                     // two lanes on a phone, and no
@@ -709,14 +732,15 @@ fun ArticleListPage(
                                                     // In the other layouts, columned
                                                     // only for the width, it keeps
                                                     // to its column.
-                                                    span = { index, _ ->
+                                                    span = { i, _ ->
                                                         if (leadSpansRow(layout, columns) &&
-                                                            emphasis.getOrNull(index) ==
+                                                            emphasis.getOrNull(i + offset) ==
                                                             FeedEmphasis.Large
                                                         ) StaggeredGridItemSpan.FullLine
                                                         else StaggeredGridItemSpan.SingleLane
                                                     },
-                                                ) { index, item ->
+                                                ) { i, item ->
+                                                    val index = i + offset
                                                     // Articles arriving from a
                                                     // sync used to appear by
                                                     // replacement: the list
@@ -741,6 +765,7 @@ fun ArticleListPage(
                                                         )
                                                     }
                                                 }
+                                                }
                                             },
                                         )
                                     } else {
@@ -761,19 +786,27 @@ fun ArticleListPage(
                                             contentPadding = FEED_PADDING,
                                             content = {
                                                 item(key = FEED_HEADER_KEY) { header() }
-                                                feedItems(
-                                                    frame.articles,
-                                                    animate,
-                                                    contentType = { index, item ->
-                                                        feedContentType(index, item, layout, emphasis)
-                                                    },
-                                                ) { index, item ->
-                                                    article(
-                                                        index,
-                                                        item,
-                                                        emphasis.getOrNull(index)
-                                                            ?: FeedEmphasis.Medium,
-                                                    )
+                                                segments.forEach { segment ->
+                                                    segment.day?.let { day ->
+                                                        item(key = dayHeadingKey(day), contentType = "day") {
+                                                            DayHeading(day)
+                                                        }
+                                                    }
+                                                    val offset = segment.from
+                                                    feedItems(
+                                                        frame.articles.subList(segment.from, segment.until),
+                                                        animate,
+                                                        contentType = { i, item ->
+                                                            feedContentType(i + offset, item, layout, emphasis)
+                                                        },
+                                                    ) { i, item ->
+                                                        article(
+                                                            i + offset,
+                                                            item,
+                                                            emphasis.getOrNull(i + offset)
+                                                                ?: FeedEmphasis.Medium,
+                                                        )
+                                                    }
                                                 }
                                             },
                                         )

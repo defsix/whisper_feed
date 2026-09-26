@@ -47,7 +47,8 @@ class FocusAnchorTest {
     fun `the article's position is offset past the header`() {
         assertTrue(
             "an index into the articles is not an index into the list",
-            anchor.contains("FEED_ARTICLES_START"),
+            anchor.contains("feedListIndex(position, breaks)") &&
+                source("ui/overlay/FeedDays.kt").contains("position + FEED_ARTICLES_START + breaks.count { it.index <= position }"),
         )
         assertEquals(
             "one header item, in every feed list",

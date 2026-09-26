@@ -64,7 +64,6 @@ import com.saulhdev.feeder.ui.components.SaveButton
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.Asterisk
 import com.saulhdev.feeder.ui.icons.phosphor.Megaphone
-import com.saulhdev.feeder.ui.icons.phosphor.ShareNetwork
 import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.utils.formatArticleAge
 
@@ -278,14 +277,8 @@ fun ArticleHeroCard(
                         onSavedChange = onBookmark,
                         onImage = true,
                     )
-                    IconButton(onClick = onShare) {
-                        Icon(
-                            imageVector = Phosphor.ShareNetwork,
-                            contentDescription = stringResource(R.string.share),
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
+                    // Share lives in the menu beside it. Two ways to one
+                    // action on every card was a button the card did not need.
                     menu(Color.White)
                 }
             }
@@ -394,14 +387,7 @@ fun ArticleCard(
                 )
 
                 SaveButton(saved = item.bookmarked, onSavedChange = onBookmark)
-                IconButton(onClick = onShare) {
-                    Icon(
-                        imageVector = Phosphor.ShareNetwork,
-                        contentDescription = stringResource(R.string.share),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                // Share is in the menu; see the hero above.
                 menu(null)
             }
         }

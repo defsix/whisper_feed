@@ -171,7 +171,7 @@ class FeedFrameTest {
             assertEquals(
                 "$what: both the column and the grid",
                 2,
-                Regex("""contentType = \{ index, item ->\s+feedContentType\(index, item, layout, emphasis\)""")
+                Regex("""contentType = \{ (index|i), item ->\s+feedContentType\((index|i \+ offset), item, layout, emphasis\)""")
                     .findAll(text).count(),
             )
         }

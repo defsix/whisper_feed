@@ -55,6 +55,8 @@ fun AnchorFeedOnFocusChange(
     isGrid: Boolean,
     listState: LazyListState,
     gridState: LazyStaggeredGridState,
+    /** Day headings above the articles, which move every article down. */
+    breaks: List<DayBreak> = emptyList(),
 ) {
     LaunchedEffect(appliedFocus, anchorId) {
         val id = anchorId ?: return@LaunchedEffect
@@ -63,7 +65,7 @@ fun AnchorFeedOnFocusChange(
         // filtered out of the feed being returned to, by a category chip or by
         // hide-read. Leaving the scroll where it is beats guessing.
         if (position < 0) return@LaunchedEffect
-        val index = position + FEED_ARTICLES_START
+        val index = feedListIndex(position, breaks)
         if (isGrid) gridState.scrollToItem(index) else listState.scrollToItem(index)
     }
 }
