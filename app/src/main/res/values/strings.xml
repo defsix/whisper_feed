@@ -304,7 +304,7 @@
     <string name="backup_stopped_title">Backups have stopped</string>
     <string name="backup_stopped_body">Whisper could not reach the folder you chose, so the daily backup stopped on %1$s. Choose a folder again to start it.</string>
     <string name="backup_off">Everything here is off. Nothing is leaving this phone.</string>
-    <string name="backup_on">Your subscriptions and settings are being copied to the folder below.</string>
+    <string name="backup_on">Your subscriptions and settings are copied to the folder below once a day, whenever the phone is on Wi-Fi and the battery is not low.</string>
     <string name="pref_platform_device">Include in phone-to-phone transfer</string>
     <string name="pref_platform_device_summary">When you set up a new phone next to this one. A direct copy \u2014 no server involved.</string>
     <string name="pref_platform_cloud">Include in Google cloud backup</string>
