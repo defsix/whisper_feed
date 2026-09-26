@@ -135,7 +135,7 @@ fun LauncherPage() {
                         icon = Phosphor.GearSix,
                         onClick = {
                             LauncherLink.settingsIntent(context, launcher)?.let {
-                                context.startActivity(it)
+                                runCatching { context.startActivity(it) }
                             }
                         },
                     )

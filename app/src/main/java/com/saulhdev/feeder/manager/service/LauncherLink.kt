@@ -18,6 +18,8 @@
 package com.saulhdev.feeder.manager.service
 
 import android.content.Context
+import android.provider.Settings
+import android.net.Uri
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Process
@@ -86,10 +88,30 @@ object LauncherLink {
      * this opens the launcher's settings and the instructions take it from
      * there. Better than nothing, and honest about being a starting point
      * rather than a shortcut.
+     *
+     * Not the launcher's launch intent: for a launcher that is the home
+     * screen, and the button put the reader on their desktop. In order: the
+     * settings screen an app declares for Android's own "App settings" link;
+     * Lawnchair's settings by name, for a version that declares none; and
+     * the launcher's page in Android's settings, which at least is a
+     * settings screen for it.
      */
-    fun settingsIntent(context: Context, packageName: String): Intent? =
-        context.packageManager.getLaunchIntentForPackage(packageName)
-            ?.takeIf { context.isInstalled(packageName) }
+    fun settingsIntent(context: Context, packageName: String): Intent? {
+        if (!context.isInstalled(packageName)) return null
+        val pm = context.packageManager
+        val candidates = listOf(
+            Intent(Intent.ACTION_APPLICATION_PREFERENCES).setPackage(packageName),
+            Intent().setClassName(packageName, LAWNCHAIR_SETTINGS),
+        )
+        return candidates.firstOrNull { intent ->
+            pm.resolveActivity(intent, 0)?.activityInfo?.exported == true
+        } ?: Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", packageName, null),
+        )
+    }
+
+    private const val LAWNCHAIR_SETTINGS = "app.lawnchair.ui.preferences.PreferenceActivity"
 
     /**
      * Whether the caller asking to bind [OverlayService] is a launcher.
