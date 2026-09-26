@@ -45,10 +45,11 @@ done now, and a signed build.
 
 Two things are honestly incomplete and worth knowing:
 
-- **Google Reader sync has never spoken to a live server.** It is written end
-  to end and unit-tested against fixtures, but until it has met a real FreshRSS
-  or Miniflux, treat it as unproven.
-- **There are no instrumentation or screenshot tests.** 176 unit tests cover
+- **Google Reader sync has been proven against FreshRSS only.** It runs two
+  way against a live FreshRSS server, with 114 feeds, since September 2026.
+  Miniflux and the other services speak the same protocol but have not been
+  tried.
+- **There are no instrumentation or screenshot tests.** 794 unit tests cover
   the logic; every on-device check so far has been done by hand.
 
 [`ROADMAP.md`](ROADMAP.md) has the position section by section, including what
@@ -120,8 +121,8 @@ they are not upgradeable to a real release and are not for distribution.
   rounded to about a kilometre before a forecast is requested
 
 **Sync and backup**
-- Google Reader API sync — FreshRSS, Miniflux, The Old Reader and others
-  (see the caveat under Status)
+- Google Reader API sync, two way — FreshRSS, Miniflux, The Old Reader and
+  others (see the caveat under Status). [Run your own FreshRSS](#sync-with-your-own-server-optional)
 - OPML and settings backup to a folder you choose, on a schedule
 - Android backup, off by default and asked separately for cloud and for
   phone-to-phone transfer
@@ -152,6 +153,21 @@ setting. [`ROADMAP.md`](ROADMAP.md) has the launcher-by-launcher position under
 
 See [Getting Lawnchair to use it](#getting-lawnchair-to-use-it) below for the
 four-step setup.
+
+## Sync with your own server (optional)
+
+Whisper needs no account. To keep subscriptions and reading in step across
+devices, run a small FreshRSS server and sign in to it under
+**Settings → Account**.
+
+```
+Docker + an https address → FreshRSS → Whisper: Settings → Account
+```
+
+[`docs/SYNC_SERVER_FRESHRSS.md`](docs/SYNC_SERVER_FRESHRSS.md) is the whole
+setup with Docker Compose. It includes the one setting that
+stops sites turning your server away, and what to do if some feeds show as
+**On this phone only**.
 
 ## Principles
 
@@ -236,6 +252,7 @@ grant it.
 | [`UPSTREAM_NOTES.md`](UPSTREAM_NOTES.md) | How the launcher integration actually works |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release history |
 | [`ATTRIBUTION.md`](ATTRIBUTION.md) | Upstream copyright and credits |
+| [`docs/SYNC_SERVER_FRESHRSS.md`](docs/SYNC_SERVER_FRESHRSS.md) | Running your own FreshRSS server to sync with |
 | [`docs/FRESHRSS_TEST_SERVER.md`](docs/FRESHRSS_TEST_SERVER.md) | Standing up a server to test sync against |
 
 ## Privacy and terms
