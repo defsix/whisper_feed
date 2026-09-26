@@ -13,7 +13,7 @@ disagree.
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPL--3.0-blue)](LICENSE)
 ![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-informational)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-brightgreen)
-![Tests](https://img.shields.io/badge/tests-224%20passing-success)
+![Tests](https://img.shields.io/badge/tests-825%20passing-success)
 ![No trackers](https://img.shields.io/badge/trackers-none-success)
 
 </div>
@@ -38,19 +38,26 @@ That is a bonus rather than the point — see
 
 **Version 1.0.0, feature complete, in private testing. Not yet released.**
 
-The feature work is done and the app has been through a full security,
-correctness and performance audit — see [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md).
-What is left before a public release is on-device verification, which is being
-done now, and a signed build.
+The feature work is done, the app has been through a full security,
+correctness and performance audit — see [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md) —
+and it is in daily use on two devices:
 
-Two things are honestly incomplete and worth knowing:
+| Device | Android | Screen |
+|---|---|---|
+| Google Pixel 10 Pro | 17 | Phone |
+| Samsung Galaxy Tab S5e | 11 | 10.5" tablet |
 
-- **Google Reader sync has been proven against FreshRSS only.** It runs two
-  way against a live FreshRSS server, with 114 feeds, since September 2026.
-  Miniflux and the other services speak the same protocol but have not been
-  tried.
-- **There are no instrumentation or screenshot tests.** 794 unit tests cover
-  the logic; every on-device check so far has been done by hand.
+What is left before a public release is a signed build, then GitHub Releases,
+F-Droid and Play, in that order.
+
+Two things are worth knowing:
+
+- **Sync is supported with FreshRSS only.** It has run two way against a live
+  FreshRSS server, with 114 feeds, since September 2026, on both devices at
+  once. Miniflux and the other Google Reader services speak the same protocol
+  and may work, but are not tested or supported.
+- **There are no instrumentation or screenshot tests.** 825 unit tests cover
+  the logic; every on-device check has been done by hand.
 
 [`ROADMAP.md`](ROADMAP.md) has the position section by section, including what
 was deliberately left undone and why.
@@ -102,9 +109,25 @@ they are not upgradeable to a real release and are not for distribution.
 - Four layouts — Cards, Magazine, List, Mosaic
 - Article size earned rather than positional: recency, your own reading habits
   and whether several sources are covering one story
+- **Today**, **Yesterday** and the days before as headings, with the time of
+  the last update beside the first
+- Search over headlines, sources and summaries, offline; tap a source's name
+  to see only that source
 - Mark read on scroll, with read articles dimmed or hidden as you prefer
-- Bookmarks, pinning, and full article text fetched per-feed or globally
+- Breaking stories: several sources on one story become one lead card, and it
+  can stay at the top until you scroll past it
+- Bookmarks, pinning, and full article text fetched per-feed or globally, and
+  kept for reading offline
 - A reader and an in-app browser, matched to each other
+
+**Phones and tablets**
+- On a tablet the feed spreads into columns sized to the screen — two, three or
+  four, depending on the layout and the width
+- Open an article and it sits beside the feed rather than replacing it
+- A lead story spans two columns at most, so it reads as a headline rather
+  than a banner
+- Tuned on an older tablet as well as a new phone: on slower devices photos
+  are decoded two at a time, so scrolling stays smooth
 
 **Personalisation you can see** — the part nothing else does
 - Tap through to **why** an article was given the size it was: recency, how
@@ -121,11 +144,24 @@ they are not upgradeable to a real release and are not for distribution.
   rounded to about a kilometre before a forecast is requested
 
 **Sync and backup**
-- Google Reader API sync, two way — FreshRSS, Miniflux, The Old Reader and
-  others (see the caveat under Status). [Run your own FreshRSS](#sync-with-your-own-server-optional)
+- Two-way sync with your own **FreshRSS** server: subscriptions, read and
+  unread, and saved articles. [Run your own FreshRSS](#sync-with-your-own-server-optional)
+- After every sync, a summary of what it did — feeds on the server, reads sent
+  and received — plus totals for the day, and any feed the server would not
+  take, with the reason
+- Hourly by default, with Wi-Fi-only and charging-only options; pull down or
+  tap **Sync now** to go at once
 - OPML and settings backup to a folder you choose, on a schedule
 - Android backup, off by default and asked separately for cloud and for
   phone-to-phone transfer
+
+**When something is wrong**
+- Feeds that stop working are flagged, with their last five fetches and the
+  error from each
+- A notification only when sync is actually stuck, not for every hiccup
+- **Settings → Export diagnostics** writes a report to Downloads that you can
+  read or share. It holds counts and settings, never what you searched for or the
+  addresses you typed
 
 ## On your launcher's home screen (optional)
 
@@ -254,6 +290,8 @@ grant it.
 | [`ATTRIBUTION.md`](ATTRIBUTION.md) | Upstream copyright and credits |
 | [`docs/SYNC_SERVER_FRESHRSS.md`](docs/SYNC_SERVER_FRESHRSS.md) | Running your own FreshRSS server to sync with |
 | [`docs/FRESHRSS_TEST_SERVER.md`](docs/FRESHRSS_TEST_SERVER.md) | Standing up a server to test sync against |
+| [`docs/LAWNCHAIR_WHITELIST.md`](docs/LAWNCHAIR_WHITELIST.md) | The request to add Whisper to Lawnchair's feed list |
+| [`PRIVACY.md`](PRIVACY.md) · [`DISCLAIMER.md`](DISCLAIMER.md) | What leaves your phone, and what Whisper is not |
 
 ## Privacy and terms
 

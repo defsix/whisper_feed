@@ -19,10 +19,11 @@ is maintained:
 - [`docs/AUDIT_2026-09.md`](docs/AUDIT_2026-09.md) — the security, correctness
   and performance audit, and the four items it left open
 
-Two things are knowingly unproven and repeated here so a release note cannot
-be read as a clean bill of health: **Google Reader sync has never spoken to a
-live server**, and **there are no instrumentation or screenshot tests** — the
-350 unit tests cover logic, and every on-device check so far has been manual.
+Two things are repeated here so a release note cannot be read as more than it
+is: **sync is supported with FreshRSS only** — proven against a live server
+with 114 feeds, on a phone and a tablet at once — and **there are no
+instrumentation or screenshot tests**: the 825 unit tests cover logic, and
+every on-device check has been manual.
 
 ---
 
