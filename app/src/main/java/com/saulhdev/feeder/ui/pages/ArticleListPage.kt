@@ -82,6 +82,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -144,6 +145,8 @@ import com.saulhdev.feeder.utils.LAYOUT_CARDS
 import com.saulhdev.feeder.ui.overlay.FeedArticleItem
 import com.saulhdev.feeder.ui.overlay.GlanceRow
 import com.saulhdev.feeder.ui.overlay.SyncFreshnessLine
+import com.saulhdev.feeder.ui.overlay.SyncFreshnessText
+import com.saulhdev.feeder.ui.overlay.firstSegmentHasHeading
 import com.saulhdev.feeder.ui.overlay.CategoryChipRow
 import kotlinx.coroutines.Dispatchers
 import org.koin.compose.koinInject
@@ -524,6 +527,8 @@ fun ArticleListPage(
                             // which is why read-on-scroll now matches articles
                             // by key rather than by layout position — with
                             // headers in the list those two stopped agreeing.
+                            val freshnessBesideHeading =
+                                !showBookmarks && firstSegmentHasHeading(segments)
                             val header: @Composable () -> Unit = {
                                 Column {
                                     GlanceRow(
@@ -545,8 +550,15 @@ fun ArticleListPage(
                                     // feed is rather than inside the sheet
                                     // that set it.
                                     ActiveFilterBar()
-                                    SyncFreshnessLine()
+                                    // Beside the first day heading when the
+                                    // feed opens on one; on its own line when
+                                    // it does not (saved, searching, another
+                                    // sort, pinned stories first, empty).
+                                    if (!freshnessBesideHeading) SyncFreshnessLine()
                                 }
+                            }
+                            val firstHeadingTrailing: @Composable (Modifier) -> Unit = {
+                                SyncFreshnessText(modifier = it, textAlign = TextAlign.End)
                             }
 
                             when {
@@ -713,7 +725,13 @@ fun ArticleListPage(
                                                         key = dayHeadingKey(day),
                                                         span = StaggeredGridItemSpan.FullLine,
                                                         contentType = "day",
-                                                    ) { DayHeading(day) }
+                                                    ) {
+                                                        DayHeading(
+                                                            day,
+                                                            trailing = firstHeadingTrailing
+                                                                .takeIf { segment.from == 0 },
+                                                        )
+                                                    }
                                                 }
                                                 val offset = segment.from
                                                 itemsIndexed(
@@ -789,7 +807,11 @@ fun ArticleListPage(
                                                 segments.forEach { segment ->
                                                     segment.day?.let { day ->
                                                         item(key = dayHeadingKey(day), contentType = "day") {
-                                                            DayHeading(day)
+                                                            DayHeading(
+                                                                day,
+                                                                trailing = firstHeadingTrailing
+                                                                    .takeIf { segment.from == 0 },
+                                                            )
                                                         }
                                                     }
                                                     val offset = segment.from

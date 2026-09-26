@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
@@ -56,7 +57,18 @@ import org.koin.compose.koinInject
  * screen having to carry it through.
  */
 @Composable
-fun SyncFreshnessLine(modifier: Modifier = Modifier) {
+fun SyncFreshnessLine(modifier: Modifier = Modifier) = SyncFreshnessText(
+    modifier = modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 4.dp),
+)
+
+/**
+ * The same words without a line of their own, for drawing beside something
+ * else: the app puts them at the right of the first day heading.
+ */
+@Composable
+fun SyncFreshnessText(modifier: Modifier = Modifier, textAlign: TextAlign? = null) {
     val sources: SourcesRepository = koinInject()
     val prefs: FeedPreferences = koinInject()
     val context = LocalContext.current
@@ -102,8 +114,7 @@ fun SyncFreshnessLine(modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.labelSmall,
         color = if (late) MaterialTheme.colorScheme.error
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+        textAlign = textAlign,
+        modifier = modifier,
     )
 }

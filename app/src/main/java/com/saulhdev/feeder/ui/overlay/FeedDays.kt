@@ -17,6 +17,8 @@
  */
 package com.saulhdev.feeder.ui.overlay
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +89,13 @@ fun feedSegments(count: Int, breaks: List<DayBreak>): List<FeedSegment> {
 }
 
 /**
+ * Whether the feed opens on a day heading, which is then where the update
+ * time goes. Not when pinned stories come first: the heading is below them.
+ */
+fun firstSegmentHasHeading(segments: List<FeedSegment>): Boolean =
+    segments.firstOrNull()?.let { it.day != null && it.from == 0 } == true
+
+/**
  * Where the article at [position] is in the list that draws it: past the
  * header, and past every heading at or above it.
  */
@@ -106,8 +115,19 @@ fun dayName(day: LocalDate, today: LocalDate): DayName = when {
     else -> DayName.Date
 }
 
+/**
+ * A day's heading, with room at its right for [trailing].
+ *
+ * The first heading carries "Updated 12m ago" there: on its own line under
+ * the chips it left a row that was empty from a few words in, directly above
+ * a heading that was empty from one word in.
+ */
 @Composable
-fun DayHeading(day: LocalDate, modifier: Modifier = Modifier) {
+fun DayHeading(
+    day: LocalDate,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable (Modifier) -> Unit)? = null,
+) {
     // From the configuration, so a change of language redraws the headings.
     val locale = LocalConfiguration.current.locales[0]
     val today = LocalDate.now()
@@ -119,13 +139,22 @@ fun DayHeading(day: LocalDate, modifier: Modifier = Modifier) {
             DateTimeFormatter.ofPattern(if (day.year == today.year) "EEE d MMM" else "EEE d MMM yyyy", locale)
         )
     }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 6.dp)
-            .semantics { heading() },
-    )
+            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 6.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .alignByBaseline()
+                .semantics { heading() },
+        )
+        // Takes what is left and sets its words against the right edge, so a
+        // longer message wraps within that space rather than under the day.
+        trailing?.invoke(Modifier.weight(1f).alignByBaseline())
+    }
 }

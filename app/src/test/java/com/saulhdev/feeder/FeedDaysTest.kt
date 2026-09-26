@@ -7,6 +7,7 @@ import com.saulhdev.feeder.ui.overlay.dayBreaks
 import com.saulhdev.feeder.ui.overlay.dayName
 import com.saulhdev.feeder.ui.overlay.feedListIndex
 import com.saulhdev.feeder.ui.overlay.feedSegments
+import com.saulhdev.feeder.ui.overlay.firstSegmentHasHeading
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -87,6 +88,39 @@ class FeedDaysTest {
 }
 
 /** Save and the menu sat a whole button apart, and a button's padding in from the edge. */
+class FreshnessBesideHeadingTest {
+
+    private val today = LocalDate.of(2026, 9, 26)
+
+    @Test
+    fun `a feed that opens on a day carries the update time beside it`() {
+        val segments = feedSegments(10, listOf(DayBreak(0, today), DayBreak(6, today.minusDays(1))))
+        assertTrue(firstSegmentHasHeading(segments))
+    }
+
+    @Test
+    fun `pinned stories first keep the time on its own line`() {
+        // The heading is below the pins, far from the top.
+        val segments = feedSegments(10, listOf(DayBreak(2, today)))
+        assertFalse(firstSegmentHasHeading(segments))
+    }
+
+    @Test
+    fun `no headings, or no articles, keep the time on its own line`() {
+        assertFalse(firstSegmentHasHeading(feedSegments(10, emptyList())))
+        assertFalse(firstSegmentHasHeading(emptyList()))
+    }
+
+    @Test
+    fun `the page draws it in exactly one of the two places`() {
+        val src = File("src/main/java/com/saulhdev/feeder/ui/pages/ArticleListPage.kt").readText()
+        assertTrue(src.contains("if (!freshnessBesideHeading) SyncFreshnessLine()"))
+        assertTrue(src.contains("!showBookmarks && firstSegmentHasHeading(segments)"))
+        // Both containers, grid and list, hand it to the first heading only.
+        assertEquals(2, Regex("""trailing = firstHeadingTrailing\s*\.takeIf \{ segment\.from == 0 \}""").findAll(src).count())
+    }
+}
+
 class CardActionsTest {
     private val card = File("src/main/java/com/saulhdev/feeder/ui/overlay/ArticleCard.kt").readText()
 
