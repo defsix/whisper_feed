@@ -170,18 +170,41 @@ class FeedWeightTest {
         val before = feedEmphasisFor(items, emptyMap(), NOW)
 
         val read = items.mapIndexed { i, it ->
-            if (i == 2) it.copy(article = it.article.copy(readAt = NOW - 1000)) else it
+            if (i == 0) it.copy(article = it.article.copy(readAt = NOW - 1000)) else it
         }
         val after = feedEmphasisFor(read, emptyMap(), NOW)
 
         assertTrue(
             "reading an article should lower its weight",
-            weight(read[2]) < weight(items[2]),
+            weight(read[0]) < weight(items[0]),
         )
+        assertEquals(FeedEmphasis.Large, before[0])
         assertTrue(
             "and that is exactly what would resize it mid-scroll",
-            before[2] != after[2],
+            before[0] != after[0],
         )
+    }
+
+    @Test
+    fun `a read article loses the large slot but keeps its card`() {
+        // A second device receives most of its reads from the account before
+        // it draws the articles, so they are sized read from the start. When
+        // read meant Small, a tablet showed a wall of thin rows where the
+        // phone showed cards for the same stories.
+        val items = (0 until 8).map { item(source = "S$it", hoursAgo = 3, read = true) }
+        val sizes = feedEmphasisFor(items, emptyMap(), NOW)
+        assertTrue("a read article took a thin row: $sizes", sizes.none { it == FeedEmphasis.Small })
+        // The anchor rule still gives the top of the feed one large card.
+        assertEquals(1, sizes.take(ArticleWeight.ANCHOR_WITHIN).count { it == FeedEmphasis.Large })
+    }
+
+    @Test
+    fun `reading does not lift an article that was small unread`() {
+        // Past its time and badly shaped: small unread, and small read.
+        val weak = item(hoursAgo = 200, title = "Hi", description = "")
+        assertTrue(weight(weak) < ArticleWeight.MEDIUM_AT)
+        val items = listOf(item(source = "A", hoursAgo = 0), weak.copy(article = weak.article.copy(readAt = NOW - 1000)))
+        assertEquals(FeedEmphasis.Small, feedEmphasisFor(items, emptyMap(), NOW)[1])
     }
 
     @Test

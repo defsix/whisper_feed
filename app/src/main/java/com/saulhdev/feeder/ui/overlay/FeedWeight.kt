@@ -242,11 +242,11 @@ object ArticleWeight {
     /**
      * What having already read an article costs it.
      *
-     * Paired with [MEDIUM_AT]: the whole job of this number is to drop a
-     * read article below that floor whatever else it has going for it, so
-     * the two cannot be tuned apart. A fresh, well-titled article with a
-     * summary scores 2.9, and 2.0 puts it at 0.9 — under the floor with room
-     * to spare, which is the property worth keeping rather than the figure.
+     * Enough to keep a read article out of the large slot whatever else it
+     * has going for it: a fresh, well-titled article with a summary scores
+     * 2.9, and 2.0 puts it at 0.9. It no longer decides the smaller sizes —
+     * feedEmphasisFor keeps a read article at Medium if it would have been
+     * Medium or larger unread — so it only ever costs the hero.
      */
     const val READ_PENALTY = 2.0f
 
@@ -530,7 +530,7 @@ fun articleWeight(
     // kept its card — so the strongest negative signal there is, the reader
     // having actually seen the thing, stopped being able to shrink anything
     // fresh. This is the one term that should beat freshness outright.
-    if (item.article.readAt != 0L && !item.pinned) weight -= ArticleWeight.READ_PENALTY
+    if (readForSize(item)) weight -= ArticleWeight.READ_PENALTY
 
     // Saved, and pinned, are the reader saying this one matters.
     if (item.bookmarked) weight += 0.4f
@@ -538,6 +538,9 @@ fun articleWeight(
 
     return weight
 }
+
+/** Whether the read penalty applies: read, and not pinned. */
+private fun readForSize(item: FeedItem): Boolean = item.article.readAt != 0L && !item.pinned
 
 /**
  * Sizes for a whole list, in order.
@@ -578,6 +581,16 @@ fun feedEmphasisFor(
             // A large-weight article that lands inside either gap still
             // deserves more than the smallest tile.
             weight >= ArticleWeight.MEDIUM_AT                       -> FeedEmphasis.Medium
+
+            // Read, but it would have earned a card unread: it keeps the card.
+            // The penalty still costs it the large slot; it no longer drops it
+            // to a thin row. Reads arrive from the account too, so on a second
+            // device most of the feed was read on the first before it was
+            // ever drawn here, and a tablet showed a wall of rows where the
+            // phone showed cards for the same articles.
+            readForSize(items[index]) &&
+                    weight + ArticleWeight.READ_PENALTY >= ArticleWeight.MEDIUM_AT -> FeedEmphasis.Medium
+
             else                                                    -> FeedEmphasis.Small
         }
     }
