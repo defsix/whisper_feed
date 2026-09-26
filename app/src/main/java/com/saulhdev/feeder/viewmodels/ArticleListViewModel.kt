@@ -381,13 +381,22 @@ class ArticleListViewModel(
         }
     }
 
-    /** Marks everything currently unread, offering the whole batch back. */
-    fun markAllRead() {
+    /**
+     * Marks everything unread in [range], offering the whole batch back.
+     *
+     * [nowMs] is the instant the counts were shown for, so what is marked is
+     * what the dialog said would be.
+     */
+    fun markAllRead(range: MarkReadRange = MarkReadRange.Everything, nowMs: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
-            val marked = articleRepo.markAllRead()
+            val marked = articleRepo.markAllRead(range.before(nowMs))
             if (marked.isNotEmpty()) _undoableReads.value = _undoableReads.value + marked
         }
     }
+
+    /** How many unread articles each choice would mark, at [nowMs]. */
+    suspend fun unreadCounts(nowMs: Long): Map<MarkReadRange, Int> =
+        MarkReadRange.entries.associateWith { articleRepo.unreadCountBefore(it.before(nowMs)) }
 
     /** Puts back every article marked since the offer was last dismissed. */
     fun undoReads() {

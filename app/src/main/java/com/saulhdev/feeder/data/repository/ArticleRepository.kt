@@ -381,8 +381,8 @@ class ArticleRepository(db: NeoFeedDb) {
      * statement — a few hundred unread articles is an ordinary feed, and one
      * IN clause holding all of them fails rather than truncating.
      */
-    suspend fun markAllRead(): List<String> = withContext(jcc) {
-        val ids = articlesDao.unreadIds()
+    suspend fun markAllRead(before: Long = Long.MAX_VALUE): List<String> = withContext(jcc) {
+        val ids = articlesDao.unreadIdsBefore(before)
         val now = System.currentTimeMillis()
         ids.chunked(SQLITE_ARG_LIMIT).forEach { articlesDao.markReadBatch(it, now) }
         if (ids.isNotEmpty()) {
@@ -390,6 +390,11 @@ class ArticleRepository(db: NeoFeedDb) {
             onReadChanged?.invoke(ids, true)
         }
         ids
+    }
+
+    /** Unread articles dated before [before], as [markAllRead] would count them. */
+    suspend fun unreadCountBefore(before: Long): Int = withContext(jcc) {
+        articlesDao.unreadCountBefore(before)
     }
 
     /** Puts back what [markAllRead], or a run of scroll marks, took. */

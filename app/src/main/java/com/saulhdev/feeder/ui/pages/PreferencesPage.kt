@@ -57,6 +57,7 @@ import com.saulhdev.feeder.manager.models.scheduleFullTextParse
 import com.saulhdev.feeder.ui.components.PreferenceGroup
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
 import com.saulhdev.feeder.ui.components.dialog.BaseDialog
+import com.saulhdev.feeder.ui.components.dialog.MarkAllReadDialog
 import com.saulhdev.feeder.ui.components.dialog.StringSelectionPrefDialogUI
 import androidx.compose.runtime.DisposableEffect
 import com.saulhdev.feeder.utils.extensions.koinNeoViewModel
@@ -87,8 +88,10 @@ fun PreferencesPage(
     // The row acts on the feed, which lives in a view model this screen does
     // not otherwise touch; see FeedPreferences.markEverythingRead.
     val articles: ArticleListViewModel = koinNeoViewModel()
+    // The row asks how far back before it marks anything.
+    var markingRead by remember { mutableStateOf(false) }
     DisposableEffect(articles) {
-        FeedPreferences.markEverythingRead = { articles.markAllRead() }
+        FeedPreferences.markEverythingRead = { markingRead = true }
         onDispose { FeedPreferences.markEverythingRead = null }
     }
 
@@ -320,6 +323,14 @@ fun PreferencesPage(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
+        }
+
+        if (markingRead) {
+            MarkAllReadDialog(
+                counts = { now -> articles.unreadCounts(now) },
+                onConfirm = { range, now -> articles.markAllRead(range, now) },
+                onDismiss = { markingRead = false },
+            )
         }
 
         if (openDialog.value) {

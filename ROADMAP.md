@@ -496,12 +496,13 @@ Two interactions that had to be right, and are:
 
 #### Still open in this corner
 
-- **"Mark all as read."** The bulk escape hatch every traditional reader has,
-  and the obvious companion to a feed that now marks things on its own.
-- **An undo window on a scroll-produced batch.** A single mark is recoverable
-  because the reader saw it happen; forty in one scroll is not, and the
-  scroll trigger can produce forty. Nothing else in the app performs a bulk
-  change without an undo.
+- ~~**"Mark all as read."**~~ **Built**, in Settings, with a choice of how far
+  back: **Everything**, **Older than an hour** or **Older than a day**, by the
+  article's own date. Each choice shows how many unread articles it would
+  mark, and one with nothing in it cannot be picked. Reads sync to the
+  account like any other.
+- ~~**An undo window on a scroll-produced batch.**~~ **Built.** A run of scroll
+  marks, or a mark-all, is offered back as one batch in the feed's snackbar.
 - **A debug readout of accrued dwell**, showing what each card banked as it
   passed. Worth building only if the four thresholds turn out not to cover
   it — the point is to choose the number from what actually happens rather

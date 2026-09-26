@@ -159,9 +159,21 @@ interface FeedArticleDao {
         SELECT Article.uuid FROM Article
         JOIN Feeds ON Article.feedId = Feeds.id
         WHERE Feeds.isEnabled = 1 AND Article.readAt = 0
+          AND Article.primarySortTime < :before
         """
     )
-    suspend fun unreadIds(): List<String>
+    suspend fun unreadIdsBefore(before: Long): List<String>
+
+    /** How many [unreadIdsBefore] would return, for the choice of how far back. */
+    @Query(
+        """
+        SELECT COUNT(*) FROM Article
+        JOIN Feeds ON Article.feedId = Feeds.id
+        WHERE Feeds.isEnabled = 1 AND Article.readAt = 0
+          AND Article.primarySortTime < :before
+        """
+    )
+    suspend fun unreadCountBefore(before: Long): Int
 
     @Query("UPDATE Article SET readAt = :readAt WHERE uuid IN (:ids)")
     suspend fun markReadBatch(ids: List<String>, readAt: Long)
