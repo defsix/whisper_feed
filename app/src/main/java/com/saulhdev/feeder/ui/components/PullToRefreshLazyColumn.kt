@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
@@ -118,6 +119,8 @@ fun PullToRefreshStaggeredGrid(
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues = PaddingValues(8.dp),
     columns: Int = 2,
+    /** Between lanes. Mosaic's tiles bring their own; full cards side by side do not. */
+    laneSpacing: Dp = 0.dp,
 ) {
     val (showing, onPulled) = rememberRefreshing(isRefreshing)
     val coroutineScope = rememberCoroutineScope()
@@ -135,6 +138,7 @@ fun PullToRefreshStaggeredGrid(
         ) {
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(columns),
+                horizontalArrangement = Arrangement.spacedBy(laneSpacing),
                 state = gridState,
                 contentPadding = contentPadding,
                 modifier = Modifier.fillMaxSize(),

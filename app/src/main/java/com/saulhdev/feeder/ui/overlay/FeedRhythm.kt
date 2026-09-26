@@ -131,6 +131,32 @@ enum class FeedEmphasis {
 fun feedLayoutIsGrid(layout: String): Boolean = layout == LAYOUT_MOSAIC
 
 /**
+ * How many columns the feed is laid out in, at a width.
+ *
+ * On a tablet with no article open the feed had the whole screen to itself
+ * and filled it with one column: a card two thousand pixels wide, its photo
+ * decoded at that size by an older chip, and scrolling that stuttered where
+ * the phone did not. Columns put the width to use and make every card, and
+ * every picture, a third to half the size. With an article open beside it,
+ * the feed is narrow again and goes back to one column.
+ *
+ * Mosaic keeps its two lanes on a phone and gains more on a wide screen; the
+ * other layouts stay a single column until there is room for a second card at
+ * a phone's width.
+ *
+ * @param widthDp the width the feed has, in dp.
+ */
+fun feedColumns(layout: String, widthDp: Int): Int =
+    if (feedLayoutIsGrid(layout)) (widthDp / MOSAIC_LANE_DP).coerceIn(2, 4)
+    else (widthDp / CARD_COLUMN_DP).coerceIn(1, 3)
+
+/** About a phone's width: a card never gets narrower than it is on one. */
+const val CARD_COLUMN_DP = 360
+
+/** Half of that, for Mosaic's tiles. */
+const val MOSAIC_LANE_DP = 200
+
+/**
  * The key the glance row and chips travel under, on both surfaces.
  *
  * A key rather than a bare item because read-on-scroll reads keys: it ignores

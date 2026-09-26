@@ -58,6 +58,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import com.saulhdev.feeder.ui.overlay.feedColumns
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -252,7 +256,27 @@ fun ArticleListPage(
 
     // Volume keys, when the reader has turned them on. Whichever container the
     // layout is using is the one that moves; asking both would fight.
-    val isGridLayout = feedLayoutIsGrid(layout)
+    // Columns by the width the feed has: the window, or the narrow pane
+    // beside an open article. See feedColumns.
+    val windowWidthDp = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp().value.toInt()
+    }
+    val articleOpenBeside =
+        paneNavigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded &&
+            paneNavigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val feedWidthDp = if (articleOpenBeside) FEED_BESIDE_ARTICLE_DP else windowWidthDp
+    val columns = feedColumns(layout, feedWidthDp)
+    val isGridLayout = columns > 1
+    // The two containers keep separate positions, so switching between them
+    // - opening an article narrows the feed to one column - carries the place
+    // across rather than jumping back to the top.
+    LaunchedEffect(isGridLayout) {
+        if (isGridLayout) {
+            if (listState.firstVisibleItemIndex > 0) gridState.scrollToItem(listState.firstVisibleItemIndex)
+        } else if (gridState.firstVisibleItemIndex > 0) {
+            listState.scrollToItem(gridState.firstVisibleItemIndex)
+        }
+    }
     LaunchedEffect(isGridLayout) {
         VolumeScroll.events.collect { direction ->
             val viewport = if (isGridLayout) gridState.layoutInfo.viewportSize.height
@@ -573,7 +597,7 @@ fun ArticleListPage(
                                     val clusters = frame.clusters
                                     TrackReading(
                                         articles = frame.articles,
-                                        isGrid = feedLayoutIsGrid(layout),
+                                        isGrid = isGridLayout,
                                         listState = listState,
                                         gridState = gridState,
                                         onRead = { viewModel.markReadOnScroll(it.id) },
@@ -651,11 +675,13 @@ fun ArticleListPage(
                                                 else -> FeedEmptyReason.NothingFetched
                                             }
                                         )
-                                    } else if (feedLayoutIsGrid(layout)) {
+                                    } else if (isGridLayout) {
                                         PullToRefreshStaggeredGrid(
                                             isRefreshing = state.isSyncing,
                                             onRefresh = { syncClient.syncAllFeeds() },
                                             gridState = gridState,
+                                            columns = columns,
+                                            laneSpacing = if (feedLayoutIsGrid(layout)) 0.dp else 12.dp,
                                             contentPadding = FEED_PADDING,
                                             content = {
                                                 item(
@@ -668,8 +694,15 @@ fun ArticleListPage(
                                                     contentType = { index, item ->
                                                         feedContentType(index, item, layout, emphasis)
                                                     },
+                                                    // A lead story spans Mosaic's
+                                                    // lanes. In the other layouts,
+                                                    // columned only for the width,
+                                                    // it keeps to its column: across
+                                                    // a whole tablet it was the
+                                                    // oversized card this is for.
                                                     span = { index, _ ->
-                                                        if (emphasis.getOrNull(index) ==
+                                                        if (feedLayoutIsGrid(layout) &&
+                                                            emphasis.getOrNull(index) ==
                                                             FeedEmphasis.Large
                                                         ) StaggeredGridItemSpan.FullLine
                                                         else StaggeredGridItemSpan.SingleLane
@@ -816,3 +849,9 @@ private const val UNDO_MIN_COUNT = 5
  * takes that decision away from the card.
  */
 private val FEED_PADDING = PaddingValues(vertical = 4.dp)
+
+/**
+ * The width the feed is laid out for with an article open beside it: the list
+ * pane is narrow then, whatever the window, so one column (two for Mosaic).
+ */
+private const val FEED_BESIDE_ARTICLE_DP = 360
